@@ -1,0 +1,25 @@
+# Dictionary of 1-letter to 3-letter aminoacids codes. Includes custom aminoacids defined only within CIVIC.
+aminoacids:
+    C: CYS
+    D: ASP
+    S: SER
+    Q: GLN
+    K: LYS
+    I: ILE
+    P: PRO
+    T: THR
+    F: PHE
+    N: ASN
+    G: GLY
+    H: HIS
+    L: LEU
+    R: ARG
+    W: TRP
+    A: ALA
+    V: VAL
+    E: GLU
+    Y: TYR
+    M: MET
+    '*': *
+    # CIVIC variant names use 'X' to indicate a stop codon
+    X: *
