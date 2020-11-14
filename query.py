@@ -79,7 +79,6 @@ def check_url_end(url):
     return new_url
 
 
-
 # Build API URL for the genes endpoint
 def get_api_genes():
     (url,end_genes,end_variants) = get_api_access_info()
@@ -104,18 +103,20 @@ def get_api_variants():
 # TODO: check that None is a valid return
 def check_query(results):
     for r in results:
-    if isinstance(r,Exception):
-        print("Something went wrong! Exception: %s" %(r))
-        sys.exit(1)
+        if isinstance(r,Exception):
+            print("Something went wrong! Exception: %s" %(r))
+            sys.exit(1)
     return None
 
 # Query a list of genes
+# For identifier_type="entrez_symbol", only perfect matches are allowed (ie. even known aliases will not give a match)
 # TODO: check if there is a limitation on the number of batches provided to the gene batch query
 def query_civic_genes(genes, identifier_type="entrez_symbol", batch=True, batch_size=200):
-    # Sanity check if provided identifier_type is valid
-    valid_identifiers = ["entrez_symbol","entrez_id","civic_id"]
-    if identifier_type not in valid_identifiers:
-        print("Error! Provided identifier_type '%s' is not allowed. Please use one of the following: %s." %(identifier_type, valid_identifiers))
+    # Sanity check that provided identifier_type is valid
+    # Valid identifiers are supplied via the civic.yml file
+    dict_ids = get_identifier_type_to_civic()
+    if identifier_type not in dict_ids.keys():
+        print("Error! Provided identifier_type '%s' is unknown. Please use one of the following: %s." %(identifier_type, list(dict_ids.keys())))
         sys.exit(1)
 
     base_url = get_api_genes()
@@ -124,6 +125,7 @@ def query_civic_genes(genes, identifier_type="entrez_symbol", batch=True, batch_
     # Validate gene identifiers before querying
     # Symbols containing a dot "." cause the query to fail, so remove them from the list (if any)
     # Remove empty or duplicated identifiers from the list (if any)
+    print("Validating input genes...")
     genes = validate_genes(genes)
 
     # Check that at least one valid gene was provided
@@ -138,49 +140,118 @@ def query_civic_genes(genes, identifier_type="entrez_symbol", batch=True, batch_
     else:
 # TODO: check that geneBatches is identical to genes in this case
         geneBatches = genes
-    results = query_civic(elements=geneBatches, urlbase=url, batch=batch)
-    check_query(results)
+    # Returns nested dict of gene records
+    # NOTE: query will crash when only a single gene was provided and it could not be found in CIVIC
+    print("Querying CIViC...")
+    tmp = query_civic(elements=geneBatches, urlbase=url, batch=batch)
+    print("Done")
+    check_query(tmp)
+
+    # Flatten the nested list to have plain list of gene records
+    results = []
+    # NOTE: results will be empty list when >1 genes were queried and none could be found in CIVIC
+    for recordList in tmp:
+        # NOTE: queries containing one single gene will contain a single list (ie. gene) instead of a nested list (ie. batches and genes)
+        if isinstance(recordList, dict):
+            results.append(recordList)
+        else if isinstance(recordList, list):
+            for record in recordList:
+                if isinstance(record, dict):
+                    results.append(record)
     return results
 
 # Query a list of variants CIVIC ids
 def query_civic_variants(variants):
     url = get_api_variants()
+    print("Querying CIViC...")
     results = query_civic(elements=variants, urlbase=url, batch=False)
+    print("Done")
     check_query(results)
     return results
 
 
+# NOTE: there can be gene records without any variant associated
+# Given a single gene record, retrieve its associated variant records and return dict of variant -> value
+# NOTE: genes without any associated variants will return an empty dict
+def get_variants_from_gene(gene_record, var_id="id", var_value="name"):
+    entry_name = "variants"
+    if entry_name not in gene_record.keys():
+        print("Error! Entry '%s' not found in the following gene record: %s" %(entry_name,gene_record))
+        sys.exit(1)
+    # Gene records without any variants will have an empty list
+    variant_records = gene_record[entry_name]
+    dictVars = get_field_from_records(variant_records, id_field=var_id, field_name=var_value)
+    return(dictVars)
+
+# Given a list of gene records, return nested dict of gene -> {variants} (dict of variant -> value)
+# NOTE: genes without any associated variants will return an empty dict
+def get_variants_from_genes(gene_records, gene_id="entrez_symbol", var_id="id", var_value="name"):
+    # Sanity check that provided gene_id is valid
+    # Valid identifiers are supplied via the civic.yml file
+    dict_ids = get_identifier_type_to_civic()
+    if gene_id not in dict_ids.keys():
+        print("Error! Provided gene_id '%s' is unknown. Please use one of the following: %s." %(gene_id, list(dict_ids.keys())))
+        sys.exit(1)
+    # dict_ids contains mapping of identifier_type to name of corresponding CIVIC gene record entry
+    civic_name = dict_ids[gene_id]
+    dictGenes = {}
+    # Iterate individual gene records and retrieve the associated variants
+    for gene_record in gene_records:
+        if civic_name not in gene_record.keys():
+            print("Error! Provided gene_id '%s' could not be found in the following gene record: %s" %(gene_id,gene_record))
+            sys.exit(1)
+        # Use provided gene_id as keys of the output dict
+        geneId = gene_record[civic_name]
+        if geneId not in dictGenes.keys():
+            # NOTE: genes without any associated variants will return an empty dict
+            dictGenes[geneId] = get_variants_from_gene(gene_record, var_id=var_id, var_value=var_value)
+        else:
+            print("Warning! Skipped record for duplicated gene '%s'!" %(geneId))
+    return(dictGenes)
 
 
+def get_all_variant_ids(gene_records):
+    # Extract nested dict of gene -> {variants} (where keys are variant ids associated to the gene)
+    # NOTE: in this case, the identifier_type used for the gene keys is irrelevant
+    dictGenes = get_variants_from_genes(gene_records=gene_records, var_id="id")
 
-# TODO: return dict of gene -> [variants]
-def get_variants_from_gene(gene_result):
-    allvariants = []
-    retrieved = []
-    # Not all gene records will contain variants
-    for lb in results:
-        # Sanity check for queries containing one single gene
-        # Instead of a nested list (batches and genes), will return one single list (gene)
-        if isinstance(lb, dict):
-            lb = [lb]
-        for dg in lb:
-            # Only perfect matches are allowed (even gene aliases will not give a match)
-            if dg['name'] not in retrieved:
-                retrieved.append(dg['name'])
-            for dv in dg['variants']:
-                if dv['id'] not in allvariants:
-                    allvariants.append(dv['id'])
-    return allvariants
-
-retrieved = set(retrieved)
-unmatched = list(set(genes) - retrieved)
-# TODO: report only total # of genes instead of whole list? Specially for CNVs this list becomes huge
-print('  Genes Matched: {}'.format(','.join(list(retrieved))))
-print('\n  Genes Not Matched: {}'.format(','.join(unmatched)))
-print('\nTotal # variants to query: {}'.format(len(allvariants)))
+    allvariants = []        # keep track of unique variant civic ids
+    emptyGenes = []         # keep track of gene ids that did not have any variants associated
+    # Iterate individual gene entries in the dict
+    for gene in dictGenes.keys():
+        # Extract the variants associated to the current gene
+        variants = dictGenes[gene]
+        # Keep track of gene ids without any associated variant 
+        if not variants:
+            # Gene keys in the dict will be unique by definition
+            emptyGenes.append(gene)
+        # Keep track of unique variant civic ids across the complete dict
+        for varId in variants:
+            if varId not in allvariants:
+                allvariants.append(varId)
+    print("Parsed a total of %s genes and found %s associated variant ids." %(len(dictGenes.keys()),len(allvariants)))
+    if emptyGenes:
+        print("Found %s genes that did not have any variants available: %s" %(len(emptyGenes),",".join(emptyGenes)))
+    return(allvariants)
 
 
-
+def compare_query_and_return(genes, gene_records, identifier_type="entrez_symbol"):
+    print("Comparing query and results...")
+    print("Validating input genes...")
+    validated = validate_genes(genes)
+    print("Parsing results...")
+    # Return dict of gene -> {variants} (for all genes contained in the provided records)
+    # Genes without any associated variants will also be returned
+    dictGenes = get_variants_from_genes(gene_records=gene_records, gene_id=identifier_type)
+    # Extract all genes which could be matched and retrieved by the query
+    retrieved = set(dictGenes.keys())
+    # Compare set of input genes to set of retrieved genes
+    unmatched = list(set(validated) - retrieved)
+    print("Number of input genes (validated):\t%s" %(len(validated)))
+    print("Number of retrieved genes:\t%s" %(len(retrieved)))
+    if unmatched:
+        print("Unmatched genes: %s" %(",".join(unmatched)))
+    return None
 
 
 

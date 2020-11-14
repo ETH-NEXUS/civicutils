@@ -45,12 +45,38 @@ def validate_genes(genes):
             if "." not in gene:
                 if gene not in out:
                     out.append(gene)
+                else:
+                    print("Warning! Removed duplicated gene '%s'!" %(gene))
             else:
                 if gene not in skip:
                     skip.append(gene)
+        else:
+            print("Warning! Removed empty gene '%s'!" %(gene))
     if skip:
         print("Omitted gene symbols: %s" %(",".join(skip)))
     return(out)
+
+
+def get_field_from_record(record, field_name):
+    # Check that provided field_name can be found in record
+    if field_name not in record.keys():
+        print("Error! Provided field '%s' could not be found in the following record: %s." %(field_name,record))
+        sys.exit(1)
+    else:
+        field = record[field_name]
+    return field
+
+# Empty list of records will return empty dict
+def get_field_from_records(records, id_field, field_name):
+    dictFields = {}
+    for record in records:
+        thisId = get_field_from_record(record,id_field)
+        field = get_field_from_record(record,field_name)
+        if thisId not in dictFields.keys():
+            dictFields[thisId] = field
+        else:
+            print("Warning! Skipped record for duplicated id '%s'!" %(thisId))
+    return dictFields
 
 
 # Translate a 1-letter aminoacid code (if it exists) into a 3-letter code
