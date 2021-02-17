@@ -118,12 +118,6 @@ def reformat_results(results, identifier_type):
                 if (evidence_status != "ACCEPTED"):
                     continue
 
-                # Skip records that correspond to germline variants
-                # The variant_origin field might be blank/empty (None)
-                if variant_origin:
-                    if re.search("GERMLINE", variant_origin):
-                        continue
-
                 # Sanity check for empty evidence direction, clinical significance or level
                 # 'NULL' is introduced to distinguish from 'N/A' tag
                 if evidence_direction is None:
@@ -153,23 +147,9 @@ def reformat_results(results, identifier_type):
                     varMap[gene_key][variant_name]['id'] = variant_id
                     varMap[gene_key][variant_name]['civic_score'] = civic_score
 
-                    ## Generate list of strings that will be used to match our input variants in CIVIC
-                    ## Returned list always has at least length=1 (in this case, containing only variant name)
-                    ## For CNV, variant matching is not based on HGVS, so matchStrings will only contain the variant name
-                    matchStrings = generate_civic_matchStrings(variant_name, hgvs_expressions, dataType)
-                    varMap[gene_key][variant_name]['match_hgvs'] = matchStrings
                     # Keep original HGVS annotations (empty list when nothing is available)
                     # Use uppercase to avoid mismatches due to case
                     varMap[gene_key][variant_name]['hgvs'] = [h.strip().upper() for h in hgvs_expressions]
-
-                    # Include associated variant types (sequence ontology terms). There can be multiple terms
-                    varMap[gene_key][variant_name]['types'] = []
-                    for vartype_record in variant_record.variant_types:
-                        varMap[gene_key][variant_name]['types'].append(vartype_record.name.strip().upper())
-                    # Account for empty variant types (can happen)
-                    # 'NULL' is introduced to distinguish from 'N/A' tag
-                    if not varMap[gene_key][variant_name]['types']:
-                        varMap[gene_key][variant_name]['types'] = ["NULL"]
 
                 # FIXME: there is no sanity check for detecting possible variant name duplicates
                 if evidence_type not in varMap[gene_key][variant_name].keys():
