@@ -1250,6 +1250,9 @@ print('\nRetrieving data from CIViC...')
 
 (varMap,retrieved_genes,no_variants,all_variants) = query_civic_genes(genes, identifier_type="entrez_symbol")
 
+import json
+print(json.dumps(varMap, indent=1))
+
 retrieved = set(retrieved_genes)
 unmatched = list(set(genes) - retrieved)
 print("Found %s/%s genes in CIVIC associated to %s variants. Found %s CIVIC genes that had no variants available." %(len(retrieved_genes),len(genes),len(all_variants),len(no_variants)))
