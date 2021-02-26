@@ -42,7 +42,7 @@ def sanity_check_identifier_type(identifier_type):
 
 # Given a list of CIVIC gene records, parse and reformat into an structured dictionary
 # Assume gene records already contain all information about associated variants and corresponding evidence items
-def reformat_results(results, identifier_type):
+def reformat_results(results, identifier_type, dataType):
 
 # TODO: for now, keep the same filters as we had in the previous version
 # TODO: to be done soon; do not filter anything but retrieve all the gene-variant records unchanged. we will apply filtering using functions at a later step
@@ -230,7 +230,10 @@ def reformat_results(results, identifier_type):
 
 # Given a list of gene identifiers, query CIVIC for known variants and return a structured dictionary with the relevant results
 # List of gene ids can be: CIVIC id, entrez id or gene symbol
-def query_civic_genes(genes, identifier_type="entrez_symbol"):
+def query_civic_genes(genes, identifier_type="entrez_symbol", dataType="SNV"):
+
+# TODO
+    # Check that dataType is valid
 
     # Check that provided argument is a list (even if length = 1)
     if (not isinstance(genes, list)) or (not genes):
@@ -294,7 +297,7 @@ def query_civic_genes(genes, identifier_type="entrez_symbol"):
     # At this point, all CIVIC results for queried genes have been retrieved in a list
     # Process gene records into a dictionary with structured format
     # gene -> variants -> evidence_items
-    (dict_results,retrieved_genes,no_variants,all_variants) = reformat_results(results, identifier_type)
+    (dict_results,retrieved_genes,no_variants,all_variants) = reformat_results(results, identifier_type, dataType)
     return (dict_results,retrieved_genes,no_variants,all_variants)
 
 
@@ -1248,7 +1251,7 @@ if not genes:
 print('\nTotal # genes to query: {}'.format(len(genes)))
 print('\nRetrieving data from CIViC...')
 
-(varMap,retrieved_genes,no_variants,all_variants) = query_civic_genes(genes, identifier_type="entrez_symbol")
+(varMap,retrieved_genes,no_variants,all_variants) = query_civic_genes(genes, identifier_type="entrez_symbol", dataType=dataType)
 
 import json
 print(json.dumps(varMap, indent=1))
