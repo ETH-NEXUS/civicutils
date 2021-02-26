@@ -28,8 +28,12 @@ def check_string_filter_arguments(field, myList):
         )
     # Use uppercase and remove leading/trailing spaces, for consistency of strings
     newField = field.strip().upper()
-# TODO: convert every element into string (in case numbers were provided)
-    newList = [x.strip().upper for x in myList]
+    newList = []
+    # Convert individual elements into strings, in case provided list contains numbers (eg. gene or variant ids)
+    for tmpItem in myList:
+        newItem = str(tmpItem)
+        newItem = newItem.strip().upper()
+        newList.append(newItem)
     return (newField,newList)
 
 
@@ -45,7 +49,7 @@ def apply_in_filter(field, inList, matchType="exact"):
                     match = True
             if (matchType == "partial"):
                 for tmp in inList:
-                    if field in tmp:
+                    if tmp in field:
                         match = True
     else:
         match = True
@@ -63,7 +67,7 @@ def apply_not_in_filter(field, outList, matchType="exact"):
                 match = True
         if (matchType == "partial"):
             for tmp in outList:
-                if field in tmp:
+                if tmp in field:
                     match = True
     return match
 
@@ -77,7 +81,7 @@ def apply_cutoff_filter(field, cutoff):
 # cutoff should be numeric or float
 
     match = True
-    cutoff_f = float(cutoff_f)
+    cutoff_f = float(cutoff)
     field_f = float(field)
     if (cutoff_f != float(0)):
         if (field_f < cutoff_f):
@@ -85,27 +89,36 @@ def apply_cutoff_filter(field, cutoff):
     return match
 
 
+def filter_civic_results(varMap, gene_id_in=[], gene_id_not_in=[], min_variants=0, var_id_in=[], var_id_not_in=[], var_name_in=[], var_name_not_in=[], min_civic_score=0, var_type_in=[], var_type_not_in=[], min_evidence_items=0, evidence_type_in=[], evidence_type_not_in=[], disease_in=[], disease_not_in=[], drug_name_in=[], drug_name_not_in=[], evidence_dir_in=[], evidence_dir_not_in=[], evidence_clinsig_in=[], evidence_clinsig_not_in=[], evidence_level_in=[], evidence_level_not_in=[], evidence_status_in=[], evidence_status_not_in=[], source_status_in=[], source_status_not_in=[], var_origin_in=[], var_origin_not_in=[], source_type_in=[], source_type_not_in=[], min_evidence_rating=0, output_empty=False):
 
-## TODO check types of sources are even a thing?
-
-def filter_civic_results(varMap, gene_id_in=[], gene_id_not_in=[], variants=0, var_id_in=[], var_id_not_in=[], var_name_in=[], var_name_not_in=[], civic_score=0, var_origin_in=[], var_origin_not_in=[], var_type_in=[], var_type_not_in=[], evidence_items=0, evidence_status_in=[], evidence_status_not_in=[], source_in=[], source_not_in=[], disease_in=[], disease_not_in=[], evidence_rating=0, evidence_type_in=[], evidence_type_not_in=[], evidence_dir_in=[], evidence_dir_not_in=[], evidence_clinsig_in=[], evidence_clinsig_not_in=[], evidence_level_in=[], evidence_level_not_in=[], drugs=0, drug_interaction=[], drug_name_in=[], drug_name_not_in=[]):
-
-## filters are applied in the same order as their corresponding arguments
+## filters are applied in the same order as their corresponding arguments (as they are defined in the function, not the order specified in the function call)
 ## so, logic is always AND for all selected filters?
 
 ## if desired filter logic is not possible, then the function would need to be run several times, applyin the filters subsequently
 
-    cleanMap = {}
-
-
-    ## Process selected filters
+## all array or cutoff filters work identically, except for disease-related arguments (ie. disease_in=[], disease_not_in=[], alt_diseases=[])
 
 ## Assume varMap has the following structure:
 # TODO
-# gene -> variant_name -> id,civic_score,match_hgvs,hgvs,types,origin,
 
-    # gene id should always be available
+## TODO: talk about arg output_empty -> if True, then empty entries can be returned (it will be empty at the level of the filter that failed)
+
+## TODO: add framework for flexibly choosing what is filtered based of constructed argument?
+## eg. feature_name (have a catalogue of available and throw error if not matched) + in/not_in + partial/exact (feature type would determine if expectation is list or cutoff value)
+
+## TODO: add framework to apply filters based on order of arguments?
+## eg. for each feature that is provided, filtering fuction is called, and the dict is subsequently filtered in this manner until all provided filters have been applied
+
+    # sanity check that provided output_empty is logical
+    if not (isinstance(output_empty, int) or isinstance(output_empty, float)):
+        raise TypeError(
+            f"'{output_empty}' must be of type 'int' or 'float'.\n"
+        )
+
+    # Iterate complete dict of results and apply selected filters to generate a new (filtered) dict
+    cleanMap = {}
     for gene_id in varMap.keys():
+        # gene id should always be available  (type of id is chosen during the query)
         gene_id_str = str(gene_id)
         keepGene = apply_in_filter(gene_id_str, gene_id_in, matchType="exact")
         if not keepGene:
@@ -114,15 +127,17 @@ def filter_civic_results(varMap, gene_id_in=[], gene_id_not_in=[], variants=0, v
         if removeGene:
             continue
 
-        # allow number of variants to be 0
+        # allow number of min_variants to be 0
         n_variants = len(varMap[gene_id].keys())
-        keepGene = apply_cutoff_filter(n_variants, variants)
+        keepGene = apply_cutoff_filter(n_variants, min_variants)
         if not keepGene:
             continue
 
         # current gene has passed all gene-level filters
-        if gene_id_str not in cleanMap.keys():
-            cleanMap[gene_id_str] = {}
+        # write to output (filtered) dict only when output_empty=True
+        if output_empty:
+            if gene_id not in cleanMap.keys():
+                cleanMap[gene_id] = {}
 
         # variant id should always be available
         for var_id in varMap[gene_id].keys():
@@ -145,7 +160,7 @@ def filter_civic_results(varMap, gene_id_in=[], gene_id_not_in=[], variants=0, v
 
             # civic score is always a number (can be 0)
             var_score = varMap[gene_id][var_id]["civic_score"]
-            keepVar = apply_cutoff_filter(var_score, civic_score)
+            keepVar = apply_cutoff_filter(var_score, min_civic_score)
             if not keepVar:
                 continue
 
@@ -154,13 +169,16 @@ def filter_civic_results(varMap, gene_id_in=[], gene_id_not_in=[], variants=0, v
             variant_types = varMap[gene_id][var_id]["types"]
             nKeep = 0
             nRemove = 0
+            # when "NULL":
+            #  - if any var_type_in was provided, then variant will fail this filter
+            #  - if any var_type_not_in was provided, then variant will not fail this filter (given that the previous filter did not either)
             for var_type in variant_types:
                 keepType = apply_in_filter(var_type, var_type_in, matchType="partial")
                 if keepType:
-                    nKeep += 0
+                    nKeep += 1
                 removeType = apply_not_in_filter(var_type, var_type_not_in, matchType="partial")
                 if removeType:
-                    nRemove += 0
+                    nRemove += 1
             if (nKeep == 0):
                 continue
             if (nRemove > 0):
@@ -168,163 +186,332 @@ def filter_civic_results(varMap, gene_id_in=[], gene_id_not_in=[], variants=0, v
 
             # allow number of evidence items to be 0
             n_evidence_items = varMap[gene_id][var_id]["n_evidence_items"]
-            keepVar = apply_cutoff_filter(n_evidence_items, evidence_items)
-            if not keepGene:
+            keepVar = apply_cutoff_filter(n_evidence_items, min_evidence_items)
+            if not keepVar:
                 continue
 
-            evidence_types = varMap[gene_id][var_id]["evidence_items"].keys()
-# 
-
-
-
             # current variant has passed all variant-level filters
-            if var_id_str not in cleanMap[gene_id_str].keys():
-                cleanMap[gene_id_str][var_id_str] = {}
+            # write to output (filtered) dict only when output_empty=True
+            if output_empty:
+                if var_id not in cleanMap[gene_id].keys():
+                    cleanMap[gene_id][var_id] = {}
+                    cleanMap[gene_id][var_id]["name"] = variant
+                    cleanMap[gene_id][var_id]["civic_score"] = var_score
+                    cleanMap[gene_id][var_id]["hgvs"] = varMap[gene_id][var_id]['hgvs']
+                    cleanMap[gene_id][var_id]["types"] = variant_types
+                    cleanMap[gene_id][var_id]["n_evidence_items"] = 0
+                    cleanMap[gene_id][var_id]["evidence_items"] = {}
 
-            for evidence_type in varMap[gene_id][var_id]["evidence_items"].keys():
-
-                # variant origin can be "NULL" when not available
-                variant_origin = varMap[gene_id][var_id]["origin"]
-                keepVar = apply_in_filter(variant_origin, var_origin_in, matchType="partial")
-                if not keepVar:
+            n_evidence_items_after = 0
+            evidence_types = list(varMap[gene_id][var_id]["evidence_items"].keys())
+            allowed_evidence_types = []
+            # evidence type should always be available
+            for evidence_type in evidence_types:
+                keepType = apply_in_filter(evidence_type, evidence_type_in, matchType="exact")
+                if not keepType:
                     continue
-                removeVar = apply_not_in_filter(variant_origin, var_origin_not_in, matchType="partial")
-                if removeVar:
+                removeType = apply_not_in_filter(evidence_type, evidence_type_not_in, matchType="exact")
+                if removeType:
                     continue
+                allowed_evidence_types.append(evidence_type)
 
+            # only work on subset of evidence types that passed filters (if any)
+            for evidence_type in allowed_evidence_types:
+                # current evidence type has passed filters
+                # write to output (filtered) dict only when output_empty=True
+                if output_empty:
+                    if evidence_type not in cleanMap[gene_id][var_id]["evidence_items"].keys():
+                        cleanMap[gene_id][var_id]["evidence_items"][evidence_type] = {}
 
-
-
-
-
-
-
-
-            # List of evidence records available for the current variant (can be empty)
-            evidence_items = variant_record.evidence_items
-
-            # Iterate through the listed evidence items and store relevant information for this variant
-            # Variants which do not have any clinical data associated to them will be directly skipped
-            for evidence_record in evidence_items:
-
-                # FIXME: Sanity check that all critical elements are present and non-empty (entrez_name, variant name, evidence_type, disease name)
-
-                # Use uppercase for consistency of the tags
-                evidence_status = evidence_record.status.strip().upper()
-                evidence_type = evidence_record.evidence_type.strip().upper()
-                disease = evidence_record.disease.name.strip().upper()
-
-                evidence_level = evidence_record.evidence_level                     # just in case, should never be None
-                variant_origin = evidence_record.variant_origin                     # can be None
-                evidence_direction = evidence_record.evidence_direction             # can be None
-                clinical_significance = evidence_record.clinical_significance       # can be None
-
-                # Skip records that are not accepted evidence
-                if (evidence_status != "ACCEPTED"):
-                    continue
-
-                # Skip records that correspond to germline variants
-                # The variant_origin field might be blank/empty (None)
-                if variant_origin:
-                    if re.search("GERMLINE", variant_origin):
+                type_diseases = list(varMap[gene_id][var_id]["evidence_items"][evidence_type].keys())
+                # disease names should always be available
+                allowed_diseases = []
+                for type_disease in type_diseases:
+                    keepDisease = apply_in_filter(type_disease, disease_in, matchType="partial")
+                    if not keepDisease:
                         continue
+                    removeDisease = apply_not_in_filter(type_disease, disease_not_in, matchType="partial")
+                    if removeDisease:
+                        continue
+                    allowed_diseases.append(type_disease)
 
-                # Sanity check for empty evidence direction, clinical significance or level
-                # 'NULL' is introduced to distinguish from 'N/A' tag
-                if evidence_direction is None:
-                    evidence_direction = "NULL"
-                else:
-                    evidence_direction = evidence_direction.strip().upper()
-                if clinical_significance is None:
-                    clinical_significance = "NULL"
-                else:
-                    clinical_significance = clinical_significance.strip().upper()
-                if evidence_level is None:
-                    evidence_level = "NULL"
-                else:
-                    evidence_level = evidence_level.strip().upper()
+                # only work on subset of diseases that passed filters (if any)
+                for disease in allowed_diseases:
+                    # current disease name has passed filters
+                    # write to output (filtered) dict only when output_empty=True
+                    if output_empty:
+                        if disease not in cleanMap[gene_id][var_id]["evidence_items"][evidence_type].keys():
+                            cleanMap[gene_id][var_id]["evidence_items"][evidence_type][disease] = {}
 
-                # Combine the direction and significance of the evidence in one term
-                evidence = evidence_direction + ':' + clinical_significance
+                    # all evidence types except 'PREDICTIVE' will have a single entry 'NULL' (because drugs are not associated to these evidence types)
+                    # when "NULL", the drug-related filters do not apply (to avoid filtering evidences from types other than 'PREDICTIVE')
 
-                # At this point, currently evaluate evidence item has passed all the checks/filters
-                # Keep track of the current evidence item under the corresponding variant and gene
-                if gene_key not in varMap.keys():
-                    varMap[gene_key] = {}
+                    disease_drugs = list(varMap[gene_id][var_id]["evidence_items"][evidence_type][disease].keys())
 
-                # Variant name should be unique within gene (found some duplicates but all were submitted, not accepted data)
-                if variant_name not in varMap[gene_key].keys():
-                    varMap[gene_key][variant_name] = {}
-                    varMap[gene_key][variant_name]['id'] = variant_id
-                    varMap[gene_key][variant_name]['civic_score'] = civic_score
+                    allowed_drugs = []
+                    if (evidence_type != "PREDICTIVE"):
+                        allowed_drugs = disease_drugs   # ['NULL']
+                    else:
+                        # iterate existing drugs and apply filters
+                        for disease_drug in disease_drugs:
+                            keepDrug = apply_in_filter(disease_drug, drug_name_in, matchType="partial")
+                            if not keepDrug:
+                                continue
+                            removeDrug = apply_not_in_filter(disease_drug, drug_name_not_in, matchType="partial")
+                            if removeDrug:
+                                continue
+                            allowed_drugs.append(disease_drug)
 
-                    ## Generate list of strings that will be used to match our input variants in CIVIC
-                    ## Returned list always has at least length=1 (in this case, containing only variant name)
-                    ## For CNV, variant matching is not based on HGVS, so matchStrings will only contain the variant name
-                    matchStrings = generate_civic_matchStrings(variant_name, hgvs_expressions, dataType)
-                    varMap[gene_key][variant_name]['match_hgvs'] = matchStrings
-                    # Keep original HGVS annotations (empty list when nothing is available)
-                    # Use uppercase to avoid mismatches due to case
-                    varMap[gene_key][variant_name]['hgvs'] = [h.strip().upper() for h in hgvs_expressions]
+                    # only work on subset of drugs that passed filters (if any)
+                    for drug in allowed_drugs:
+                        # current drug has passed filters ("NULL" whenever evidence type is not 'PREDICTIVE')
+                        # write to output (filtered) dict only when output_empty=True
+                        if output_empty:
+                            if drug not in cleanMap[gene_id][var_id]["evidence_items"][evidence_type][disease].keys():
+                                cleanMap[gene_id][var_id]["evidence_items"][evidence_type][disease][drug] = {}
 
-                    # Include associated variant types (sequence ontology terms). There can be multiple terms
-                    varMap[gene_key][variant_name]['types'] = []
-                    for vartype_record in variant_record.variant_types:
-                        varMap[gene_key][variant_name]['types'].append(vartype_record.name.strip().upper())
-                    # Account for empty variant types (can happen)
-                    # 'NULL' is introduced to distinguish from 'N/A' tag
-                    if not varMap[gene_key][variant_name]['types']:
-                        varMap[gene_key][variant_name]['types'] = ["NULL"]
+                        evidences = list(varMap[gene_id][var_id]["evidence_items"][evidence_type][disease][drug].keys())
+                        allowed_evidences = []
+                        for evidence in evidences:
+                            # split the evidence string into direction and clinical significance
+                            # format: 'DIRECTION:CLINSIGF'
+                            evidenceArr = evidence.strip().split(':')
+                            # sanity check for correct format of evidence string
+                            if (len(evidenceArr) != 2):
+                                raise ValueError(
+# TODO
+                                    f"'{disease_drugs}' .\n"
+                                )
 
-                # FIXME: there is no sanity check for detecting possible variant name duplicates
-                if evidence_type not in varMap[gene_key][variant_name].keys():
-                    varMap[gene_key][variant_name][evidence_type] = {}
-                if disease not in varMap[gene_key][variant_name][evidence_type].keys():
-                    varMap[gene_key][variant_name][evidence_type][disease] = {}
+                            # check evidence direction filters
+                            direction = evidenceArr[0]
+                            keepDir = apply_in_filter(direction, evidence_dir_in, matchType="exact")
+                            if not keepDir:
+                                continue
+                            removeDir = apply_not_in_filter(direction, evidence_dir_not_in, matchType="exact")
+                            if removeDir:
+                                continue
+                            # check evidence clinical significance filters
+                            clin_signf = evidenceArr[1]
+                            keepClin = apply_in_filter(clin_signf, evidence_clinsig_in, matchType="exact")
+                            if not keepClin:
+                                continue
+                            removeClin = apply_not_in_filter(clin_signf, evidence_clinsig_not_in, matchType="exact")
+                            if removeClin:
+                                continue
+                            allowed_evidences.append(evidence)
 
-                drugs = []
-                evidence_drugs = evidence_record.drugs
-                for evidence_drug in evidence_drugs:
-                    drug_name = evidence_drug.name.strip().upper()
-                    if drug_name not in drugs:
-                        drugs.append(drug_name)
+                        # only work on subset of evidences that passed filters (if any)
+                        for this_evidence in allowed_evidences:
+                            # current evidence has passed filters
+                            # write to output (filtered) dict only when output_empty=True
+                            if output_empty:
+                                if this_evidence not in cleanMap[gene_id][var_id]["evidence_items"][evidence_type][disease][drug].keys():
+                                    cleanMap[gene_id][var_id]["evidence_items"][evidence_type][disease][drug][this_evidence] = {}
 
-                # When more than 1 drug are listed for the same evidence item, 'drug_interaction_type' is not null and defines the nature of this multiple drug entry
-                drug_interaction = evidence_record.drug_interaction_type
-                if drug_interaction is not None:
-                    drug_interaction = drug_interaction.strip().upper()
-                    # 'Substitutes' indicates that drugs can be considered individually
-                    if drug_interaction != "SUBSTITUTES":
-                        # Remaining terms ('Sequential' and 'Combination') indicate that drugs should be considered together, so join their names into a single tag
-                        # Sort drugs alphabetically to ensure that their order in the combination treatment is always the same
-                        drugs.sort()
-                        drugs = ["+".join(drugs)]
+                            evidence_levels = list(varMap[gene_id][var_id]["evidence_items"][evidence_type][disease][drug][this_evidence].keys())
+                            allowed_levels = []
+                            for evidence_level in evidence_levels:
+                                keepLevel = apply_in_filter(evidence_level, evidence_level_in, matchType="exact")
+                                if not keepLevel:
+                                    continue
+                                removeLevel = apply_not_in_filter(evidence_level, evidence_level_not_in, matchType="exact")
+                                if removeLevel:
+                                    continue
+                                allowed_levels.append(evidence_level)
 
-                if not drugs:
-                    # Only non-Predictive evidences and Predictive ones without drugs will have this dummy level
-                    # Introduced for consistency purposes within the varMap structure
-                    drugs = ["NULL"]
+                            # only work on subset of evidence levels that passed filters (if any)
+                            for level in allowed_levels:
+                                # current evidence level has passed filters
+                                # write to output (filtered) dict only when output_empty=True
+                                if output_empty:
+                                    if level not in cleanMap[gene_id][var_id]["evidence_items"][evidence_type][disease][drug][this_evidence].keys():
+                                        cleanMap[gene_id][var_id]["evidence_items"][evidence_type][disease][drug][this_evidence][level] = []
 
-                # Iterate through drugs to add evidences associated to them
-                #   For non-Predictive evidences or Predictive with empty drugs, drugs=['NULL']
-                #   For Predictive and interaction=None, len(drugs) = 1
-                #   For Predictive and interaction='Substitutes', len(drugs)>1
-                #   For Predictive and interaction!='Substitutes', len(drugs)=1 (combiantion of several using '+')
-                for drug in drugs:
-                    if drug not in varMap[gene_key][variant_name][evidence_type][disease].keys():
-                        varMap[gene_key][variant_name][evidence_type][disease][drug] = {}
-                    if evidence not in varMap[gene_key][variant_name][evidence_type][disease][drug].keys():
-                        varMap[gene_key][variant_name][evidence_type][disease][drug][evidence] = {}
-                    if evidence_level not in varMap[gene_key][variant_name][evidence_type][disease][drug][evidence].keys():
-                        varMap[gene_key][variant_name][evidence_type][disease][drug][evidence][evidence_level] = []
-                    # Group all publications associated to the same level. Do not check publication status
-                    ## On 25.01.2019, source structure was changed to introduce ASCO abstracts as a source type
-## TODO: sanity check for empty ID. Check for type of source?
-                    varMap[gene_key][variant_name][evidence_type][disease][drug][evidence][evidence_level].append(evidence_record.source.citation_id.strip())
+                                # Format of list: ['TYPE_ID1:EVIDENCESTATUS1:SOURCESTATUS1:VARORIGIN1:RATING1',..,'TYPE_IDN:EVIDENCESTATUSN:SOURCESTATUSN:VARORIGINN:RATINGN']
+                                all_evidence_items = varMap[gene_id][var_id]["evidence_items"][evidence_type][disease][drug][this_evidence][level]
+                                for evidence_item in all_evidence_items:
+                                    # split the evidence item string into the 5 separate fields
+                                    itemArr = evidence_item.strip().split(":")
+                                    # sanity check for correct format of evidence item string
+                                    if (len(itemArr) != 5):
+                                        raise ValueError(
+# TODO
+                                            f"'{itemArr}' .\n"
+                                        )
+                                    tmpId = itemArr[0]
+                                    evidence_status = itemArr[1]
+                                    source_status = itemArr[2]
+                                    var_origin = itemArr[3]
+                                    rating = itemArr[4]
+
+                                    # split the id string into the 2 separate fields
+                                    # format: 'TYPE_ID'
+                                    tmpIdArr = tmpId.split("_")
+                                    # sanity check for correct format of evidence id string
+                                    if (len(tmpIdArr) != 2):
+                                        raise ValueError(
+# TODO
+                                            f"'{tmpIdArr}' .\n"
+                                        )
+                                    idType = tmpIdArr[0]
+                                    this_id = tmpIdArr[1]
+
+                                    # apply filters on evidence status
+                                    keepStatus = apply_in_filter(evidence_status, evidence_status_in, matchType="exact")
+                                    if not keepStatus:
+                                        continue
+                                    removeStatus = apply_not_in_filter(evidence_status, evidence_status_not_in, matchType="exact")
+                                    if removeStatus:
+                                        continue
+                                    # apply filters on source status
+                                    keepSource = apply_in_filter(source_status, source_status_in, matchType="partial")
+                                    if not keepSource:
+                                        continue
+                                    removeSource = apply_not_in_filter(source_status, source_status_not_in, matchType="partial")
+                                    if removeSource:
+                                        continue
+                                    # apply filters on variant origin
+                                    keepOrigin = apply_in_filter(var_origin, var_origin_in, matchType="partial")
+                                    if not keepOrigin:
+                                        continue
+                                    removeOrigin = apply_not_in_filter(var_origin, var_origin_not_in, matchType="partial")
+                                    if removeOrigin:
+                                        continue
+                                    # apply filters on source type
+                                    keepType = apply_in_filter(idType, source_type_in, matchType="exact")
+                                    if not keepType:
+                                        continue
+                                    removeType = apply_not_in_filter(idType, source_type_not_in, matchType="exact")
+                                    if removeType:
+                                        continue
+                                    # when rating in not available (ie. 'NULL'), the evidence will directly fail if corresponding filter is set
+                                    if (rating == "NULL"):
+                                        if (float(min_evidence_rating) != float(0)):
+                                            continue
+                                    # when rating is available, apply filters on evidence rating
+                                    else:
+                                        keepRating = apply_cutoff_filter(rating, min_evidence_rating)
+                                        if not keepRating:
+                                            continue
+
+                                    # current evidence item has passed all filters
+                                    # write complete entry (from gene to evidence item) to output (filtered) dict only when output_empty>0
+                                    if not output_empty:
+                                        if gene_id not in cleanMap.keys():
+                                            cleanMap[gene_id] = {}
+                                        if var_id not in cleanMap[gene_id].keys():
+                                            cleanMap[gene_id][var_id] = {}
+                                            cleanMap[gene_id][var_id]["name"] = variant
+                                            cleanMap[gene_id][var_id]["civic_score"] = var_score
+                                            cleanMap[gene_id][var_id]["hgvs"] = varMap[gene_id][var_id]['hgvs']
+                                            cleanMap[gene_id][var_id]["types"] = variant_types
+                                            cleanMap[gene_id][var_id]["n_evidence_items"] = 0
+                                            cleanMap[gene_id][var_id]["evidence_items"] = {}
+                                        if evidence_type not in cleanMap[gene_id][var_id]["evidence_items"].keys():
+                                            cleanMap[gene_id][var_id]["evidence_items"][evidence_type] = {}
+                                        if disease not in cleanMap[gene_id][var_id]["evidence_items"][evidence_type].keys():
+                                            cleanMap[gene_id][var_id]["evidence_items"][evidence_type][disease] = {}
+                                        if drug not in cleanMap[gene_id][var_id]["evidence_items"][evidence_type][disease].keys():
+                                            cleanMap[gene_id][var_id]["evidence_items"][evidence_type][disease][drug] = {}
+                                        if this_evidence not in cleanMap[gene_id][var_id]["evidence_items"][evidence_type][disease][drug].keys():
+                                            cleanMap[gene_id][var_id]["evidence_items"][evidence_type][disease][drug][this_evidence] = {}
+                                        if level not in cleanMap[gene_id][var_id]["evidence_items"][evidence_type][disease][drug][this_evidence].keys():
+                                            cleanMap[gene_id][var_id]["evidence_items"][evidence_type][disease][drug][this_evidence][level] = []
+
+                                    cleanMap[gene_id][var_id]["evidence_items"][evidence_type][disease][drug][this_evidence][level].append(evidence_item)
+                                    n_evidence_items_after += 1
+
+            # At this point, all evidence items available for this variant have been parsed and filtered
+            # Add number of evidence items remaining after filtering for this variant
+            # check if output_empty=True or not
+            if not output_empty:
+                # In this case, corresponding gene and variant entries will only be available when n_items > 0 (avoid empty entries)
+                if (n_evidence_items_after > 0):
+                    cleanMap[gene_id][var_id]["n_evidence_items"] = n_evidence_items_after
+            else:
+                # In this case, corresponding gene and variant entries are always available
+                cleanMap[gene_id][var_id]["n_evidence_items"] = n_evidence_items_after
+
+    return cleanMap
 
 
+# Given a list of disease names, first filter out those matching the black-listed terms (if any), and from the remaining set, return either:
+#   - Subset of diseases matching white-listed terms - partial match (eg. 'Melanoma')
+#   - If previous is not available, subset of matching high-level diseases - exact match (eg. 'Cancer', 'Solid tumor')
+#   - If previous is not available, return all available diseases (ie. so, original set except those matched to the black list, if any)
+def match_and_classify_diseases(diseaseArr, disease_name_not_in, disease_name_in, alt_disease_names):
 
-    return
+    ## Keep track of diseases that did not pass the black-list filter
+    blackMatched = []
+    ## Keep track of diseases that passed the black-list filter
+    cleanSet = []
+    ## Final list of matched diseases (associated to one of 3 categories depending on match type: 'ct', 'gt' or 'nct')
+    matched = []
+    ## Keep track of which type of disease specificy was matched in the end ('ct', 'gt' or 'nct')
+    ct = ''
+
+    ## 1) First, remove diseases that partially match black-listed terms (if any are provided)
+    # NOTE: PARTIAL matches to the black list are allowed! eg:
+    #   - including 'small' will remove 'non-small cell lung cancer' and 'lung small cell carcinoma'
+    #   - including 'non-small' will remove 'non-small cell lung cancer' but not 'lung small cell carcinoma'
+    if disease_name_not_in:
+        # Iterate available diseases and keep track of those that partially match to black list (there can be several)
+        for disease in diseaseArr:
+            # To find partial matches, it is necessary to iterate through both lists (input and civic)
+            for blackListed in disease_name_not_in:
+                # Search for partial match of INPUT disease in CIVIC disease e.g. 'Melanoma' (input list) in 'Skin Melanoma' (CIVIC) and not opposite
+                if blackListed in disease:
+                    if disease not in blackMatched:
+                        blackMatched.append(disease)
+        # Iterate available diseases once again to retrieve those that passed the black list filter
+        for disease in diseaseArr:
+            # Retrieve valid diseases only
+            if disease in blackMatched:
+                continue
+            if disease not in cleanSet:
+                cleanSet.append(disease)
+
+    ## If no black list was provided, then all available diseases constitute the clean set
+    else:
+        cleanSet = diseaseArr
+
+    ## 2) Now, iterate the list of "allowed" diseases (ie. passing the black list filter) and attempt to match to white-listed terms
+    # NOTE: again, PARTIAL matches to the white list are allowed! eg:
+    #   - including 'melanoma' will match 'melanoma', 'skin melanoma' and 'uveal melanoma', but not 'skin cancer' (hypothetical)
+    #   - including 'uveal melanoma' will only match 'uveal melanoma'
+    for cleanType in cleanSet:
+        # To find partial matches, it is necessary to iterate through both lists (input and civic)
+        for whiteListed in disease_name_in:
+            # Search for partial match of INPUT disease in CIVIC disease e.g. 'Melanoma' (input list) in 'Skin Melanoma' (CIVIC) and not opposite
+            if whiteListed in cleanType:
+                # Keep track of diseases that passed the white list filter
+                if cleanType not in matched:
+                    ct = 'ct'
+                    matched.append(cleanType)
+
+    ## 3) When nothing could be matched to the white-list terms, attempt a second-best match strategy to higher-level diseases
+    ## In CIVIC, some 'general' diseases are included as disease, eg. 'cancer' or 'solid tumor'. Hence, must be exact matches since they are DB-specific
+    # NOTE: here, only PERFECT matches are allowed!
+    #   - including 'cancer' will only match 'cancer' and not 'lung cancer'
+    if not matched:
+        for cleanType in cleanSet:
+            if cleanType in alt_disease_names:
+                if cleanType not in matched:
+                    ct = 'gt'
+                    matched.append(cleanType)
+
+    ## 4) If nothing could be matched to either the white-list or higher-level diseases, return all 'allowed' (ie. not black-listed) diseases available in CIVIC
+    ## These will be considered as non-specific diseases (ie. off label)
+    if not matched:
+        for cleanType in cleanSet:
+            if cleanType not in matched:
+                ct = 'nct'
+                matched.append(cleanType)
+
+    ## Now, list 'matched' contains all cancer types for which their evidences items will be returned
+    ## They can correspond to either 'ct' (from white-list), 'gt' (from high-level list) or 'nct' (if nothing could be matched, return all that is available)
+    return (matched,ct)
 
 
 # Translate a 1-letter aminoacid code (if it exists) into a 3-letter code

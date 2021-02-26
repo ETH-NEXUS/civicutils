@@ -17,6 +17,19 @@ def check_identifier_type(identifier_type):
         )
 
 
+def check_empty_field(field):
+    """If a given field is None or empty string, return 'NULL'; otherwise return the same field string.
+## TODO
+
+    """
+
+    if (field is None) or (not field):
+        newField = "NULL"
+    else:
+        newField = field
+    return newField
+
+
 def reformat_results(results, identifier_type="entrez_symbol"):
     """Reformat records returned from CIVIC query into a dictionary.
 
@@ -38,9 +51,6 @@ def reformat_results(results, identifier_type="entrez_symbol"):
 # TODO: to be done soon; do not filter anything but retrieve all the gene-variant records unchanged. we will apply filtering using functions at a later step
 
     varMap = {}
-    retrieved_genes = []    # keep track of genes that could be retrieved from CIVIC
-    no_variants = []        # keep track of genes retrieved from CIVIC but with no variants available
-    all_variants = []       # keep track of all variants retrieved from CIVIC
 
     # Check that id type corresponds to one of the allowed options
     ignore = check_identifier_type(identifier_type)
@@ -63,15 +73,13 @@ def reformat_results(results, identifier_type="entrez_symbol"):
         if identifier_type == "entrez_symbol":
             gene_key = gene_symbol
 
-        # Keep track of gene ids which could be retrieved from CIVIC
-        if gene_key not in retrieved_genes:
-            retrieved_genes.append(gene_key)
+        # keep track of genes records returned by the query, even if they have no variants associated
+        if gene_key not in varMap.keys():
+            varMap[gene_key] = {}
 
         # NOTE: it seems that only genes having at least 1 variant record available are included in the offline cache (eg. gene ADORA1 has no variants and is found via API but not in the cache)
         # Skip genes that do not have any variants available in CIVIC
         if not gene_variants:
-            if gene_key not in no_variants:
-                no_variants.append(gene_key)
             continue
 
         # Iterate variant records associated to the current gene
@@ -79,20 +87,39 @@ def reformat_results(results, identifier_type="entrez_symbol"):
         for variant_record in gene_variants:
             # Internal variant id in CIVIC
             variant_id = str(variant_record.id)
-            # Keep track of all variants retrieved from CIVIC
-            if variant_id not in all_variants:
-                all_variants.append(variant_id)
             # Variant name in CIVIC; use uppercase for consistency
             variant_name = variant_record.name.strip().upper()
             hgvs_expressions = variant_record.hgvs_expressions
             # Score to assess the accumulation of evidence for each variant (quantity and quality)
             civic_score = variant_record.civic_actionability_score
             # Sanity check for empty scores
-            if civic_score is None:
-                civic_score = "NULL"
-
+            if (civic_score is None) or (not civic_score):
+                civic_score = 0.0
             # List of evidence records available for the current variant (can be empty)
             evidence_items = variant_record.evidence_items
+            n_items = len(evidence_items)
+
+            # Variant id should be unique even across genes
+            if variant_id not in varMap[gene_key].keys():
+                varMap[gene_key][variant_id] = {}
+                varMap[gene_key][variant_id]['name'] = variant_name
+                varMap[gene_key][variant_id]['civic_score'] = civic_score
+                # Keep original HGVS annotations (empty list when nothing is available)
+                # Use uppercase to avoid mismatches due to case
+                varMap[gene_key][variant_id]['hgvs'] = [h.strip().upper() for h in hgvs_expressions]
+
+                # Include associated variant types (sequence ontology terms). There can be multiple terms
+                varMap[gene_key][variant_id]['types'] = []
+                for vartype_record in variant_record.variant_types:
+                    varMap[gene_key][variant_id]['types'].append(vartype_record.name.strip().upper())
+                # Account for empty variant types (can happen)
+                # 'NULL' is introduced to distinguish from 'N/A' tag
+                if not varMap[gene_key][variant_id]['types']:
+                    varMap[gene_key][variant_id]['types'] = ["NULL"]
+
+                # Keep track of number of evidence items associated with the current variant
+                varMap[gene_key][variant_id]['n_evidence_items'] = n_items
+                varMap[gene_key][variant_id]['evidence_items'] = {}
 
             # Iterate through the listed evidence items and store relevant information for this variant
             # Variants which do not have any clinical data associated to them will be directly skipped
@@ -100,78 +127,33 @@ def reformat_results(results, identifier_type="entrez_symbol"):
 
                 # FIXME: Sanity check that all critical elements are present and non-empty (entrez_name, variant name, evidence_type, disease name)
 
-                # Use uppercase for consistency of the tags
-                evidence_status = evidence_record.status.strip().upper()
+                # Use uppercase for consistency of the tags (except id which should be unique)
+                # These fields are expected to never be empty or None
                 evidence_type = evidence_record.evidence_type.strip().upper()
                 disease = evidence_record.disease.name.strip().upper()
+                evidence_status = evidence_record.status.strip().upper()
+                source_type = evidence_record.source.source_type.strip().upper()
+                source_status = evidence_record.source.status.strip().upper()
+                evidence_id = evidence_record.source.citation_id.strip()        # expected to be entirely numeric
 
-                evidence_level = evidence_record.evidence_level                     # just in case, should never be None
-                variant_origin = evidence_record.variant_origin                     # can be None
-                evidence_direction = evidence_record.evidence_direction             # can be None
-                clinical_significance = evidence_record.clinical_significance       # can be None
+                if evidence_type not in varMap[gene_key][variant_id]['evidence_items'].keys():
+                    varMap[gene_key][variant_id]['evidence_items'][evidence_type] = {}
+                if disease not in varMap[gene_key][variant_id]['evidence_items'][evidence_type].keys():
+                    varMap[gene_key][variant_id]['evidence_items'][evidence_type][disease] = {}
 
-                # Skip records that are not accepted evidence
-                if (evidence_status != "ACCEPTED"):
-                    continue
-
-                # Skip records that correspond to germline variants
-                # The variant_origin field might be blank/empty (None)
-                if variant_origin:
-                    if re.search("GERMLINE", variant_origin):
-                        continue
-
-                # Sanity check for empty evidence direction, clinical significance or level
+                # Sanity check for fields that can be empty
                 # 'NULL' is introduced to distinguish from 'N/A' tag
-                if evidence_direction is None:
-                    evidence_direction = "NULL"
-                else:
-                    evidence_direction = evidence_direction.strip().upper()
-                if clinical_significance is None:
-                    clinical_significance = "NULL"
-                else:
-                    clinical_significance = clinical_significance.strip().upper()
-                if evidence_level is None:
-                    evidence_level = "NULL"
-                else:
-                    evidence_level = evidence_level.strip().upper()
+                evidence_level = check_empty_field(evidence_record.evidence_level).strip().upper()                     # string (just in case, should never be None)
+                variant_origin = check_empty_field(evidence_record.variant_origin).strip().upper()                     # string, can be None
+                evidence_direction = check_empty_field(evidence_record.evidence_direction).strip().upper()             # string, can be None
+                clinical_significance = check_empty_field(evidence_record.clinical_significance).strip().upper()       # string, can be None
+                evidence_rating = check_empty_field(evidence_record.rating)                                            # numeric, can be None
+                # sanity check for cases when rating=0 (check will return 'NULL')
+                if (isinstance(evidence_record.rating, int) or isinstance(evidence_record.rating, float)) and (evidence_rating == "NULL"):
+                    evidence_rating = 0.0
 
                 # Combine the direction and significance of the evidence in one term
                 evidence = evidence_direction + ':' + clinical_significance
-
-                # At this point, currently evaluate evidence item has passed all the checks/filters
-                # Keep track of the current evidence item under the corresponding variant and gene
-                if gene_key not in varMap.keys():
-                    varMap[gene_key] = {}
-
-                # Variant name should be unique within gene (found some duplicates but all were submitted, not accepted data)
-                if variant_name not in varMap[gene_key].keys():
-                    varMap[gene_key][variant_name] = {}
-                    varMap[gene_key][variant_name]['id'] = variant_id
-                    varMap[gene_key][variant_name]['civic_score'] = civic_score
-
-                    ## Generate list of strings that will be used to match our input variants in CIVIC
-                    ## Returned list always has at least length=1 (in this case, containing only variant name)
-                    ## For CNV, variant matching is not based on HGVS, so matchStrings will only contain the variant name
-                    matchStrings = generate_civic_matchStrings(variant_name, hgvs_expressions, dataType)
-                    varMap[gene_key][variant_name]['match_hgvs'] = matchStrings
-                    # Keep original HGVS annotations (empty list when nothing is available)
-                    # Use uppercase to avoid mismatches due to case
-                    varMap[gene_key][variant_name]['hgvs'] = [h.strip().upper() for h in hgvs_expressions]
-
-                    # Include associated variant types (sequence ontology terms). There can be multiple terms
-                    varMap[gene_key][variant_name]['types'] = []
-                    for vartype_record in variant_record.variant_types:
-                        varMap[gene_key][variant_name]['types'].append(vartype_record.name.strip().upper())
-                    # Account for empty variant types (can happen)
-                    # 'NULL' is introduced to distinguish from 'N/A' tag
-                    if not varMap[gene_key][variant_name]['types']:
-                        varMap[gene_key][variant_name]['types'] = ["NULL"]
-
-                # FIXME: there is no sanity check for detecting possible variant name duplicates
-                if evidence_type not in varMap[gene_key][variant_name].keys():
-                    varMap[gene_key][variant_name][evidence_type] = {}
-                if disease not in varMap[gene_key][variant_name][evidence_type].keys():
-                    varMap[gene_key][variant_name][evidence_type][disease] = {}
 
                 drugs = []
                 evidence_drugs = evidence_record.drugs
@@ -196,26 +178,34 @@ def reformat_results(results, identifier_type="entrez_symbol"):
                     # Introduced for consistency purposes within the varMap structure
                     drugs = ["NULL"]
 
+                # sanity checks that only 'PREDICTIVE' evidences have drugs associated
+                if (evidence_type != "PREDICTIVE") and (drugs != ["NULL"]):
+                    raise ValueError(
+                        f"'Evidence type {evidence_type} cannot have drugs associated ({drugs}).' .\n"
+                    )
+                # submitted evidence items can fulfill having 'PREDICTIVE' evidence type and no drugs ('NULL')
+
                 # Iterate through drugs to add evidences associated to them
                 #   For non-Predictive evidences or Predictive with empty drugs, drugs=['NULL']
                 #   For Predictive and interaction=None, len(drugs) = 1
                 #   For Predictive and interaction='Substitutes', len(drugs)>1
                 #   For Predictive and interaction!='Substitutes', len(drugs)=1 (combiantion of several using '+')
                 for drug in drugs:
-                    if drug not in varMap[gene_key][variant_name][evidence_type][disease].keys():
-                        varMap[gene_key][variant_name][evidence_type][disease][drug] = {}
-                    if evidence not in varMap[gene_key][variant_name][evidence_type][disease][drug].keys():
-                        varMap[gene_key][variant_name][evidence_type][disease][drug][evidence] = {}
-                    if evidence_level not in varMap[gene_key][variant_name][evidence_type][disease][drug][evidence].keys():
-                        varMap[gene_key][variant_name][evidence_type][disease][drug][evidence][evidence_level] = []
-                    # Group all publications associated to the same level. Do not check publication status
-                    ## On 25.01.2019, source structure was changed to introduce ASCO abstracts as a source type
-## TODO: sanity check for empty ID. Check for type of source?
-                    varMap[gene_key][variant_name][evidence_type][disease][drug][evidence][evidence_level].append(evidence_record.source.citation_id.strip())
+                    if drug not in varMap[gene_key][variant_id]['evidence_items'][evidence_type][disease].keys():
+                        varMap[gene_key][variant_id]['evidence_items'][evidence_type][disease][drug] = {}
+                    if evidence not in varMap[gene_key][variant_id]['evidence_items'][evidence_type][disease][drug].keys():
+                        varMap[gene_key][variant_id]['evidence_items'][evidence_type][disease][drug][evidence] = {}
+                    if evidence_level not in varMap[gene_key][variant_id]['evidence_items'][evidence_type][disease][drug][evidence].keys():
+                        varMap[gene_key][variant_id]['evidence_items'][evidence_type][disease][drug][evidence][evidence_level] = []
+
+                    # Group all publications associated to the same level
+                    # Keep track of associated info: source type, source id, evidence status, publication status, variant origin, evidence rating
+                    # Format: 'TYPE_ID:EVIDENCESTATUS:SOURCESTATUS:VARORIGIN:RATING'
+                    varMap[gene_key][variant_id]['evidence_items'][evidence_type][disease][drug][evidence][evidence_level].append(source_type + "_" + str(evidence_id) + ":" + evidence_status + ":" + source_status + ":" + variant_origin + ":" + str(evidence_rating))
 
 # TODO: iterate through assertions and repeat above process? They are not structured but (highly curated) free text
 
-    return (varMap,retrieved_genes,no_variants,all_variants)
+    return varMap
 
 
 # Given a list of gene identifiers, query CIVIC for known variants and return a structured dictionary with the relevant results
@@ -284,5 +274,5 @@ def query_civic_genes(genes, identifier_type="entrez_symbol"):
     # At this point, all CIVIC results for queried genes have been retrieved in a list
     # Process gene records into a dictionary with structured format
     # gene -> variants -> evidence_items
-    (dict_results,retrieved_genes,no_variants,all_variants) = reformat_results(results, identifier_type)
-    return (dict_results,retrieved_genes,no_variants,all_variants)
+    dict_results = reformat_results(results, identifier_type)
+    return dict_results
