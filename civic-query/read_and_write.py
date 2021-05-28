@@ -1,29 +1,12 @@
-#!/usr/bin/env python
-
-'''
-Functions for I/O operations
-Lourdes Rosano, November 2020
-'''
-
-'''
-Required Python modules
-'''
-
 import sys
 import yaml
 import json
 
-'''
-Required files
-'''
-
 # TODO: how to specify? or can they be imported as modules are instead?
 # data.yml
 
-'''
-Functions
-'''
 
+# FIXME: should this go in init.py?
 def get_dict_aminoacids():
     f = "data/data.yml"
     entry_name = "aminoacids"
@@ -52,6 +35,7 @@ def checkHeaderField(name,headerSplit,isRequired=True):
             sys.exit(1)
     return pos
 
+
 # Retrieve the following column names from the given header:
 # - Variant_dna: HGVS c. annotation for the variant (one per row)
 # - Variant_prot: HGVS p. annotation (if available) for the variant (one per row)
@@ -68,12 +52,15 @@ def processSnvHeader(header):
     return (cPos,pPos,genePos,impactPos,exonPos)
 
 
+# TODO
+# FIXME: allow several variants per row?
 
 # Assumes header and that relevant info is contained in the following columns: Variant_dna, Variant_prot, Gene. Optional columns: Variant_impact, Variant_exon
 # For further info, see docs of processSnvHeader()
 def readInSnvs(infile):
     # dict lineNumber -> [dna,prot,gene,impact,exon]
     rawData = {}
+    snvData = {}
     inFile = open(infile,'r')
     header = inFile.readline().strip()
     (cPos,pPos,genePos,impactPos,exonPos) = processSnvHeader(header)
@@ -90,27 +77,23 @@ def readInSnvs(infile):
         if exonPos:
             exon = lineSplit[exonPos].strip()
         rawData[nLine] = [cVar,pVar,gene,impact,exon]
-    infile.close()
-    return(rawData)
 
-# Process rawData to have gene-centered dict
-# Returns dict of gene -> [var1,var2,..,varN], where a given var="lineNumber|dna|prot|impact|exon"
-def processSnvData(rawData):
-    snvData = {}
-    for nLine in rawData.keys():
-        # lineNumber -> [dna,prot,gene,impact,exon]
-        data = rawData[nLine]
-        # Retrieve and remove gene from data list
-        gene = data.pop(2)
+        # Process rawData to have gene-centered dict
+        # Returns dict of gene -> [var1,var2,..,varN], where a given var="lineNumber|dna|prot|impact|exon"
         if gene not in snvData.keys():
-            snvData[gene] = []
+            snvData[gene] = {}
         # Collapse variant info separated with "|"
-        variant = "|".join(data)
         # Keep track of what line each variant comes from
-        mapped_var = nLine + "|" + variant
+        variant = nLine + "|" + cVar + "|" + pVar + "|" + impact + "|" + exon
+# FIXME
+        if variant in snvData[gene].keys():
+            print("Found duplicated variant '%s|%s' for gene '%s' in line '%s'!" %(cVar,pVar,gene,nLine))
+            sys.exit(1)
         # This way, we ensure all variants will be unique in dict snvData
-        snvData[gene].append(mapped_var)
-    return(snvData)
+        snvData[gene][variant] = {}
+
+    infile.close()
+    return (rawData,snvData)
 
 
 # TODO: add more options from json.dump?

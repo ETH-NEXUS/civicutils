@@ -4,7 +4,7 @@ import re
 
 from .utils import check_string_filter_arguments
 
-def apply_in_filter(field, inList, matchType="exact"):
+def filter_in(field, inList, matchType="exact"):
     (field, inList) = check_string_filter_arguments(field, inList)
     match = False
     # Only perform check when inList is not empty
@@ -23,7 +23,7 @@ def apply_in_filter(field, inList, matchType="exact"):
     return match
 
 
-def apply_not_in_filter(field, outList, matchType="exact"):
+def filter_not_in(field, outList, matchType="exact"):
     (field, outList) = check_string_filter_arguments(field, outList)
     match = False
     # If no list was provided, even if field is empty, filter is always "passed" (ie. False to not remove variant)
@@ -41,7 +41,7 @@ def apply_not_in_filter(field, outList, matchType="exact"):
 
 # Only keep if cutoff or more instances
 # Ignore filter when cutoff=0
-def apply_cutoff_filter(field, cutoff):
+def filter_cutoff(field, cutoff):
 
 ## TODO check for correct classes provided
 # field should be numeric or float
@@ -56,7 +56,7 @@ def apply_cutoff_filter(field, cutoff):
     return match
 
 
-def filter_civic_results(varMap, gene_id_in=[], gene_id_not_in=[], min_variants=0, var_id_in=[], var_id_not_in=[], var_name_in=[], var_name_not_in=[], min_civic_score=0, var_type_in=[], var_type_not_in=[], min_evidence_items=0, evidence_type_in=[], evidence_type_not_in=[], disease_in=[], disease_not_in=[], drug_name_in=[], drug_name_not_in=[], evidence_dir_in=[], evidence_dir_not_in=[], evidence_clinsig_in=[], evidence_clinsig_not_in=[], evidence_level_in=[], evidence_level_not_in=[], evidence_status_in=[], evidence_status_not_in=[], source_status_in=[], source_status_not_in=[], var_origin_in=[], var_origin_not_in=[], source_type_in=[], source_type_not_in=[], min_evidence_rating=0, output_empty=False):
+def filter_civic(varMap, gene_id_in=[], gene_id_not_in=[], min_variants=0, var_id_in=[], var_id_not_in=[], var_name_in=[], var_name_not_in=[], min_civic_score=0, var_type_in=[], var_type_not_in=[], min_evidence_items=0, evidence_type_in=[], evidence_type_not_in=[], disease_in=[], disease_not_in=[], drug_name_in=[], drug_name_not_in=[], evidence_dir_in=[], evidence_dir_not_in=[], evidence_clinsig_in=[], evidence_clinsig_not_in=[], evidence_level_in=[], evidence_level_not_in=[], evidence_status_in=[], evidence_status_not_in=[], source_status_in=[], source_status_not_in=[], var_origin_in=[], var_origin_not_in=[], source_type_in=[], source_type_not_in=[], min_evidence_rating=0, output_empty=False):
 
 ## filters are applied in the same order as their corresponding arguments (as they are defined in the function, not the order specified in the function call)
 ## so, logic is always AND for all selected filters?
@@ -91,16 +91,16 @@ def filter_civic_results(varMap, gene_id_in=[], gene_id_not_in=[], min_variants=
     for gene_id in varMap.keys():
         # gene id should always be available  (type of id is chosen during the query)
         gene_id_str = str(gene_id)
-        keepGene = apply_in_filter(gene_id_str, gene_id_in, matchType="exact")
+        keepGene = filter_in(gene_id_str, gene_id_in, matchType="exact")
         if not keepGene:
             continue
-        removeGene = apply_not_in_filter(gene_id_str, gene_id_not_in, matchType="exact")
+        removeGene = filter_not_in(gene_id_str, gene_id_not_in, matchType="exact")
         if removeGene:
             continue
 
         # allow number of min_variants to be 0
         n_variants = len(varMap[gene_id].keys())
-        keepGene = apply_cutoff_filter(n_variants, min_variants)
+        keepGene = filter_cutoff(n_variants, min_variants)
         if not keepGene:
             continue
 
@@ -113,25 +113,25 @@ def filter_civic_results(varMap, gene_id_in=[], gene_id_not_in=[], min_variants=
         # variant id should always be available
         for var_id in varMap[gene_id].keys():
             var_id_str = str(var_id)
-            keepVar = apply_in_filter(var_id_str, var_id_in, matchType="exact")
+            keepVar = filter_in(var_id_str, var_id_in, matchType="exact")
             if not keepVar:
                 continue
-            removeVar = apply_not_in_filter(var_id_str, var_id_not_in, matchType="exact")
+            removeVar = filter_not_in(var_id_str, var_id_not_in, matchType="exact")
             if removeVar:
                 continue
 
             # variant name should always be available (never "NULL")
             variant = varMap[gene_id][var_id]["name"]
-            keepVar = apply_in_filter(variant, var_name_in, matchType="partial")
+            keepVar = filter_in(variant, var_name_in, matchType="partial")
             if not keepVar:
                 continue
-            removeVar = apply_not_in_filter(variant, var_name_not_in, matchType="partial")
+            removeVar = filter_not_in(variant, var_name_not_in, matchType="partial")
             if removeVar:
                 continue
 
             # civic score is always a number (can be 0)
             var_score = varMap[gene_id][var_id]["civic_score"]
-            keepVar = apply_cutoff_filter(var_score, min_civic_score)
+            keepVar = filter_cutoff(var_score, min_civic_score)
             if not keepVar:
                 continue
 
@@ -144,10 +144,10 @@ def filter_civic_results(varMap, gene_id_in=[], gene_id_not_in=[], min_variants=
             #  - if any var_type_in was provided, then variant will fail this filter
             #  - if any var_type_not_in was provided, then variant will not fail this filter (given that the previous filter did not either)
             for var_type in variant_types:
-                keepType = apply_in_filter(var_type, var_type_in, matchType="partial")
+                keepType = filter_in(var_type, var_type_in, matchType="partial")
                 if keepType:
                     nKeep += 1
-                removeType = apply_not_in_filter(var_type, var_type_not_in, matchType="partial")
+                removeType = filter_not_in(var_type, var_type_not_in, matchType="partial")
                 if removeType:
                     nRemove += 1
             if (nKeep == 0):
@@ -157,7 +157,7 @@ def filter_civic_results(varMap, gene_id_in=[], gene_id_not_in=[], min_variants=
 
             # allow number of evidence items to be 0
             n_evidence_items = varMap[gene_id][var_id]["n_evidence_items"]
-            keepVar = apply_cutoff_filter(n_evidence_items, min_evidence_items)
+            keepVar = filter_cutoff(n_evidence_items, min_evidence_items)
             if not keepVar:
                 continue
 
@@ -178,10 +178,10 @@ def filter_civic_results(varMap, gene_id_in=[], gene_id_not_in=[], min_variants=
             allowed_evidence_types = []
             # evidence type should always be available
             for evidence_type in evidence_types:
-                keepType = apply_in_filter(evidence_type, evidence_type_in, matchType="exact")
+                keepType = filter_in(evidence_type, evidence_type_in, matchType="exact")
                 if not keepType:
                     continue
-                removeType = apply_not_in_filter(evidence_type, evidence_type_not_in, matchType="exact")
+                removeType = filter_not_in(evidence_type, evidence_type_not_in, matchType="exact")
                 if removeType:
                     continue
                 allowed_evidence_types.append(evidence_type)
@@ -198,10 +198,10 @@ def filter_civic_results(varMap, gene_id_in=[], gene_id_not_in=[], min_variants=
                 # disease names should always be available
                 allowed_diseases = []
                 for type_disease in type_diseases:
-                    keepDisease = apply_in_filter(type_disease, disease_in, matchType="partial")
+                    keepDisease = filter_in(type_disease, disease_in, matchType="partial")
                     if not keepDisease:
                         continue
-                    removeDisease = apply_not_in_filter(type_disease, disease_not_in, matchType="partial")
+                    removeDisease = filter_not_in(type_disease, disease_not_in, matchType="partial")
                     if removeDisease:
                         continue
                     allowed_diseases.append(type_disease)
@@ -225,10 +225,10 @@ def filter_civic_results(varMap, gene_id_in=[], gene_id_not_in=[], min_variants=
                     else:
                         # iterate existing drugs and apply filters
                         for disease_drug in disease_drugs:
-                            keepDrug = apply_in_filter(disease_drug, drug_name_in, matchType="partial")
+                            keepDrug = filter_in(disease_drug, drug_name_in, matchType="partial")
                             if not keepDrug:
                                 continue
-                            removeDrug = apply_not_in_filter(disease_drug, drug_name_not_in, matchType="partial")
+                            removeDrug = filter_not_in(disease_drug, drug_name_not_in, matchType="partial")
                             if removeDrug:
                                 continue
                             allowed_drugs.append(disease_drug)
@@ -256,18 +256,18 @@ def filter_civic_results(varMap, gene_id_in=[], gene_id_not_in=[], min_variants=
 
                             # check evidence direction filters
                             direction = evidenceArr[0]
-                            keepDir = apply_in_filter(direction, evidence_dir_in, matchType="exact")
+                            keepDir = filter_in(direction, evidence_dir_in, matchType="exact")
                             if not keepDir:
                                 continue
-                            removeDir = apply_not_in_filter(direction, evidence_dir_not_in, matchType="exact")
+                            removeDir = filter_not_in(direction, evidence_dir_not_in, matchType="exact")
                             if removeDir:
                                 continue
                             # check evidence clinical significance filters
                             clin_signf = evidenceArr[1]
-                            keepClin = apply_in_filter(clin_signf, evidence_clinsig_in, matchType="exact")
+                            keepClin = filter_in(clin_signf, evidence_clinsig_in, matchType="exact")
                             if not keepClin:
                                 continue
-                            removeClin = apply_not_in_filter(clin_signf, evidence_clinsig_not_in, matchType="exact")
+                            removeClin = filter_not_in(clin_signf, evidence_clinsig_not_in, matchType="exact")
                             if removeClin:
                                 continue
                             allowed_evidences.append(evidence)
@@ -283,10 +283,10 @@ def filter_civic_results(varMap, gene_id_in=[], gene_id_not_in=[], min_variants=
                             evidence_levels = list(varMap[gene_id][var_id]["evidence_items"][evidence_type][disease][drug][this_evidence].keys())
                             allowed_levels = []
                             for evidence_level in evidence_levels:
-                                keepLevel = apply_in_filter(evidence_level, evidence_level_in, matchType="exact")
+                                keepLevel = filter_in(evidence_level, evidence_level_in, matchType="exact")
                                 if not keepLevel:
                                     continue
-                                removeLevel = apply_not_in_filter(evidence_level, evidence_level_not_in, matchType="exact")
+                                removeLevel = filter_not_in(evidence_level, evidence_level_not_in, matchType="exact")
                                 if removeLevel:
                                     continue
                                 allowed_levels.append(evidence_level)
@@ -329,31 +329,31 @@ def filter_civic_results(varMap, gene_id_in=[], gene_id_not_in=[], min_variants=
                                     this_id = tmpIdArr[1]
 
                                     # apply filters on evidence status
-                                    keepStatus = apply_in_filter(evidence_status, evidence_status_in, matchType="exact")
+                                    keepStatus = filter_in(evidence_status, evidence_status_in, matchType="exact")
                                     if not keepStatus:
                                         continue
-                                    removeStatus = apply_not_in_filter(evidence_status, evidence_status_not_in, matchType="exact")
+                                    removeStatus = filter_not_in(evidence_status, evidence_status_not_in, matchType="exact")
                                     if removeStatus:
                                         continue
                                     # apply filters on source status
-                                    keepSource = apply_in_filter(source_status, source_status_in, matchType="partial")
+                                    keepSource = filter_in(source_status, source_status_in, matchType="partial")
                                     if not keepSource:
                                         continue
-                                    removeSource = apply_not_in_filter(source_status, source_status_not_in, matchType="partial")
+                                    removeSource = filter_not_in(source_status, source_status_not_in, matchType="partial")
                                     if removeSource:
                                         continue
                                     # apply filters on variant origin
-                                    keepOrigin = apply_in_filter(var_origin, var_origin_in, matchType="partial")
+                                    keepOrigin = filter_in(var_origin, var_origin_in, matchType="partial")
                                     if not keepOrigin:
                                         continue
-                                    removeOrigin = apply_not_in_filter(var_origin, var_origin_not_in, matchType="partial")
+                                    removeOrigin = filter_not_in(var_origin, var_origin_not_in, matchType="partial")
                                     if removeOrigin:
                                         continue
                                     # apply filters on source type
-                                    keepType = apply_in_filter(idType, source_type_in, matchType="exact")
+                                    keepType = filter_in(idType, source_type_in, matchType="exact")
                                     if not keepType:
                                         continue
-                                    removeType = apply_not_in_filter(idType, source_type_not_in, matchType="exact")
+                                    removeType = filter_not_in(idType, source_type_not_in, matchType="exact")
                                     if removeType:
                                         continue
                                     # when rating in not available (ie. 'NULL'), the evidence will directly fail if corresponding filter is set
@@ -362,7 +362,7 @@ def filter_civic_results(varMap, gene_id_in=[], gene_id_not_in=[], min_variants=
                                             continue
                                     # when rating is available, apply filters on evidence rating
                                     else:
-                                        keepRating = apply_cutoff_filter(rating, min_evidence_rating)
+                                        keepRating = filter_cutoff(rating, min_evidence_rating)
                                         if not keepRating:
                                             continue
 

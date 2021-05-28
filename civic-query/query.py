@@ -7,7 +7,7 @@ from .utils import check_identifier_type,check_empty_field
 
 # Given a list of gene identifiers, query CIVIC for known variants and return a structured dictionary with the relevant results
 # List of gene ids can be: CIVIC id, entrez id or gene symbol
-def query_civic_genes(genes, identifier_type="entrez_symbol"):
+def query_civic(genes, identifier_type="entrez_symbol"):
     """Given a list of gene identifiers, query CIVIC for known variants and return a structured dictionary with the relevant results
 
 ## TODO
@@ -71,12 +71,11 @@ def query_civic_genes(genes, identifier_type="entrez_symbol"):
     # At this point, all CIVIC results for queried genes have been retrieved in a list
     # Process gene records into a dictionary with structured format
     # gene -> variants -> evidence_items
-    dict_results = reformat_results(results, identifier_type)
+    dict_results = reformat_civic(results, identifier_type)
     return dict_results
 
 
-
-def reformat_results(results, identifier_type="entrez_symbol"):
+def reformat_civic(results, identifier_type="entrez_symbol"):
     """Reformat records returned from CIVIC query into a dictionary.
 
     Arguments
