@@ -2,32 +2,78 @@ import sys
 import os
 import re
 
+from .utils import check_identifier_type,check_empty_field
 
-def check_identifier_type(identifier_type):
-    """Check that a given identifier type is valid.
+
+# Given a list of gene identifiers, query CIVIC for known variants and return a structured dictionary with the relevant results
+# List of gene ids can be: CIVIC id, entrez id or gene symbol
+def query_civic_genes(genes, identifier_type="entrez_symbol"):
+    """Given a list of gene identifiers, query CIVIC for known variants and return a structured dictionary with the relevant results
 
 ## TODO
 
+    Arguments
+    ---------
+
+    Returns
+    -------
     """
 
-    if identifier_type not in ["entrez_id", "entrez_symbol", "civic_id"]:
-        raise ValueError(
-            f"'{identifier_type}' is not a valid identifier type.\n"
-            f"Please, provide one of the following identifier types: 'entrez_id','entrez_symbol','civic_id'.\n"
+    # Check that provided argument is a list (even if length = 1)
+    if (not isinstance(genes, list)) or (not genes):
+        raise TypeError(
+            f"'{genes}' is not of type 'list'.\n"
         )
 
+    # Check that id type corresponds to one of the allowed options
+    ignore = check_identifier_type(identifier_type)
 
-def check_empty_field(field):
-    """If a given field is None or empty string, return 'NULL'; otherwise return the same field string.
-## TODO
+    ## Offline cache of CIVICdb should already be loaded
 
-    """
+    # Querying functionality provided by module `civicpy` can only use internal CIVIC ids
+    # NOTE: when using `civic.get_genes_by_ids()` with CIVIC ids, if any of them is not contained in the cache file, then it will try to directly query the CIVICdb, causing this script to crash
 
-    if (field is None) or (not field):
-        newField = "NULL"
-    else:
-        newField = field
-    return newField
+    # Workaround: retrieve all gene records available in the offline cache and parse them to match to input genes
+    # Avoid at all costs directly querying the CIVIC db: even for CIVIC ids, we will match to available records from the offline cache
+    all_results = civic.get_all_genes()
+
+    # Iterate individual records and retrieve only those matching the provided gene ids
+    results = []
+    for gene_record in all_results:
+        toKeep = False
+
+        if (identifier_type == "civic_id"):
+            gene_id = str(gene_record.id)                    # expectation is a single number
+            if gene_id in genes:
+                toKeep = True
+
+        if (identifier_type == "entrez_id"):
+            gene_id = str(gene_record.entrez_id)             # expectation is a single number
+            if gene_id in genes:
+                toKeep = True
+
+        if (identifier_type == "entrez_symbol"):
+            gene_id = gene_record.name.strip()          # expectation is single string
+            aliases = gene_record.aliases               # expectation is list of strings
+            # Perform union of all gene symbols available for the current record
+            tmp_symbols = list(set([gene_id]) | set(aliases))
+            # Try to match current gene record (any alias) to the provided gene symbols
+            for tmp_symbol in tmp_symbols:
+                # Use uppercase to ensure consistency of gene symbols
+                this_symbol = tmp_symbol.strip().upper()
+                if this_symbol in genes:
+                    toKeep = True
+                    break
+
+        if toKeep:
+            results.append(gene_record)
+
+    # At this point, all CIVIC results for queried genes have been retrieved in a list
+    # Process gene records into a dictionary with structured format
+    # gene -> variants -> evidence_items
+    dict_results = reformat_results(results, identifier_type)
+    return dict_results
+
 
 
 def reformat_results(results, identifier_type="entrez_symbol"):
@@ -208,71 +254,3 @@ def reformat_results(results, identifier_type="entrez_symbol"):
     return varMap
 
 
-# Given a list of gene identifiers, query CIVIC for known variants and return a structured dictionary with the relevant results
-# List of gene ids can be: CIVIC id, entrez id or gene symbol
-def query_civic_genes(genes, identifier_type="entrez_symbol"):
-    """Given a list of gene identifiers, query CIVIC for known variants and return a structured dictionary with the relevant results
-
-## TODO
-
-    Arguments
-    ---------
-
-    Returns
-    -------
-    """
-
-    # Check that provided argument is a list (even if length = 1)
-    if (not isinstance(genes, list)) or (not genes):
-        raise TypeError(
-            f"'{genes}' is not of type 'list'.\n"
-        )
-
-    # Check that id type corresponds to one of the allowed options
-    ignore = check_identifier_type(identifier_type)
-
-    ## Offline cache of CIVICdb should already be loaded
-
-    # Querying functionality provided by module `civicpy` can only use internal CIVIC ids
-    # NOTE: when using `civic.get_genes_by_ids()` with CIVIC ids, if any of them is not contained in the cache file, then it will try to directly query the CIVICdb, causing this script to crash
-
-    # Workaround: retrieve all gene records available in the offline cache and parse them to match to input genes
-    # Avoid at all costs directly querying the CIVIC db: even for CIVIC ids, we will match to available records from the offline cache
-    all_results = civic.get_all_genes()
-
-    # Iterate individual records and retrieve only those matching the provided gene ids
-    results = []
-    for gene_record in all_results:
-        toKeep = False
-
-        if (identifier_type == "civic_id"):
-            gene_id = str(gene_record.id)                    # expectation is a single number
-            if gene_id in genes:
-                toKeep = True
-
-        if (identifier_type == "entrez_id"):
-            gene_id = str(gene_record.entrez_id)             # expectation is a single number
-            if gene_id in genes:
-                toKeep = True
-
-        if (identifier_type == "entrez_symbol"):
-            gene_id = gene_record.name.strip()          # expectation is single string
-            aliases = gene_record.aliases               # expectation is list of strings
-            # Perform union of all gene symbols available for the current record
-            tmp_symbols = list(set([gene_id]) | set(aliases))
-            # Try to match current gene record (any alias) to the provided gene symbols
-            for tmp_symbol in tmp_symbols:
-                # Use uppercase to ensure consistency of gene symbols
-                this_symbol = tmp_symbol.strip().upper()
-                if this_symbol in genes:
-                    toKeep = True
-                    break
-
-        if toKeep:
-            results.append(gene_record)
-
-    # At this point, all CIVIC results for queried genes have been retrieved in a list
-    # Process gene records into a dictionary with structured format
-    # gene -> variants -> evidence_items
-    dict_results = reformat_results(results, identifier_type)
-    return dict_results
