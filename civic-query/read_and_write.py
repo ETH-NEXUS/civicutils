@@ -58,7 +58,7 @@ def processSnvHeader(header):
 # Assumes header and that relevant info is contained in the following columns: Variant_dna, Variant_prot, Gene. Optional columns: Variant_impact, Variant_exon
 # For further info, see docs of processSnvHeader()
 def readInSnvs(infile):
-    # dict lineNumber -> [dna,prot,gene,impact,exon]
+    # dict lineNumber -> [gene,dna,prot,(impact,exon)]
     rawData = {}
     snvData = {}
     inFile = open(infile,'r')
@@ -76,7 +76,7 @@ def readInSnvs(infile):
         exon = ""
         if exonPos:
             exon = lineSplit[exonPos].strip()
-        rawData[nLine] = [cVar,pVar,gene,impact,exon]
+        rawData[nLine] = [gene,cVar,pVar,impact,exon]
 
         # Process rawData to have gene-centered dict
         # Returns dict of gene -> [var1,var2,..,varN], where a given var="lineNumber|dna|prot|impact|exon"
