@@ -2,8 +2,7 @@ import sys
 import os
 import re
 
-from .utils import check_identifier_type,check_empty_field
-
+from utils import check_identifier_type,check_empty_field
 
 # Given a list of gene identifiers, query CIVIC for known variants and return a structured dictionary with the relevant results
 # List of gene ids can be: CIVIC id, entrez id or gene symbol
@@ -21,9 +20,8 @@ def query_civic(genes, identifier_type="entrez_symbol"):
 
     # Check that provided argument is a list (even if length = 1)
     if (not isinstance(genes, list)) or (not genes):
-        raise TypeError(
-            f"'{genes}' is not of type 'list'.\n"
-        )
+        raise TypeError("")
+#             f"'{genes}' is not of type 'list'.\n"
 
     # Check that id type corresponds to one of the allowed options
     ignore = check_identifier_type(identifier_type)
@@ -225,9 +223,8 @@ def reformat_civic(results, identifier_type="entrez_symbol"):
 
                 # sanity checks that only 'PREDICTIVE' evidences have drugs associated
                 if (evidence_type != "PREDICTIVE") and (drugs != ["NULL"]):
-                    raise ValueError(
-                        f"'Evidence type {evidence_type} cannot have drugs associated ({drugs}).' .\n"
-                    )
+                    raise ValueError("")
+#                         f"'Evidence type {evidence_type} cannot have drugs associated ({drugs}).' .\n"
                 # submitted evidence items can fulfill having 'PREDICTIVE' evidence type and no drugs ('NULL')
 
                 # Iterate through drugs to add evidences associated to them

@@ -20,6 +20,6 @@ aminoacids:
     E: GLU
     Y: TYR
     M: MET
-    '*': *
+    "*": "*"
     # CIVIC variant names use 'X' to indicate a stop codon
-    X: *
+    X: "*"

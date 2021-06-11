@@ -2,7 +2,7 @@ import sys
 import os
 import re
 
-from .utils import check_string_filter_arguments
+from utils import check_string_filter_arguments
 
 def filter_in(field, inList, matchType="exact"):
     (field, inList) = check_string_filter_arguments(field, inList)
@@ -82,9 +82,8 @@ def filter_civic(varMap, gene_id_in=[], gene_id_not_in=[], min_variants=0, var_i
 
     # sanity check that provided output_empty is logical
     if not (isinstance(output_empty, int) or isinstance(output_empty, float)):
-        raise TypeError(
-            f"'{output_empty}' must be of type 'int' or 'float'.\n"
-        )
+        raise TypeError("")
+#             f"'{output_empty}' must be of type 'int' or 'float'.\n"
 
     # Iterate complete dict of results and apply selected filters to generate a new (filtered) dict
     cleanMap = {}
@@ -249,10 +248,8 @@ def filter_civic(varMap, gene_id_in=[], gene_id_not_in=[], min_variants=0, var_i
                             evidenceArr = evidence.strip().split(':')
                             # sanity check for correct format of evidence string
                             if (len(evidenceArr) != 2):
-                                raise ValueError(
-# TODO
-                                    f"'{disease_drugs}' .\n"
-                                )
+# FIXME
+                                raise ValueError("")
 
                             # check evidence direction filters
                             direction = evidenceArr[0]
@@ -306,10 +303,7 @@ def filter_civic(varMap, gene_id_in=[], gene_id_not_in=[], min_variants=0, var_i
                                     itemArr = evidence_item.strip().split(":")
                                     # sanity check for correct format of evidence item string
                                     if (len(itemArr) != 5):
-                                        raise ValueError(
-# TODO
-                                            f"'{itemArr}' .\n"
-                                        )
+                                        raise ValueError("")
                                     tmpId = itemArr[0]
                                     evidence_status = itemArr[1]
                                     source_status = itemArr[2]
@@ -321,10 +315,7 @@ def filter_civic(varMap, gene_id_in=[], gene_id_not_in=[], min_variants=0, var_i
                                     tmpIdArr = tmpId.split("_")
                                     # sanity check for correct format of evidence id string
                                     if (len(tmpIdArr) != 2):
-                                        raise ValueError(
-# TODO
-                                            f"'{tmpIdArr}' .\n"
-                                        )
+                                        raise ValueError("")
                                     idType = tmpIdArr[0]
                                     this_id = tmpIdArr[1]
 
