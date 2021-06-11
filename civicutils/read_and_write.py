@@ -16,6 +16,7 @@ def get_dict_aminoacids():
             data = yaml.safe_load(infile)
         except yaml.YAMLError as exc:
             print(exc)
+            sys.exit(1)
 
     # Sanity check that expected entry is contained in the yml file
     if entry_name not in data.keys():
@@ -165,11 +166,7 @@ def readInExpr(infile):
         gene = lineSplit[genePos].strip()
         logFC = lineSplit[logfcPos].strip()
         # Sanity check on valid type and number
-        try:
-            logFC = float(logFC)
-        except as 
-# FIXME TBC
-                
+        check_logFC(logFC,gene)
 
         rawData[str(nLine)] = [gene,logFC]
         # Process rawData to have gene-centered dict
@@ -178,7 +175,7 @@ def readInExpr(infile):
             exprData[gene] = {}
         # Collapse expression info separated with "|"
         # Keep track of what line each variant comes from
-        expression = logFC + "|" + str(nLine)
+        expression = str(logFC) + "|" + str(nLine)
         # NOTE: Expression values can never be duplicated because of the different row numbers assigned
         # if expression in exprData[gene].keys():
         #     print("Found duplicated expression value '%s' for gene '%s' in line '%s'!" %(logFC,gene,str(nLine)))

@@ -3,6 +3,12 @@ import os
 import re
 
 from utils import check_identifier_type,check_empty_field
+from civicpy import civic
+
+# TODO: can we just load the civic database once when the package is first loaded?
+success = civic.load_cache(on_stale='ignore')
+if not success:
+    raise ValueError("Could not load cache file from `civicpy`!")
 
 # Given a list of gene identifiers, query CIVIC for known variants and return a structured dictionary with the relevant results
 # List of gene ids can be: CIVIC id, entrez id or gene symbol
@@ -19,12 +25,14 @@ def query_civic(genes, identifier_type="entrez_symbol"):
     """
 
     # Check that provided argument is a list (even if length = 1)
-    if (not isinstance(genes, list)) or (not genes):
-        raise TypeError("")
+    if not isinstance(genes, list):
+        raise TypeError("Please provide a list of genes!")
+    if not genes:
+        raise ValueError("Please provided a non-empty list of genes!")
 #             f"'{genes}' is not of type 'list'.\n"
 
     # Check that id type corresponds to one of the allowed options
-    ignore = check_identifier_type(identifier_type)
+    check_identifier_type(identifier_type)
 
     ## Offline cache of CIVICdb should already be loaded
 
@@ -96,7 +104,7 @@ def reformat_civic(results, identifier_type="entrez_symbol"):
     varMap = {}
 
     # Check that id type corresponds to one of the allowed options
-    ignore = check_identifier_type(identifier_type)
+    check_identifier_type(identifier_type)
 
     # Iterate individual gene records to retrieve associated variants and evidence information
     for gene_record in results:
@@ -248,5 +256,4 @@ def reformat_civic(results, identifier_type="entrez_symbol"):
 # TODO: iterate through assertions and repeat above process? They are not structured but (highly curated) free text
 
     return varMap
-
 

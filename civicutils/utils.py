@@ -2,18 +2,29 @@ import sys
 import os
 import re
 
+from read_and_write import get_dict_aminoacids
+
 def check_identifier_type(identifier_type):
     """Check that a given identifier type is valid.
 
 ## TODO
 
     """
+    idTypes = ["entrez_id", "entrez_symbol", "civic_id"]
+    if identifier_type not in idTypes:
+        raise ValueError("'%s' is not a valid identifier_type. Please provide one of: %s" %(identifier_type,idTypes))
+    return None
 
-    if identifier_type not in ["entrez_id", "entrez_symbol", "civic_id"]:
-# FIXME
-        raise ValueError("")
-#             f"'{identifier_type}' is not a valid identifier type.\n"
-#             f"Please, provide one of the following identifier types: 'entrez_id','entrez_symbol','civic_id'.\n"
+def check_data_type(dataType):
+    """Check that a given data type is valid.
+
+## TODO
+
+    """
+    dataTypes = ["SNV", "CNV", "EXPR"]
+    if dataType not in dataTypes:
+        raise ValueError("'%s' is not a valid dataType. Please provide one of: %s" %(dataType,dataTypes))
+    return None
 
 
 def check_empty_field(inField):
@@ -32,6 +43,7 @@ def check_empty_field(inField):
 def check_empty_input(inField, fieldName, isRequired=True):
     """If a given inField is None, '.' or empty string, return empty ''; otherwise return the same inField string. For required fields, throw a warning
     """
+    check_is_str(inField,fieldName)
     if (inField is None) or (not inField) or (inField == "."):
         if isRequired:
 # TODO
@@ -57,41 +69,61 @@ def parse_input(inField, fieldName, isRequired=True):
             out.append(new)
     return out
 
+def check_logFC(logfc,gene):
+    """Check that a given logFC value is valid.
+
+## TODO
+
+    """
+    logfc = check_empty_input(logfc, "logFC", isRequired=True)
+    try:
+        logfc = float(logfc)
+    except ValueError:
+        print("Invalid logFC = '%s' for gene '%s'. Please provide a numeric value." %(logFC,gene))
+        sys.exit(1)
+    return logfc
+
 
 # Check object is a list (even if empty)
-def check_is_list(inList):
+def check_is_list(inList,listName):
     if not isinstance(inList, list):
-        raise TypeError("")
-        #     f"Provided 'inList' is not of type 'list': {inList}.\n"
+        raise TypeError("'%s' is not of type 'list'" %(listName))
+    return None
 
 # Check object is a dict (even if empty)
-def check_is_dict(inDict):
+def check_is_dict(inDict,dictName):
     if not isinstance(inDict, dict):
-        raise TypeError("")
-#             f"Provided 'inDict' is not of type 'dict': {inDict}.\n"
+        raise TypeError("'%s' is not of type 'dict'" %(dictName))
+    return None
 
-def check_keys(inDict,keyList):
-    check_is_dict(inDict)
-    check_is_list(keyList)
-    if set(inDict.keys()) != set(keyList):
-        raise ValueError("")
-#             f"Provided 'inDict' does not containg all of the following keys: {keyList}.\n"
+def check_keys(inDict,dictName,keyList,matches_all=True):
+    check_is_dict(inDict,dictName)
+    check_is_list(keyList,"keyList")
+    in1 = set(inDict.keys())
+    in2 = set(keyList)
+    if matches_all:
+        if (in1 != in2):
+            raise ValueError("Dictionary '%s' does not contain all of the following keys: %s" %(dictName,keyList))
+    else:
+        notFound = False
+        for x in in2:
+            if x not in inDict.keys():
+                raise ValueError("Dictionary '%s' does not contain the following key: %s" %(dictName,x))
+    return None
 
 # Check object is a str (even if empty)
-def check_is_str(inField):
+def check_is_str(inField,fieldName):
     if not isinstance(inField, str):
-        raise TypeError("")
-#             f"Provided 'inField' is not of type 'str': {inField}.\n"
+        raise TypeError("'%s' is not of type 'str'" %(fieldName))
+    return None
 
-def check_string_filter_arguments(inField, inList):
+def check_string_filter_arguments(inField, fieldName, inList, listName):
     # Check expected class was provided for each argument
     # inList should be a list (even if empty)
-    check_is_list(inList)
+    check_is_list(inList,listName)
     # inField should be a non-empty string
-    check_is_str(inField)
-    if not inField:
-        raise ValueError("")
-#             f"Please provided a non-empty 'inField'.\n"
+    check_is_str(inField,fieldName)
+    check_empty_input(inField,fieldName,isRequired=True)
     # Use uppercase and remove leading/trailing spaces, for consistency of strings
     newField = inField.strip().upper()
     newList = []
@@ -103,13 +135,12 @@ def check_string_filter_arguments(inField, inList):
     return (newField,newList)
 
 
-# FIXME generalize and include sanity check in all functions handling dicts
-def check_variant_level_entry(subDict,entry):
-# TODO: sanity check that arguments are of the correct type
-
-    if entry not in subDict.keys():
-        raise ValueError("")
-#             f"Variant-level entry '{entry}' could not be found!\n"
+def check_dict_entry(myDict,dictName,entry,entryName):
+    check_is_dict(myDict,dictName)
+    check_is_str(entry,entryName)
+    if entry not in myDict.keys():
+        raise ValueError("Could not find %s '%s' in dict %s!" %(entryName,entry,dictName))
+    return None
 
 
 # Possible values for select_tier can be a string or a list of tiers
@@ -120,39 +151,32 @@ def check_variant_level_entry(subDict,entry):
 def check_tier_selection(select_tier,all_tiers):
     # Check for empty argument
     # Only valid argument types are str or list
-    if select_tier is None:
-        raise ValueError("")
-#             f"Argument 'select_tier' must be provided: {select_tier}.\n"
-#             f"Please, provide either a str ('all','highest') or a list of tiers.\n"
+    new_selection = None
+    if (select_tier is None) or (not select_tier):
+        raise ValueError("Please provide a non-empty tier selection!")
     elif isinstance(select_tier, str):
         # Check a valid value was provided for select_tier
         if select_tier not in ["all","highest"]:
-            raise ValueError("")
-#                 f"'Unknown str option provided to argument 'select_tier': {select_tier}'.\n"
-#                 f"Please, select either 'all' (to return all tiers) or 'highest' (to return only match for the highest tier).\n"
+            raise ValueError("Unknown tier option provided: '%s'. Possible options are: 'all' (to return all tiers) or 'highest' (to return only match for the highest tier)." %(select_tier))
+        new_selection = select_tier
     elif isinstance(select_tier, list):
-        # Check that valid values were provided in select_tier
         unique_tiers = set(select_tier)
-        if not unique_tiers:
-            raise ValueError("")
-#                 f"Empty list provided to argument 'select_tier': {select_tier}.\n"
-#                 f"Please, provide a non-empty list of tiers.\n"
+        # Check that valid values were provided in select_tier
         for tmp_tier in list(unique_tiers):
             if tmp_tier not in all_tiers:
-                raise ValueError("")
-#                     f"Invalid tier provided to argument 'select_tier': {tmp_tier}.\n"
-#                     f"Please, provide a selection of valid tiers from: {all_tiers}.\n"
+                raise ValueError("Provided list contains invalid tier: '%s'. Possible options are: %s" %(tmp_tier,all_tiers))
+        new_selection = []
         # Sanity check for cases when all tiers are provided in the list
         if unique_tiers == set(all_tiers):
             # Use correct select_tier value for this situation
-            select_tier = "all"
+            new_selection = "all"
         else:
-            select_tier = list(unique_tiers)
+            for tmp_tier in all_tiers:
+                if tmp_tier in unique_tiers: 
+                    new_selection.append(tmp_tier)
     else:
-        raise TypeError("")
-#             f"Invalid type provided to argument 'select_tier': {select_tier}.\n"
-#             f"Please, provide either a str ('all','highest') or a list of tiers.\n"
-    return select_tier
+        raise TypeError("Please provide either a str ('all','highest') or a list of tiers.")
+    return new_selection
 
 
 # Sanity check that a given HGVS string corresponds to a coding DNA reference sequence ie. starts with "c."
@@ -170,8 +194,11 @@ def check_is_pHGVS(hgvs):
 
 
 # Translate a 1-letter aminoacid code (if it exists) into a 3-letter code
-def translate_aa(oneLetter):
+def translate_aa(aminoacid):
+    # Import the dictionary of aminoacid codes provided in the data.yml file
+    dict_codes = get_dict_aminoacids()
     aaNew = None
-    if oneLetter.upper() in dict_codes.keys():
-        aaNew = dict_codes[oneLetter.upper()]
+    check_empty_input(aminoacid,"aminoacid",isRequired=True)
+    if aminoacid.upper() in dict_codes.keys():
+        aaNew = dict_codes[aminoacid.upper()]
     return aaNew
