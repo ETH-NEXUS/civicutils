@@ -2,7 +2,7 @@ import sys
 import os
 import re
 
-from utils import check_string_filter_arguments
+from utils import check_string_filter_arguments,check_cutoff_filter_arguments
 
 def filter_in(field, fieldName, inList, listName, matchType="exact"):
     (field, inList) = check_string_filter_arguments(field, fieldName, inList, listName)
@@ -41,12 +41,10 @@ def filter_not_in(field, fieldName, outList, listName, matchType="exact"):
 
 # Only keep if cutoff or more instances
 # Ignore filter when cutoff=0
-def filter_cutoff(field, cutoff):
-
-## TODO check for correct classes provided
-# field should be numeric or float
-# cutoff should be numeric or float
-
+def filter_cutoff(field, fieldName, cutoff, cutoffName):
+    # Sanity check for provided arguments (both should be numeric or floats)
+    check_cutoff_filter_arguments(field, fieldName)
+    check_cutoff_filter_arguments(cutoff, cutoffName)
     match = True
     cutoff_f = float(cutoff)
     field_f = float(field)
@@ -71,6 +69,8 @@ def filter_civic(varMap, gene_id_in=[], gene_id_not_in=[], min_variants=0, var_i
 
 ## Assume varMap has the following structure:
 # TODO
+    varmap_entries = ['name','civic_score','hgvs','types','n_evidence_items','evidence_items']
+    sorted_cts = ["ct","gt","nct"]
 
 ## TODO: talk about arg output_empty -> if True, then empty entries can be returned (it will be empty at the level of the filter that failed)
 
@@ -81,10 +81,9 @@ def filter_civic(varMap, gene_id_in=[], gene_id_not_in=[], min_variants=0, var_i
 ## eg. for each feature that is provided, filtering fuction is called, and the dict is subsequently filtered in this manner until all provided filters have been applied
 
     # sanity check that provided output_empty is logical
-    if not (isinstance(output_empty, bool)):
-        raise TypeError("Argument 'output_empty' must be of type 'bool'.")
     if output_empty is None:
         raise TypeError("Argument 'output_empty' must be provided.")
+    check_is_bool(output_empty,"output_empty")
 
     # Iterate complete dict of results and apply selected filters to generate a new (filtered) dict
     cleanMap = {}
@@ -100,7 +99,7 @@ def filter_civic(varMap, gene_id_in=[], gene_id_not_in=[], min_variants=0, var_i
 
         # allow number of min_variants to be 0
         n_variants = len(varMap[gene_id].keys())
-        keepGene = filter_cutoff(n_variants, min_variants)
+        keepGene = filter_cutoff(n_variants, "n_variants", min_variants, "min_variants")
         if not keepGene:
             continue
 
@@ -120,6 +119,9 @@ def filter_civic(varMap, gene_id_in=[], gene_id_not_in=[], min_variants=0, var_i
             if removeVar:
                 continue
 
+            # Check that the expected entries are found in the dictionary
+            check_keys(varMap[gene_id][var_id],"varMap",varmap_entries,matches_all=True)
+
             # variant name should always be available (never "NULL")
             variant = varMap[gene_id][var_id]["name"]
             keepVar = filter_in(variant, "variant", var_name_in, "var_name_in", matchType="partial")
@@ -131,7 +133,7 @@ def filter_civic(varMap, gene_id_in=[], gene_id_not_in=[], min_variants=0, var_i
 
             # civic score is always a number (can be 0)
             var_score = varMap[gene_id][var_id]["civic_score"]
-            keepVar = filter_cutoff(var_score, min_civic_score)
+            keepVar = filter_cutoff(var_score, "var_score", min_civic_score, "min_civic_score")
             if not keepVar:
                 continue
 
@@ -157,7 +159,7 @@ def filter_civic(varMap, gene_id_in=[], gene_id_not_in=[], min_variants=0, var_i
 
             # allow number of evidence items to be 0
             n_evidence_items = varMap[gene_id][var_id]["n_evidence_items"]
-            keepVar = filter_cutoff(n_evidence_items, min_evidence_items)
+            keepVar = filter_cutoff(n_evidence_items, "n_evidence_items", min_evidence_items, "min_evidence_items")
             if not keepVar:
                 continue
 
@@ -195,6 +197,9 @@ def filter_civic(varMap, gene_id_in=[], gene_id_not_in=[], min_variants=0, var_i
                         cleanMap[gene_id][var_id]["evidence_items"][evidence_type] = {}
 
                 type_diseases = list(varMap[gene_id][var_id]["evidence_items"][evidence_type].keys())
+                # Check that provided varMap is not annotated with disease specificity info (ct/gt/nct)
+                check_keys_not(type_diseases,"varMap",sorted_cts)
+
                 # disease names should always be available
                 allowed_diseases = []
                 for type_disease in type_diseases:
@@ -249,8 +254,7 @@ def filter_civic(varMap, gene_id_in=[], gene_id_not_in=[], min_variants=0, var_i
                             evidenceArr = evidence.strip().split(':')
                             # sanity check for correct format of evidence string
                             if (len(evidenceArr) != 2):
-# FIXME
-                                raise ValueError("")
+                                raise ValueError("Unexpected format of evidence '%s'! Please provide string as 'EVIDENCE_DIRECTION:CLINICAL_SIGNIFICANCE'." %(evidence))
 
                             # check evidence direction filters
                             direction = evidenceArr[0]
@@ -304,7 +308,7 @@ def filter_civic(varMap, gene_id_in=[], gene_id_not_in=[], min_variants=0, var_i
                                     itemArr = evidence_item.strip().split(":")
                                     # sanity check for correct format of evidence item string
                                     if (len(itemArr) != 5):
-                                        raise ValueError("")
+                                        raise ValueError("Unexpected format of evidence item '%s'! Please provide string as 'EVIDENCE_ID:EVIDENCE_STATUS:SOURCE_STATUS:VARIANT_ORIGIN:RATING'." %(evidence_item))
                                     tmpId = itemArr[0]
                                     evidence_status = itemArr[1]
                                     source_status = itemArr[2]
@@ -316,7 +320,7 @@ def filter_civic(varMap, gene_id_in=[], gene_id_not_in=[], min_variants=0, var_i
                                     tmpIdArr = tmpId.split("_")
                                     # sanity check for correct format of evidence id string
                                     if (len(tmpIdArr) != 2):
-                                        raise ValueError("")
+                                        raise ValueError("Unexpected format of evidence id '%s'! Please provide string as 'PUBMED_[ID]' or 'ASCO_[ID]'." %(tmpId))
                                     idType = tmpIdArr[0]
                                     this_id = tmpIdArr[1]
 
@@ -354,7 +358,7 @@ def filter_civic(varMap, gene_id_in=[], gene_id_not_in=[], min_variants=0, var_i
                                             continue
                                     # when rating is available, apply filters on evidence rating
                                     else:
-                                        keepRating = filter_cutoff(rating, min_evidence_rating)
+                                        keepRating = filter_cutoff(rating, "rating", min_evidence_rating, "min_evidence_rating")
                                         if not keepRating:
                                             continue
 

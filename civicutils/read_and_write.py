@@ -28,6 +28,27 @@ def get_dict_aminoacids():
     return dict_codes
 
 
+# FIXME: should this go in init.py?
+def get_dict_support():
+    f = BinPath + "/data.yml"
+    entry_name = "drug_support"
+    with open(f, 'r') as infile:
+        try:
+            data = yaml.safe_load(infile)
+        except yaml.YAMLError as exc:
+            print(exc)
+            sys.exit(1)
+
+    # Sanity check that expected entry is contained in the yml file
+    if entry_name not in data.keys():
+        raise ValueError("Please provide a custom dictionary of drug support for CIVIC evidences via the '%s' entry in %s!" %(entry_name,f))
+
+    # TODO add sanity checks for all aa being present?
+    # TODO add sanity check for contained values eg. special cases like "*"
+    supportDict = data[entry_name]
+    return supportDict
+
+
 # Retrieve a given column name from list of header fields
 # Throw a warning when required column is not found
 def checkHeaderField(name,headerSplit,isRequired=True):

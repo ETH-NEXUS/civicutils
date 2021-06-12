@@ -23,14 +23,9 @@ def query_civic(genes, identifier_type="entrez_symbol"):
     Returns
     -------
     """
-
-    # Check that provided argument is a list (even if length = 1)
-    if not isinstance(genes, list):
-        raise TypeError("Please provide a list of genes!")
-    if not genes:
-        raise ValueError("Please provided a non-empty list of genes!")
-#             f"'{genes}' is not of type 'list'.\n"
-
+    # Check arguments
+    check_argument(genes,"genes")
+    check_is_list(genes,"genes")
     # Check that id type corresponds to one of the allowed options
     check_identifier_type(identifier_type)
 
@@ -97,14 +92,13 @@ def reformat_civic(results, identifier_type="entrez_symbol"):
 ## TODO
 
     """
-
-# TODO: for now, keep the same filters as we had in the previous version
-# TODO: to be done soon; do not filter anything but retrieve all the gene-variant records unchanged. we will apply filtering using functions at a later step
-
-    varMap = {}
-
+    # Check arguments
+    check_argument(results,"results")
+    check_is_list(results,"results")
     # Check that id type corresponds to one of the allowed options
     check_identifier_type(identifier_type)
+
+    varMap = {}
 
     # Iterate individual gene records to retrieve associated variants and evidence information
     for gene_record in results:
@@ -230,10 +224,9 @@ def reformat_civic(results, identifier_type="entrez_symbol"):
                     drugs = ["NULL"]
 
                 # sanity checks that only 'PREDICTIVE' evidences have drugs associated
-                if (evidence_type != "PREDICTIVE") and (drugs != ["NULL"]):
-                    raise ValueError("")
-#                         f"'Evidence type {evidence_type} cannot have drugs associated ({drugs}).' .\n"
                 # submitted evidence items can fulfill having 'PREDICTIVE' evidence type and no drugs ('NULL')
+                if (evidence_type != "PREDICTIVE") and (drugs != ["NULL"]):
+                    raise ValueError("Only evidences of type 'PREDICTIVE' can have drugs associated!")
 
                 # Iterate through drugs to add evidences associated to them
                 #   For non-Predictive evidences or Predictive with empty drugs, drugs=['NULL']

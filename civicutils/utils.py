@@ -4,12 +4,36 @@ import re
 
 from read_and_write import get_dict_aminoacids
 
+def check_argument(argument,argName):
+    """Check that a given argument exists and is non-empty
+    """
+    if (not argument) or (argument is None):
+        raise ValueError("Argument '%s' must be provided!" %(argName))
+    return None
+
+
+def check_arguments(argList,nameList):
+    """Check that a given list of arguments all exist and are non-empty
+    """
+    check_argument(argList,"argList")
+    check_argument(nameList,"nameList")
+    check_is_list(argList,"argList")
+    check_is_list(nameList,"nameList")
+    if (len(argList) != len(nameList)):
+        raise ValueError("Arguments 'argList' and 'nameList' must have the same length!")
+    for i,argument in enumerate(argList):
+        check_argument(argument,nameList[i])
+    return None
+
+
 def check_identifier_type(identifier_type):
     """Check that a given identifier type is valid.
 
 ## TODO
 
     """
+    check_argument(identifier_type,"identifier_type")
+    check_is_str(identifier_type,"identifier_type")
     idTypes = ["entrez_id", "entrez_symbol", "civic_id"]
     if identifier_type not in idTypes:
         raise ValueError("'%s' is not a valid identifier_type. Please provide one of: %s" %(identifier_type,idTypes))
@@ -21,6 +45,8 @@ def check_data_type(dataType):
 ## TODO
 
     """
+    check_argument(dataType,"dataType")
+    check_is_str(dataType,"dataType")
     dataTypes = ["SNV", "CNV", "EXPR"]
     if dataType not in dataTypes:
         raise ValueError("'%s' is not a valid dataType. Please provide one of: %s" %(dataType,dataTypes))
@@ -32,7 +58,6 @@ def check_empty_field(inField):
 ## TODO
 
     """
-
     if (inField is None) or (not inField):
         newField = "NULL"
     else:
@@ -47,7 +72,7 @@ def check_empty_input(inField, fieldName, isRequired=True):
     if (inField is None) or (not inField) or (inField == "."):
         if isRequired:
 # TODO
-            raise ValueError("Field '%s' is required and cannot be empty!" %(fieldName))
+            raise ValueError("'%s' is required and cannot be empty!" %(fieldName))
         newField = ""
     else:
         newField = inField
@@ -69,13 +94,14 @@ def parse_input(inField, fieldName, isRequired=True):
             out.append(new)
     return out
 
+
 def check_logFC(logfc,gene):
     """Check that a given logFC value is valid.
 
 ## TODO
 
     """
-    logfc = check_empty_input(logfc, "logFC", isRequired=True)
+    check_argument(logfc,"logFC")
     try:
         logfc = float(logfc)
     except ValueError:
@@ -84,11 +110,19 @@ def check_logFC(logfc,gene):
     return logfc
 
 
+# Check object is a boolean
+def check_is_bool(inBool,boolName):
+    if not isinstance(inBool, bool):
+        raise TypeError("'%s' is not of type 'bool'" %(boolName))
+    return None
+
+
 # Check object is a list (even if empty)
 def check_is_list(inList,listName):
     if not isinstance(inList, list):
         raise TypeError("'%s' is not of type 'list'" %(listName))
     return None
+
 
 # Check object is a dict (even if empty)
 def check_is_dict(inDict,dictName):
@@ -96,9 +130,12 @@ def check_is_dict(inDict,dictName):
         raise TypeError("'%s' is not of type 'dict'" %(dictName))
     return None
 
+
 def check_keys(inDict,dictName,keyList,matches_all=True):
+    check_arguments([inDict,keyList],[dictName,"keyList"])
     check_is_dict(inDict,dictName)
     check_is_list(keyList,"keyList")
+
     in1 = set(inDict.keys())
     in2 = set(keyList)
     if matches_all:
@@ -111,31 +148,61 @@ def check_keys(inDict,dictName,keyList,matches_all=True):
                 raise ValueError("Dictionary '%s' does not contain the following key: %s" %(dictName,x))
     return None
 
+
+def check_keys_not(inKeys,dictName,keyList):
+    check_arguments([inKeys,keyList],[dictName,"keyList"])
+    check_is_dict(inKeys,dictName)
+    check_is_list(keyList,"keyList")
+    for key in keyList:
+        if key in inKeys:
+            raise ValueError("'%s' cannot contain key '%s'!" %(dictName,key))
+    return None
+
+
 # Check object is a str (even if empty)
 def check_is_str(inField,fieldName):
     if not isinstance(inField, str):
         raise TypeError("'%s' is not of type 'str'" %(fieldName))
     return None
 
-def check_string_filter_arguments(inField, fieldName, inList, listName):
-    # Check expected class was provided for each argument
+
+def uppercase_list(inList,listName):
     # inList should be a list (even if empty)
     check_is_list(inList,listName)
-    # inField should be a non-empty string
-    check_is_str(inField,fieldName)
-    check_empty_input(inField,fieldName,isRequired=True)
-    # Use uppercase and remove leading/trailing spaces, for consistency of strings
-    newField = inField.strip().upper()
     newList = []
     # Convert individual elements into strings, in case provided list contains numbers (eg. gene or variant ids)
     for tmpItem in inList:
         newItem = str(tmpItem)
         newItem = newItem.strip().upper()
         newList.append(newItem)
+    return newList
+
+
+def check_string_filter_arguments(inField, fieldName, inList, listName):
+    # Check expected class was provided for each argument
+    # inField should be a non-empty string
+    check_is_str(inField,fieldName)
+    check_empty_input(inField,fieldName,isRequired=True)
+    # Use uppercase and remove leading/trailing spaces, for consistency of strings
+    newField = inField.strip().upper()
+    newList = uppercase_list(inList,listName)
     return (newField,newList)
 
 
+def check_cutoff_filter_arguments(value,name):
+    """Check that a given argument is a valid number.
+    """
+    check_argument(value,name)
+    try:
+        cutoff_f = float(value)
+    except ValueError:
+        print("Invalid '%s'! Please provide a numeric value." %(name,value))
+        sys.exit(1)
+    return cutoff_f
+
+
 def check_dict_entry(myDict,dictName,entry,entryName):
+    check_arguments([myDict,entry],[dictName,entryName])
     check_is_dict(myDict,dictName)
     check_is_str(entry,entryName)
     if entry not in myDict.keys():
@@ -149,6 +216,10 @@ def check_dict_entry(myDict,dictName,entry,entryName):
 #       - "all" = ["tier_1","tier_1b","tier_2","tier_3","tier_4"]
 #       - single tier eg. "tier1"
 def check_tier_selection(select_tier,all_tiers):
+    # Check provided argument 'all_tiers'
+    check_argument(all_tiers,"all_tiers")
+    check_is_list(all_tiers,"all_tiers")
+
     # Check for empty argument
     # Only valid argument types are str or list
     new_selection = None

@@ -113,26 +113,26 @@ import json
 # print(select_tier)
 
 
-from read_and_write import readInSnvs
+from read_and_write import readInSnvs,get_dict_support
 from query import query_civic
-from match import match_in_civic
 from filtering import filter_civic
+from match import match_in_civic,filter_matches,annotate_ct,process_drug_support,filter_ct
 
 inFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_snv.txt"
 (rawData,snvData) = readInSnvs(inFile)
-print("rawData:")
-print(json.dumps(rawData,indent=1))
-print("snvData:")
-print(json.dumps(snvData,indent=1))
+# print("rawData:")
+# print(json.dumps(rawData,indent=1))
+# print("snvData:")
+# print(json.dumps(snvData,indent=1))
 
 print("\nQuerying CIVIC...")
 allGenes = list(snvData.keys())
 varMap = query_civic(allGenes, identifier_type="entrez_symbol")
-print("varMap:")
-print(json.dumps(varMap,indent=1))
+# print("varMap:")
+# print(json.dumps(varMap,indent=1))
 
 print("\nFiltering CIVIC...")
-varMap = filter_civic(varMap, source_status_in = ['ACCEPTED'], var_origin_not_in = ['GERMLINE'], output_empty=False)
+varMap = filter_civic(varMap, evidence_status_in = ['ACCEPTED'], var_origin_not_in = ['GERMLINE'], output_empty=False)
 print("varMap:")
 print(json.dumps(varMap,indent=1))
 
@@ -140,7 +140,7 @@ data_type = "SNV"
 tierSelect = "all"
 print("\nMatching CIVIC...")
 # (matchMap,matchedIds,varMap) = match_in_civic(snvData, data_type, identifier_type="entrez_symbol", select_tier=tierSelect, varMap=None)
-(matchMap,matchedIds,varMap) = match_in_civic(snvData, data_type, identifier_type="entrez_symbol", select_tier="all", varMap=varMap)
+(matchMap,matchedIds,varMap) = match_in_civic(snvData, data_type, identifier_type="entrez_symbol", select_tier=tierSelect, varMap=varMap)
 print("matchMap:")
 print(json.dumps(matchMap,indent=1))
 print("matchedIds:")
@@ -148,5 +148,51 @@ print(len(matchedIds))
 print(matchedIds)
 print("varMap:")
 print(json.dumps(varMap,indent=1))
+
+# tierSelect=["tier_1","tier_1b","tier_4"]
+# tierSelect=["tier_4"]
+# tierSelect="highest"
+# (matchMap,matchedIds) = filter_matches(matchMap,tierSelect)
+# print("matchMap:")
+# print(json.dumps(matchMap,indent=1))
+# print("matchedIds:")
+# print(len(matchedIds))
+# print(matchedIds)
+
+print("\nAnnotating CT...")
+# blackList = []
+# whiteList = ["leukemia"]
+# altList = []
+# annotMap = annotate_ct(varMap,blackList,whiteList,altList)
+
+blackList = ["leukemia"]
+whiteList = ["melanoma"]
+altList = []
+annotMap = annotate_ct(varMap,blackList,whiteList,altList)
+print("annotMap:")
+print(json.dumps(annotMap,indent=1))
+
+print("\nFiltering CT...")
+ctSelect = "all"
+annotMap = filter_ct(annotMap,ctSelect)
+print("annotMap:")
+print(json.dumps(annotMap,indent=1))
+
+sys.exit(1)
+
+print("\nProcessing drug support...")
+# Get dict of drug support
+supportDict = get_dict_support()
+# print("supportDict:")
+# print(json.dumps(supportDict,indent=1))
+
+matchMap = process_drug_support(matchMap,annotMap,supportDict)
+# matchMap = process_drug_support(matchMap,varMap,supportDict)
+print("matchMap:")
+print(json.dumps(matchMap,indent=1))
+print("matchedIds:")
+print(len(matchedIds))
+print(matchedIds)
+
 
 
