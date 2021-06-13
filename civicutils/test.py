@@ -113,72 +113,93 @@ import json
 # print(select_tier)
 
 
-from read_and_write import readInSnvs,get_dict_support
+from read_and_write import readInSnvs,get_dict_support,write_to_json,write_to_yaml
 from query import query_civic
 from filtering import filter_civic
-from match import match_in_civic,filter_matches,annotate_ct,process_drug_support,filter_ct
+from match import match_in_civic,filter_matches,annotate_ct,process_drug_support,filter_ct,add_ct,add_match
 
-inFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_snv.txt"
+# inFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_snv.txt"
+# inFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_snv.v1.txt"
+# inFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_snv.v2.txt"
+# inFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_snv.v3.txt"
+# inFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_snv.v4.txt"
+
+# inFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_snv.v9.txt"
+# inFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_snv.v10.txt"
+# inFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_snv.v11.txt"
+inFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_snv.v12.txt"
 (rawData,snvData) = readInSnvs(inFile)
-# print("rawData:")
-# print(json.dumps(rawData,indent=1))
-# print("snvData:")
-# print(json.dumps(snvData,indent=1))
+print("rawData:")
+print(json.dumps(rawData,indent=1))
+print("snvData:")
+print(json.dumps(snvData,indent=1))
 
-print("\nQuerying CIVIC...")
-allGenes = list(snvData.keys())
-varMap = query_civic(allGenes, identifier_type="entrez_symbol")
+# print("\nQuerying CIVIC...")
+# allGenes = list(snvData.keys())
+# varMap = query_civic(allGenes, identifier_type="entrez_symbol")
+# print("varMap:")
+# print(json.dumps(varMap,indent=1))
+# origMap = query_civic(allGenes, identifier_type="entrez_symbol")
+# print("origMap:")
+# print(json.dumps(origMap,indent=1))
+
+# print("\nFiltering CIVIC...")
+# varMap = filter_civic(varMap, evidence_status_in = ['ACCEPTED'], var_origin_not_in = ['GERMLINE'], output_empty=False)
 # print("varMap:")
 # print(json.dumps(varMap,indent=1))
 
-print("\nFiltering CIVIC...")
-varMap = filter_civic(varMap, evidence_status_in = ['ACCEPTED'], var_origin_not_in = ['GERMLINE'], output_empty=False)
-print("varMap:")
-print(json.dumps(varMap,indent=1))
+# print("\nAnnotating CT...")
+# blackList = []
+# whiteList = ["leukemia"]
+# altList = []
+# annotMap = annotate_ct(varMap,blackList,whiteList,altList)
+# annotMap = annotate_ct(origMap,blackList,whiteList,altList)
+# print("annotMap:")
+# print(json.dumps(annotMap,indent=1))
 
 data_type = "SNV"
-tierSelect = "all"
+# tierSelect = "highest"
+# tierSelect = "all"
+tierSelect = ["tier_1","tier_1b","tier_2","tier_3","tier_4"]
 print("\nMatching CIVIC...")
-# (matchMap,matchedIds,varMap) = match_in_civic(snvData, data_type, identifier_type="entrez_symbol", select_tier=tierSelect, varMap=None)
-(matchMap,matchedIds,varMap) = match_in_civic(snvData, data_type, identifier_type="entrez_symbol", select_tier=tierSelect, varMap=varMap)
+(matchMap,matchedIds,varMap) = match_in_civic(snvData, data_type, identifier_type="entrez_symbol", select_tier=tierSelect, varMap=None)
+# (matchMap,matchedIds,varMap) = match_in_civic(snvData, data_type, identifier_type="entrez_symbol", select_tier=tierSelect, varMap=varMap)
+# (matchMap,matchedIds,varMap) = match_in_civic(snvData, data_type, identifier_type="entrez_symbol", select_tier=tierSelect, varMap=annotMap)
+# (matchMap,matchedIds,varMap) = match_in_civic(snvData, data_type, identifier_type="entrez_symbol", select_tier=tierSelect, varMap=origMap)
+print("matchMap:")
+print(json.dumps(matchMap,indent=1))
+# print("matchedIds:")
+# print(len(matchedIds))
+# print(matchedIds)
+# print("varMap:")
+# print(json.dumps(varMap,indent=1))
+
+outFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_output.json"
+write_to_json(matchedIds,outFile,indent=1)
+outFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_output.yaml"
+write_to_yaml(data_type,outFile)
+
+sys.exit(1)
+
+print("\nFiltering match...")
+tierSelect="highest"
+(matchMap,matchedIds) = filter_matches(matchMap,tierSelect)
+# (annotMatch,matchedIds) = filter_matches(annotMatch,tierSelect)
 print("matchMap:")
 print(json.dumps(matchMap,indent=1))
 print("matchedIds:")
 print(len(matchedIds))
 print(matchedIds)
-print("varMap:")
-print(json.dumps(varMap,indent=1))
 
-# tierSelect=["tier_1","tier_1b","tier_4"]
-# tierSelect=["tier_4"]
-# tierSelect="highest"
-# (matchMap,matchedIds) = filter_matches(matchMap,tierSelect)
-# print("matchMap:")
-# print(json.dumps(matchMap,indent=1))
-# print("matchedIds:")
-# print(len(matchedIds))
-# print(matchedIds)
 
 print("\nAnnotating CT...")
-# blackList = []
-# whiteList = ["leukemia"]
-# altList = []
-# annotMap = annotate_ct(varMap,blackList,whiteList,altList)
-
-blackList = ["leukemia"]
-whiteList = ["melanoma"]
-altList = []
+blackList = ["melanoma"]
+whiteList = ["breast","ovarian"]
+altList = ["cancer"]
 annotMap = annotate_ct(varMap,blackList,whiteList,altList)
 print("annotMap:")
 print(json.dumps(annotMap,indent=1))
 
-print("\nFiltering CT...")
-ctSelect = "all"
-annotMap = filter_ct(annotMap,ctSelect)
-print("annotMap:")
-print(json.dumps(annotMap,indent=1))
-
-sys.exit(1)
 
 print("\nProcessing drug support...")
 # Get dict of drug support
@@ -186,13 +207,131 @@ supportDict = get_dict_support()
 # print("supportDict:")
 # print(json.dumps(supportDict,indent=1))
 
-matchMap = process_drug_support(matchMap,annotMap,supportDict)
+annotMatch = process_drug_support(matchMap,annotMap,supportDict)
+print("annotMatch:")
+print(json.dumps(annotMatch,indent=1))
+
+
+# gene = "ERBB4"
+# variant = "310"
+# variant = "1673"
+# evidence_type = "PREDICTIVE"
+# newMap = {}
+# newMap[gene] = {}
+# newMap[gene][variant] = {}
+# newMap[gene][variant]['evidence_items'] = {}
+# newMap[gene][variant]['evidence_items'][evidence_type] = {}
+# print("newMap:")
+# print(json.dumps(newMap,indent=1))
+
+# diseases = ["melanoma"]
+# diseases = ["dummy","melanoma"]
+# diseases = ["MELANOMA"]
+# diseases = ["HEAD AND NECK SQUAMOUS CELL CARCINOMA"]
+# ct = "ct"
+# newMap = add_ct(diseases,ct,gene,variant,evidence_type,newMap,varMap,isAnnot=False)
+# newMap = add_ct(diseases,ct,gene,variant,evidence_type,newMap,varMap,isAnnot=True)
+# newMap = add_ct(diseases,ct,gene,variant,evidence_type,newMap,annotMap,isAnnot=False)
+# newMap = add_ct(diseases,ct,gene,variant,evidence_type,newMap,annotMap,isAnnot=True)
+# newMap = add_ct(diseases,ct,gene,variant,evidence_type,newMap,origMap,isAnnot=False)
+# newMap = add_ct(diseases,ct,gene,variant,evidence_type,newMap,origMap,isAnnot=True)
+# print("newMap:")
+# print(json.dumps(newMap,indent=1))
+
 # matchMap = process_drug_support(matchMap,varMap,supportDict)
-print("matchMap:")
-print(json.dumps(matchMap,indent=1))
-print("matchedIds:")
-print(len(matchedIds))
-print(matchedIds)
+# matchMap = process_drug_support(matchMap,annotMap,supportDict)
+# annotMatch = process_drug_support(matchMap,annotMap,supportDict)
+# annotMatch = process_drug_support(annotMatch,annotMap,supportDict)
+# print("annotMatch:")
+# print(json.dumps(annotMatch,indent=1))
+# print("matchMap:")
+# print(json.dumps(matchMap,indent=1))
+# print("matchedIds:")
+# print(len(matchedIds))
+# print(matchedIds)
 
+# gene = "ERBB4"
+# variant = "c.83-126671T>A|.|sequence_feature|1/27|1"
+# match = matchMap[gene][variant]
+# match = {}
+# match[gene] = {}
+# match[gene][variant] = matchMap[gene][variant]
+# match[gene][variant] = {}
+# print("match:")
+# print(json.dumps(match,indent=1))
 
+# annot_match = process_drug_support(match,varMap,supportDict)
+# annot_match = process_drug_support(match,annotMap,supportDict)
+# print("annot_match:")
+# print(json.dumps(annot_match,indent=1))
+
+# print("match:")
+# print(json.dumps(annot_match[gene][variant],indent=1))
+
+# print("matchMap:")
+# print(json.dumps(matchMap,indent=1))
+
+# print("\nAdding match...")
+# (matchMap2,matchedIds) = add_match(annotMatch,gene,variant,match)
+# gene = "DUMMY"
+# variant = "310"
+# (matchMap2,matchedIds) = add_match(matchMap,gene,variant,match)
+# (matchMap2,matchedIds) = add_match(matchMap,gene,variant,annot_match[gene][variant])
+# print("matchMap2:")
+# print(json.dumps(matchMap2,indent=1))
+# print("matchedIds:")
+# print(len(matchedIds))
+
+# print("\nFiltering match...")
+# tierSelect=["tier_1","tier_1b","tier_4"]
+# tierSelect=["tier_4"]
+# tierSelect="highest"
+# tierSelect="all"
+# (matchMap,matchedIds) = filter_matches(matchMap,tierSelect)
+# print("matchMap:")
+# print(json.dumps(matchMap,indent=1))
+# print("matchedIds:")
+# print(len(matchedIds))
+# print(matchedIds)
+
+# testMap = process_drug_support(matchMap,varMap,supportDict)
+# testMap = process_drug_support(matchMap,annotMap,supportDict)
+# print("testMap:")
+# print(json.dumps(matchMap,indent=1))
+# print("matchedIds:")
+# print(len(matchedIds))
+# print(matchedIds)
+
+# print("\nAnnotating CT...")
+# blackList = []
+# whiteList = ["leukemia"]
+# altList = []
+# annotMap = annotate_ct(varMap,blackList,whiteList,altList)
+# print("annotMap:")
+# print(json.dumps(annotMap,indent=1))
+
+# blackList = ["leukemia"]
+# whiteList = ["melanoma"]
+# altList = []
+# annotMap = annotate_ct(varMap,blackList,whiteList,altList)
+# annotMap = annotate_ct(annotMap,blackList,whiteList,altList)
+# print("annotMap:")
+# print(json.dumps(annotMap,indent=1))
+
+# print("\nFiltering CT...")
+# ctSelect = ["nct"]
+# annotMap = filter_ct(annotMap,ctSelect)
+# print("annotMap:")
+# print(json.dumps(annotMap,indent=1))
+# testMap = filter_ct(varMap,ctSelect)
+# print("testMap:")
+# print(json.dumps(testMap,indent=1))
+
+# print("\nFiltering CIVIC...")
+# testMap = filter_civic(varMap, evidence_status_in = ['ACCEPTED'], var_origin_not_in = ['GERMLINE'], output_empty=False)
+# print("testMap:")
+# print(json.dumps(testMap,indent=1))
+# testMap = filter_civic(annotMap, evidence_status_in = ['ACCEPTED'], var_origin_not_in = ['GERMLINE'], output_empty=False)
+# print("testMap:")
+# print(json.dumps(testMap,indent=1))
 

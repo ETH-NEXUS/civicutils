@@ -2,13 +2,7 @@ import sys
 import os
 import re
 
-from utils import check_identifier_type,check_empty_field
-from civicpy import civic
-
-# TODO: can we just load the civic database once when the package is first loaded?
-success = civic.load_cache(on_stale='ignore')
-if not success:
-    raise ValueError("Could not load cache file from `civicpy`!")
+from utils import check_identifier_type,check_empty_field,check_argument,check_is_list
 
 # Given a list of gene identifiers, query CIVIC for known variants and return a structured dictionary with the relevant results
 # List of gene ids can be: CIVIC id, entrez id or gene symbol
@@ -28,6 +22,13 @@ def query_civic(genes, identifier_type="entrez_symbol"):
     check_is_list(genes,"genes")
     # Check that id type corresponds to one of the allowed options
     check_identifier_type(identifier_type)
+
+    # Load CIVIC offline cache file
+    from civicpy import civic
+    # TODO: can we just load the civic database once when the package is first loaded?
+    success = civic.load_cache(on_stale='ignore')
+    if not success:
+        raise ValueError("Could not load cache file from `civicpy`!")
 
     ## Offline cache of CIVICdb should already be loaded
 

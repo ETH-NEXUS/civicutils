@@ -2,7 +2,7 @@ import sys
 import os
 import re
 
-from utils import check_string_filter_arguments,check_cutoff_filter_arguments
+from utils import check_string_filter_arguments,check_cutoff_filter_arguments,check_is_bool,check_keys,check_keys_not,check_is_none
 
 def filter_in(field, fieldName, inList, listName, matchType="exact"):
     (field, inList) = check_string_filter_arguments(field, fieldName, inList, listName)
@@ -81,8 +81,7 @@ def filter_civic(varMap, gene_id_in=[], gene_id_not_in=[], min_variants=0, var_i
 ## eg. for each feature that is provided, filtering fuction is called, and the dict is subsequently filtered in this manner until all provided filters have been applied
 
     # sanity check that provided output_empty is logical
-    if output_empty is None:
-        raise TypeError("Argument 'output_empty' must be provided.")
+    check_is_none(output_empty,"output_empty")
     check_is_bool(output_empty,"output_empty")
 
     # Iterate complete dict of results and apply selected filters to generate a new (filtered) dict
@@ -120,7 +119,7 @@ def filter_civic(varMap, gene_id_in=[], gene_id_not_in=[], min_variants=0, var_i
                 continue
 
             # Check that the expected entries are found in the dictionary
-            check_keys(varMap[gene_id][var_id],"varMap",varmap_entries,matches_all=True)
+            check_keys(list(varMap[gene_id][var_id].keys()),"varMap",varmap_entries,matches_all=True)
 
             # variant name should always be available (never "NULL")
             variant = varMap[gene_id][var_id]["name"]
