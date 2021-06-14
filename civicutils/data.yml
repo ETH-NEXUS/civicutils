@@ -1,0 +1,68 @@
+# Change at your own risk!
+
+# Dictionary of 1-letter to 3-letter aminoacids codes. Includes custom aminoacids defined only within CIVIC.
+aminoacids:
+    C: CYS
+    D: ASP
+    S: SER
+    Q: GLN
+    K: LYS
+    I: ILE
+    P: PRO
+    T: THR
+    F: PHE
+    N: ASN
+    G: GLY
+    H: HIS
+    L: LEU
+    R: ARG
+    W: TRP
+    A: ALA
+    V: VAL
+    E: GLU
+    Y: TYR
+    M: MET
+    "*": "*"
+    # CIVIC variant names use 'X' to indicate a stop codon
+    X: "*"
+
+variant_infos:
+    name: single
+    civic_score: single
+    hgvs: list
+    types: list
+    n_evidence_items: single
+
+evidence_types:
+    PREDICTIVE
+    DIAGNOSTIC
+    PROGNOSTIC
+    PROGNOSTIC
+
+sorted_tiers:
+    tier_1: list
+    tier_1b: list
+    tier_2: list
+    tier_3: list
+    tier_4: bool
+
+sorted_cts:
+    ct
+    gt
+    nct
+
+drug_support:
+    SUPPORTS:
+        SENSITIVITY/RESPONSE: POSITIVE
+        RESISTANCE: NEGATIVE
+        REDUCED SENSITIVITY: NEGATIVE
+        ADVERSE RESPONSE: NEGATIVE
+    DOES NOT SUPPORT:
+        RESISTANCE: UNKNOWN_DNS
+        SENSITIVITY/RESPONSE: UNKNOWN_DNS
+        REDUCED SENSITIVITY: UNKNOWN_DNS
+        ADVERSE RESPONSE: UNKNOWN_DNS
+
+blank_support:
+    "NULL": UNKNOWN_BLANK
+    N/A: UNKNOWN_BLANK
