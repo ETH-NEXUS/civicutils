@@ -1,8 +1,0 @@
-url: https://civic.nexus.ethz.ch/api/
-endpoints:
-    genes: genes/
-    variants: variants/
-identifier_types:
-    entrez_symbol: name
-    civic_id: id
-    entrez_id: entrez_id
