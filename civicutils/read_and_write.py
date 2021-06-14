@@ -266,11 +266,11 @@ def write_header_line(dataType,header,writeSupport):
 
     if dataType == "SNV":
         mainHeader = "Gene\tVariant_dna\tVariant_prot"
-        if "Variant_impacts" in header:
-            mainHeader += "\tVariant_impacts"
+        if "Variant_impact" in header:
+            mainHeader += "\tVariant_impact"
             writeImpact = True
-        if "Variant_exons" in header:
-            mainHeader += "\tVariant_exons"
+        if "Variant_exon" in header:
+            mainHeader += "\tVariant_exon"
             writeExon = True
 
     if dataType == "CNV":
@@ -282,7 +282,7 @@ def write_header_line(dataType,header,writeSupport):
     clean_header = []
     if header:
         for tmp in header:
-            if (tmp != "Variant_impacts" and tmp != "Variant_exons"):
+            if (tmp != "Variant_impact" and tmp != "Variant_exon"):
                 clean_header.append(tmp)
     if clean_header:
         mainHeader += "\t%s" %("\t".join(clean_header))

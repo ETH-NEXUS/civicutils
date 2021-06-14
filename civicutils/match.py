@@ -175,23 +175,34 @@ def cnv_is_exon_string(varName):
     return isExon
 
 
-# Given a single CIVIC record name, return whether it corresponds to a EXPRESSION record related to exons
+# Given a single CIVIC record name, return whether it corresponds to a EXPRESSION record related to exons, and the type of expression change
 # For this, attemp to match the variant name to special EXPRESSION exon cases present in CIVIC (eg. EXON 1-2 EXPRESSION, EXON 5 OVEREXPRESSION...)
 def expr_is_exon_string(varName):
-    # NOTE: uppercase is critical for the match!
-    exonStrings = ['^EXON [0-9-]+ EXPRESSION$', '^EXON [0-9-]+ OVEREXPRESSION$', '^EXON [0-9-]+ UNDEREXPRESSION$']
+    # exonStrings = ['^EXON [0-9-]+ EXPRESSION$', '^EXON [0-9-]+ OVEREXPRESSION$', '^EXON [0-9-]+ UNDEREXPRESSION$']
+    exprType = ''
+    isExon = False
 
     # Sanity check of provided arguments
     check_argument(varName,"varName")
     check_is_str(varName,"varName")
     varName = varName.upper()
 
-    isExon = False
-    for exonString in exonStrings:
-        if re.search(exonString, varName):
-            isExon = True
+    # NOTE: uppercase is critical for the match!
+    if re.search('^EXON [0-9-]+ EXPRESSION$', varName):
+        isExon = True
+        exprType = 'EXPRESSION'
+    elif re.search('^EXON [0-9-]+ OVEREXPRESSION$', varName):
+        isExon = True
+        exprType = 'OVEREXPRESSION'
+    elif re.search('^EXON [0-9-]+ UNDEREXPRESSION$', varName):
+        isExon = True
+        exprType = 'UNDEREXPRESSION'
+    # isExon = False
+    # for exonString in exonStrings:
+    #     if re.search(exonString, varName):
+    #         isExon = True
 
-    return isExon
+    return (isExon,exprType)
 
 
 # Given all CIVIC variant records associated to a given gene, return all those variant names that should correspond to SNV records
@@ -1167,16 +1178,17 @@ def filter_ct(varMap, select_ct):
                 newMap[gene][variant]['evidence_items'][evidence_type] = {}
                 # Sanity check that input dict is annotated with disease specificity info (ie. has the expected format)
                 check_keys(list(varMap[gene][variant]['evidence_items'][evidence_type].keys()),"varMap",sorted_cts,matches_all=True)
+                skip = False
                 for ct in sorted_cts:
                     newMap[gene][variant]['evidence_items'][evidence_type][ct] = {}
                     ctArr = list(varMap[gene][variant]['evidence_items'][evidence_type][ct].keys())
                     # When select_ct="highest", then keep data only for the highest specificity available ct>gt>nct
                     if isinstance(select_ct, str) and (select_ct == "highest"):
                         # Check if data is available for the currently iterated ct
-                        if ctArr:
+                        if ctArr and (not skip):
                             newMap = add_ct(ctArr,ct,gene,variant,evidence_type,newMap,varMap,isAnnot=True)
                             # Prematurely exit the loop after this successful iteration (to keep only the highest ct)
-                            break
+                            skip = True
 
                     # When select_ct is a list of cts, then keep data only for those selected
                     elif isinstance(select_ct, list):

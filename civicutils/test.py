@@ -123,23 +123,26 @@ from match import match_in_civic,filter_matches,annotate_ct,process_drug_support
 # inFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_snv.v2.txt"
 # inFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_snv.v3.txt"
 # inFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_snv.v4.txt"
-
 # inFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_snv.v9.txt"
 # inFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_snv.v10.txt"
 # inFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_snv.v11.txt"
-inFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_snv.v12.txt"
+# inFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_snv.v12.txt"
+# inFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/complete_snv.txt"
+inFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/complete_snv.v1.txt"
 (rawData,snvData,extraHeader) = readInSnvs(inFile)
 print("rawData:")
 print(json.dumps(rawData,indent=1))
 print("snvData:")
 print(json.dumps(snvData,indent=1))
+print("extraHeader:")
+print(extraHeader)
 
 # print("\nQuerying CIVIC...")
 # allGenes = list(snvData.keys())
 # varMap = query_civic(allGenes, identifier_type="entrez_symbol")
+# origMap = query_civic(allGenes, identifier_type="entrez_symbol")
 # print("varMap:")
 # print(json.dumps(varMap,indent=1))
-# origMap = query_civic(allGenes, identifier_type="entrez_symbol")
 # print("origMap:")
 # print(json.dumps(origMap,indent=1))
 
@@ -171,8 +174,8 @@ print(json.dumps(matchMap,indent=1))
 print("matchedIds:")
 print(len(matchedIds))
 print(matchedIds)
-# print("varMap:")
-# print(json.dumps(varMap,indent=1))
+print("varMap:")
+print(json.dumps(varMap,indent=1))
 
 # outFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_output.json"
 # write_to_json(matchedIds,outFile,indent=1)
@@ -189,35 +192,50 @@ print(matchedIds)
 # print(len(matchedIds))
 # print(matchedIds)
 
+# print("\nFiltering CIVIC...")
+# fMatch = filter_civic(varMap, var_id_in=["3109"], output_empty=False)
+# fMatch = filter_civic(varMap, var_id_in=["3109"], output_empty=True)
+# print("fMatch:")
+# print(json.dumps(fMatch,indent=1))
 
-print("\nAnnotating CT...")
-blackList = []
+# (test,testIds,testMap) = match_in_civic(snvData, data_type, identifier_type="entrez_symbol", select_tier=tierSelect, varMap=fMatch)
+# print("test:")
+# print(json.dumps(test,indent=1))
+
+
+# print("\nAnnotating CT...")
+# blackList = []
 # blackList = ["melanoma"]
-whiteList = ["breast","ovarian"]
-altList = ["cancer"]
-annotMap = annotate_ct(varMap,blackList,whiteList,altList)
-print("annotMap:")
-print(json.dumps(annotMap,indent=1))
+# whiteList = ["breast","ovarian"]
+# altList = ["cancer"]
+# annotMap = annotate_ct(varMap,blackList,whiteList,altList)
+# print("annotMap:")
+# print(json.dumps(annotMap,indent=1))
+# annotOrig = annotate_ct(origMap,blackList,whiteList,altList)
+# print("annotOrig:")
+# print(json.dumps(annotOrig,indent=1))
 
 
-print("\nFiltering CT...")
-ctSelect = "highest"
-annotMap = filter_ct(annotMap,ctSelect)
-print("annotMap:")
-print(json.dumps(annotMap,indent=1))
-
-sys.exit(1)
+# print("\nFiltering CT...")
+# ctSelect = "highest"
+# annotMap = filter_ct(annotMap,ctSelect)
+# print("annotMap:")
+# print(json.dumps(annotMap,indent=1))
 
 
-print("\nProcessing drug support...")
+# print("\nProcessing drug support...")
 # Get dict of drug support
 supportDict = get_dict_support()
 # print("supportDict:")
 # print(json.dumps(supportDict,indent=1))
 
-annotMatch = process_drug_support(matchMap,annotMap,supportDict)
-print("annotMatch:")
-print(json.dumps(annotMatch,indent=1))
+# annotMatch = process_drug_support(matchMap,annotMap,supportDict)
+# print("annotMatch:")
+# print(json.dumps(annotMatch,indent=1))
+
+# annotMatch2 = process_drug_support(matchMap,annotOrig,supportDict)
+# print("annotMatch2:")
+# print(json.dumps(annotMatch2,indent=1))
 
 
 # outFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_output_snv.txt"
@@ -249,18 +267,39 @@ print(json.dumps(annotMatch,indent=1))
 # outFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_output_snv.v11.txt"
 # outFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_output_snv.v12.txt"
 # outFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_output_snv.v13.txt"
-outFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_output_snv.v14.txt"
+# outFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_output_snv.v14.txt"
 # write_match(matchMap,annotMap,rawData,extraHeader,dataType="SNV",outfile=outFile, hasSupport=False, hasCt=False, writeCt=False, writeSupport=False, writeComplete=False)
 # write_match(matchMap,annotMap,rawData,extraHeader,dataType="SNV",outfile=outFile, hasSupport=False, hasCt=True, writeCt=False, writeSupport=False, writeComplete=False)
 # write_match(matchMap,annotMap,rawData,extraHeader,dataType="SNV",outfile=outFile, hasSupport=True, hasCt=True, writeCt=False, writeSupport=False, writeComplete=False)
 # write_match(annotMatch,annotMap,rawData,extraHeader,dataType="SNV",outfile=outFile, hasSupport=True, hasCt=True, writeCt=False, writeSupport=False, writeComplete=False)
 # write_match(annotMatch,annotMap,rawData,extraHeader,dataType="SNV",outfile=outFile, hasSupport=True, hasCt=True, writeCt=True, writeSupport=False, writeComplete=False)
-write_match(annotMatch,annotMap,rawData,extraHeader,dataType="SNV",outfile=outFile, hasSupport=True, hasCt=True, writeCt=True, writeSupport=True, writeComplete=False)
+
+# outFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_output_snv.r1.txt"
+# outFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_output_snv.r2.txt"
+# outFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_output_snv.r3.txt"
+# outFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_output_snv.r4.txt"
+# outFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_output_snv.r5.txt"
+# write_match(annotMatch,annotMap,rawData,extraHeader,dataType="SNV",outfile=outFile, hasSupport=True, hasCt=True, writeCt=True, writeSupport=True, writeComplete=False)
+# write_match(matchMap,fMatch,rawData,extraHeader,dataType="SNV",outfile=outFile, hasSupport=False, hasCt=False, writeCt=False, writeSupport=False, writeComplete=False)
+
+# outFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_output_snv.r3b.txt"
+# write_match(annotMatch,annotOrig,rawData,extraHeader,dataType="SNV",outfile=outFile, hasSupport=True, hasCt=True, writeCt=False, writeSupport=True, writeComplete=False)
+
 # write_match(annotMatch,annotMap,rawData,extraHeader,dataType="SNV",outfile=outFile, hasSupport=True, hasCt=True, writeCt=False, writeSupport=True, writeComplete=False)
 # write_match(annotMatch,annotMap,rawData,extraHeader,dataType="SNV",outfile=outFile, hasSupport=True, hasCt=True, writeCt=False, writeSupport=False, writeComplete=False)
 # write_match(annotMatch,annotMap,rawData,extraHeader,dataType="SNV",outfile=outFile, hasSupport=True, hasCt=True, writeCt=False, writeSupport=False, writeComplete=True)
 # write_match(annotMatch,annotMap,rawData,extraHeader,dataType="SNV",outfile=outFile, hasSupport=True, hasCt=True, writeCt=False, writeSupport=True, writeComplete=True)
 # write_match(annotMatch,annotMap,rawData,extraHeader,dataType="SNV",outfile=outFile, hasSupport=True, hasCt=True, writeCt=True, writeSupport=True, writeComplete=True)
+
+# outFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_output_snv.nv1.txt"
+# outFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_output_snv.nv2.txt"
+# outFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_output_snv.nv3.txt"
+# outFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_output_snv.nv4.txt"
+# outFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_output_snv.nv5.txt"
+# outFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_output_snv.nv6.txt"
+outFile = "/cluster/work/nexus/lourdes/civic_query/tests/new/test_output_snv.nv7.txt"
+write_match(matchMap,varMap,rawData,extraHeader,dataType="SNV",outfile=outFile, hasSupport=False, hasCt=False, writeCt=False, writeSupport=False, writeComplete=False)
+
 
 sys.exit(1)
 
