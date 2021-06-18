@@ -176,7 +176,12 @@ def reformat_civic(results, identifier_type="entrez_symbol"):
                 # Use uppercase for consistency of the tags (except id which should be unique)
                 # These fields are expected to never be empty or None
                 evidence_type = evidence_record.evidence_type.strip().upper()
-                disease = evidence_record.disease.name.strip().upper()
+                # Check if disease name is available for the current evidence record
+                # NOTE: newly introduced evidence type 'FUNCTIONAL' can be associated to records without any disease name assigned to it. In this case, disease has no attribute 'name' and it is an empty dict
+                if hasattr(evidence_record.disease, 'name'):
+                    disease = evidence_record.disease.name.strip().upper()
+                else:
+                    disease = "NULL"
                 evidence_status = evidence_record.status.strip().upper()
                 source_type = evidence_record.source.source_type.strip().upper()
                 source_status = evidence_record.source.status.strip().upper()
