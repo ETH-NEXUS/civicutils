@@ -179,13 +179,14 @@ def cnv_is_exon_string(varName):
 # For this, attemp to match the variant name to special EXPRESSION exon cases present in CIVIC (eg. EXON 1-2 EXPRESSION, EXON 5 OVEREXPRESSION...)
 def expr_is_exon_string(varName):
     # exonStrings = ['^EXON [0-9-]+ EXPRESSION$', '^EXON [0-9-]+ OVEREXPRESSION$', '^EXON [0-9-]+ UNDEREXPRESSION$']
-    exprType = ''
-    isExon = False
 
     # Sanity check of provided arguments
     check_argument(varName,"varName")
     check_is_str(varName,"varName")
     varName = varName.upper()
+
+    exprType = ''
+    isExon = False
 
     # NOTE: uppercase is critical for the match!
     if re.search('^EXON [0-9-]+ EXPRESSION$', varName):
@@ -205,9 +206,8 @@ def expr_is_exon_string(varName):
     return (isExon,exprType)
 
 
-# Given all CIVIC variant records associated to a given gene, return all those variant names that should correspond to SNV records
-# For this, remove the most common CNV and EXPRESSION names existing in CIVIC from the complete set of the gene's variant names
-# Additionally, consider other special cases present in CIVIC (eg. EXON 1-2 DELETION/EXPRESSION, EXON 5 DELETION/OVEREXPRESSION, 3' EXON DELETION/UNDEREXPRESSION...)
+# Given all CIVIC variant records associated to a given gene, return all those variants that should correspond to SNV records
+# For this, remove the most common CNV and EXPRESSION ids existing in CIVIC from the complete set of the gene's variants
 def civic_return_all_snvs(geneData):
     # Sanity check of provided arguments
     check_argument(geneData,"geneData")
@@ -215,24 +215,21 @@ def civic_return_all_snvs(geneData):
 
     # Get all variant names classified as CNV or EXPRESSION (if any)
     # These functions will also attempt matching of variant name to common CNV and EXPRESSION names related to exons
-    cnvNames = civic_return_all_cnvs(geneData)
-    exprNames = civic_return_all_expr(geneData)
+    cnvIds = civic_return_all_cnvs(geneData)
+    exprIds = civic_return_all_expr(geneData)
     # All variant names not matching a CNV or EXPRESSION will be returned
     matches = []
-    for varName in list(geneData.keys()):
-        # NOTE: uppercase is critical for the match!
-        varName = varName.upper()
-        # Skip variant names matching a CNV or EXPRESSION
-        if (varName in cnvNames) or (varName in exprNames):
+    for varId in list(geneData.keys()):
+        # Skip variant ids found to match a CNV or EXPRESSION record
+        if (varId in cnvIds) or (varId in exprIds):
             continue
-        if varName not in matches:
-            matches.append(varName)
-    matches = uppercase_list(matches,"matches")
+        if varId not in matches:
+            matches.append(varId)
     return matches
 
 
-# Given all CIVIC variant records associated to a given gene, return all those variant names that correspond to CNV records
-# For this, attemp to match the gene's variant names to the most common CNV names existing in CIVIC
+# Given all CIVIC variant records associated to a given gene, return all those variant ids that correspond to CNV records
+# For this, attemp to match the corresponding gene's variant names to the most common CNV names existing in CIVIC
 # Additionally, consider other special CNV cases present in CIVIC (eg. EXON 1-2 DELETION, EXON 5 DELETION, 3' EXON DELETION...)
 def civic_return_all_cnvs(geneData):
     # Common CNV record names in CIVIC
@@ -243,24 +240,26 @@ def civic_return_all_cnvs(geneData):
     check_argument(geneData,"geneData")
     check_is_dict(geneData,"geneData")
 
-    # All matched variant names will be returned
+    # All matched variant ids will be returned
     matches = []
-    for varName in list(geneData.keys()):
-        varName = varName.upper()
+    for varId in list(geneData.keys()):
+        # Retrieve the name assigned to the current variant id
+        check_dict_entry(geneData[varId],"geneData","name","name")
+        # NOTE: uppercase is critical for the match!
+        varName = geneData[varId]["name"].upper()
         # Also attempt matching of variant name to common CNV names related to exons
         isExon = cnv_is_exon_string(varName)
         if (varName in cnvNames) or isExon:
 #             ## Special case for 'LOSS': only considered synonym of 'DELETION' when a certain variant type is present
 #             if varName == 'LOSS' and ('TRANSCRIPT_ABLATION' not in geneData[varName]['types']):
 #                 continue
-            if varName not in matches:
-                matches.append(varName)
-    matches = uppercase_list(matches,"matches")
+            if varId not in matches:
+                matches.append(varId)
     return matches
 
 
-# Given all CIVIC variant records associated to a given gene, return all those variant names that correspond to EXPRESSION records
-# For this, attemp to match the gene's variant names to the most common EXPRESSION names existing in CIVIC
+# Given all CIVIC variant records associated to a given gene, return all those variant ids that correspond to EXPRESSION records
+# For this, attemp to match the corresponding gene's variant names to the most common EXPRESSION names existing in CIVIC
 # Additionally, consider other special EXPRESSION cases present in CIVIC (eg. EXON 1-2 OVEREXPRESSION, EXON 5 UNDEREXPRESSION, ...)
 def civic_return_all_expr(geneData):
     # Common EXPRESSION record names in CIVIC
@@ -271,16 +270,18 @@ def civic_return_all_expr(geneData):
     check_argument(geneData,"geneData")
     check_is_dict(geneData,"geneData")
 
-    # All matched variant names will be returned
+    # All matched variant ids will be returned
     matches = []
-    for varName in list(geneData.keys()):
-        varName = varName.upper()
+    for varId in list(geneData.keys()):
+        # Retrieve the name assigned to the current variant id
+        check_dict_entry(geneData[varId],"geneData","name","name")
+        # NOTE: uppercase is critical for the match!
+        varName = geneData[varId]["name"].upper()
         # Also attempt matching of variant name to common EXPRESSION names related to exons
-        isExon = expr_is_exon_string(varName)
+        (isExon,exprType) = expr_is_exon_string(varName)
         if (varName in exprNames) or isExon:
-            if varName not in matches:
-                matches.append(varName)
-    matches = uppercase_list(matches,"matches")
+            if varId not in matches:
+                matches.append(varId)
     return matches
 
 
@@ -604,11 +605,13 @@ def match_variants_in_civic(gene, variants, varMap, dataType, impacts=[], exons=
         # For CNV: positional matches will correspond to EXON records (eg. EXON 1-2 DELETION, 3' EXON DELETION..)
         # For SNV: if there are positional matches, check for preferential positional matches, ie. general variants (like V600)
         if match["tier_2"] and (dataType == 'SNV'):
-            for var in match["tier_2"]:
-                isGeneral = check_general_variant(var)
+            for tmpId in match["tier_2"]:
+                # Variant was already matched, so it was already checked for entry "Name" existing
+                tmpName = varMap[gene][tmpId]["name"]
+                isGeneral = check_general_variant(tmpName)
                 if isGeneral:
                     # Stop as soon as a general variant is found and report only this
-                    match["tier_2"] = [var]
+                    match["tier_2"] = [tmpId]
                     break
 
         # If no match was found, then tier case is 3, and return all relevant variants
@@ -617,10 +620,19 @@ def match_variants_in_civic(gene, variants, varMap, dataType, impacts=[], exons=
             ## to the given gene but that do not correspond to a CNV or EXPRESSION related variant
             if dataType == 'SNV':
                 match["tier_3"] = civic_return_all_snvs(varMap[gene])
+                # NOTE: Sanity check for situation where gene does not contain any variant records for the requested data type (eg. all are CNVs)
+                # Use dummy variant name to keep track of these situations
+                if not match["tier_3"]:
+                    match["tier_3"] = ["NON_SNV_MATCH_ONLY"]
+
             ## For CNV: when input cnv could not be matched in CIVIC (tier3), return all CIVIC cnvs associated the given gene (if any)
             ## ie. not all CIVIC records are returned but only those that are matched to a 'CNV' tags
             elif dataType == 'CNV':
                 match["tier_3"] = civic_return_all_cnvs(varMap[gene])
+                # NOTE: Sanity check for situation where gene does not contain any variant records for the requested data type (eg. all are SNVs)
+                # Use dummy variant name to keep track of these situations
+                if not match["tier_3"]:
+                    match["tier_3"] = ["NON_CNV_MATCH_ONLY"]
 
     # If gene is not in CIVIC, tier level is 4 and match will be empty
     else:
@@ -681,6 +693,10 @@ def match_expression_in_civic(gene, expression_strings, varMap):
         if not (match["tier_1"] or match["tier_1b"] or match["tier_2"]):
             # Not all CIVIC records are returned but only those that are matched to a 'EXPRESSION' tag
             match["tier_3"] = civic_return_all_expr(varMap[gene])
+            # NOTE: Sanity check for situation where gene does not contain any variant records for the requested data type (eg. all are SNVs)
+            # Use dummy variant name to keep track of these situations
+            if not match["tier_3"]:
+                match["tier_3"] = ["NON_EXPR_MATCH_ONLY"]
 
     # If gene is not in CIVIC, tier level is 4 and match will be empty
     else:
@@ -778,7 +794,7 @@ def match_in_civic(varData, dataType, identifier_type, select_tier="all", varMap
             if dataType == "SNV":
                 # Sanity check for expected SNV format (at least 4 fields should exist, even if empty)
                 if (len(varArr) < 4):
-                    raise ValueError("Must provide at least 4 fields to describe a SNV variant (even if some can be empty): 'dna|[prot]|[impact]|[exon]|..|'")
+                    raise ValueError("Must provide at least 4 fields to describe a SNV variant (even if some can be empty): 'dna|prot|impact|exon|..|'")
                 # Format: var="dna|prot|[impact]|[exon]|..|"
                 # NOTE: all fields can contain >1 terms separated with ',' (no spaces). Fields 'dna' and 'prot' are required and 'impacts' and 'exons' are optional
                 # NOTE: there might be additional fields after, eg. 'lineNumber' when data has been parsed from a file
@@ -790,17 +806,20 @@ def match_in_civic(varData, dataType, identifier_type, select_tier="all", varMap
                 # Sanity check for required and optional fields
 
                 # Field 'Variant_dna' must exist and cannot contain empty values
-                cVarArr = parse_input(cVars, "Variant_dna", isRequired=True)
+                cVarArr = parse_input(cVars, "Variant_dna", isRequired=False)
                 # Field 'Variant_prot' must exist but can contain empty values
                 pVarArr = parse_input(pVars, "Variant_prot", isRequired=False)
 # TODO: use a function for this parsing
                 for cVar in cVarArr:
+                    # Sanity check that c. variant is not empty (as this field is not always required)
+                    if not cVar:
+                        continue
                     # Sanity check that variant starts with "c."
                     check_is_cHGVS(cVar)
                     if cVar not in variants:
                         variants.append(cVar)
                 for pVar in pVarArr:
-                    # Sanity check that p. variant is not empty (as this field is not required)
+                    # Sanity check that p. variant is not empty (as this field is not always required)
                     if not pVar:
                         continue
                     # Sanity check that variant starts with "p."
@@ -811,6 +830,10 @@ def match_in_civic(varData, dataType, identifier_type, select_tier="all", varMap
                 impactArr = parse_input(impacts, "Variant_impact", isRequired=False)
                 # Field 'Variant_exon' is optional and can contain empty values
                 exonArr = parse_input(exons, "Variant_exon", isRequired=False)
+
+                # Since c. and p. annotations can be optionally provided for each variant, sanity check that at least 1 annotation was provided (of either type)
+                if not variants:
+                    raise ValueError("At least one non-empty variant annotation (either 'c.' or 'p.') must be provided per variant!")
 
             if dataType == "CNV":
                 # Format: var="cnv|.."
@@ -1207,6 +1230,7 @@ def process_drug_support(matchMap, varMap, supportDict):
     sorted_tiers = ["tier_1","tier_1b","tier_2","tier_3","tier_4"]
     sorted_cts = ["ct","gt","nct"]
     evidenceType = "PREDICTIVE"
+    special_cases = ["NON_SNV_MATCH_ONLY","NON_CNV_MATCH_ONLY","NON_EXPR_MATCH_ONLY"]
 
     # Check provided argument
     check_arguments([matchMap,varMap,supportDict],["matchMap","varMap","supportDict"])
@@ -1243,11 +1267,20 @@ def process_drug_support(matchMap, varMap, supportDict):
                 drugMap = {}
                 if tier != "tier_4":
                     for varId in matchMap[gene][variant][tier]:
+                        newMap[gene][variant][tier]['matched'].append(varId)
+                        # NOTE: check for special case when tier3 but no matching variant returned for the given data type
+                        # This is a dummy tag and not an actual variant record from CIVICdb, so skip checking in varMap
+                        if varId.upper() in special_cases:
+                            # Sanity check that no other variant was matched when this special case was matched (length of matches should always be one)
+                            if len(matchMap[gene][variant][tier]) != 1:
+                                raise ValueError("Unexpected: encountered multiple matches in special case of empty tier3 match '%s'!" %(matchMap[gene][variant][tier]))
+                            continue
+
                         # For matched variants, they must be contained in the provided varMap
                         check_dict_entry(varMap,"varMap",gene,"gene")
                         check_dict_entry(varMap[gene],"varMap",varId,"variant")
                         check_dict_entry(varMap[gene][varId],"varMap","evidence_items","key")
-                        newMap[gene][variant][tier]['matched'].append(varId)
+
 # TODO: ensure that filtering returnEmpty=False does affect other functions
 # TODO: sanity check that all expected evidence types can be found -> use config for expected values of all dicts, etc.
                         if evidenceType in varMap[gene][varId]['evidence_items'].keys():

@@ -286,6 +286,7 @@ def translate_aa(aminoacid):
 def check_match_before_writing(matchMap, varMap, rawMap, hasSupport=True, hasCt=True, writeCt=False, writeSupport=True, writeComplete=False):
     sorted_tiers = ["tier_1","tier_1b","tier_2","tier_3","tier_4"]
     varmap_entries = ['name','civic_score','hgvs','types','n_evidence_items','evidence_items']
+    special_cases = ["NON_SNV_MATCH_ONLY","NON_CNV_MATCH_ONLY","NON_EXPR_MATCH_ONLY"]
 
     check_arguments([matchMap,varMap,rawMap],["matchMap","varMap","rawMap"])
     check_is_none(hasSupport,"hasSupport")
@@ -315,6 +316,12 @@ def check_match_before_writing(matchMap, varMap, rawMap, hasSupport=True, hasCt=
                     else:
                         check_is_list(matchMap[gene][variant][tier]["matched"],tier)
                         for tmpVar in matchMap[gene][variant][tier]["matched"]:
+                            # NOTE: check for special case when tier3 but no matching variant returned for the given data type
+                            if tmpVar.upper() in special_cases:
+                                # Check that no other variant was matched when this special case was matched (length of matches should always be one)
+                                if len(matchMap[gene][variant][tier]["matched"]) != 1:
+                                    raise ValueError("Unexpected: encountered multiple matches in special case of empty tier3 match '%s'!" %(matchMap[gene][variant][tier]["matched"]))
+                                continue
                             if tmpVar not in matched:
                                 matched.append(tmpVar)
                 else:
@@ -323,6 +330,12 @@ def check_match_before_writing(matchMap, varMap, rawMap, hasSupport=True, hasCt=
                     else:
                         check_is_list(matchMap[gene][variant][tier],tier)
                         for tmpVar in matchMap[gene][variant][tier]:
+                            # NOTE: check for special case when tier3 but no matching variant returned for the given data type
+                            if tmpVar.upper() in special_cases:
+                                # Check that no other variant was matched when this special case was matched (length of matches should always be one)
+                                if len(matchMap[gene][variant][tier]) != 1:
+                                    raise ValueError("Unexpected: encountered multiple matches in special case of empty tier3 match '%s'!" %(matchMap[gene][variant][tier]))
+                                continue
                             if tmpVar not in matched:
                                 matched.append(tmpVar)
             if matched:
