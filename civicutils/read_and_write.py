@@ -386,8 +386,9 @@ def write_evidences(item, writeDrug=False, writeCt=None, writeComplete=False):
 def write_match(matchMap, varMap, rawMap, header, dataType, outfile, hasSupport=True, hasCt=True, writeCt=False, writeSupport=True, writeComplete=False):
     # NOTE: uppercase is critical for matching!
     sorted_evidence_types = ['PREDICTIVE', 'DIAGNOSTIC', 'PROGNOSTIC', 'PREDISPOSING']
-    sorted_cts = ["ct","gt","nct"]
     evidenceType = "PREDICTIVE"
+    special_cases = ["NON_SNV_MATCH_ONLY","NON_CNV_MATCH_ONLY","NON_EXPR_MATCH_ONLY"]
+    sorted_cts = ["ct","gt","nct"]
 
     from utils import check_match_before_writing,check_keys,check_keys_not,check_data_type,check_dict_entry
     check_match_before_writing(matchMap,varMap,rawMap,hasSupport,hasCt,writeCt,writeSupport,writeComplete)
@@ -479,6 +480,15 @@ def write_match(matchMap, varMap, rawMap, header, dataType, outfile, hasSupport=
                         allVariants.append(tmpVar)
 
                 for varId in allVariants:
+                    # NOTE: check for special case when tier3 but no matching variant returned for the given data type
+                    # This is a dummy tag and not an actual variant record from CIVICdb, so skip checking in varMap
+                    if varId.upper() in special_cases:
+                        # In this case, current line will be associated with tier3, but all columns will be empty with "."
+                        for evidence_type in sorted_evidence_types:
+                            if evidence_type not in resultMap.keys():
+                                resultMap[evidence_type] = []
+                        continue
+
                     variant = varMap[gene][varId]['name']
                     geneScores.append(gene + ':' + variant + ':' + str(varMap[gene][varId]['civic_score']))
                     geneVarTypes.append(gene + ':' + variant + ':' + ','.join(varMap[gene][varId]['types']))
