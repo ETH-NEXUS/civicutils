@@ -794,7 +794,7 @@ def match_in_civic(varData, dataType, identifier_type, select_tier="all", varMap
             if dataType == "SNV":
                 # Sanity check for expected SNV format (at least 4 fields should exist, even if empty)
                 if (len(varArr) < 4):
-                    raise ValueError("Must provide at least 4 fields to describe a SNV variant (even if some can be empty): 'dna|[prot]|[impact]|[exon]|..|'")
+                    raise ValueError("Must provide at least 4 fields to describe a SNV variant (even if some can be empty): 'dna|prot|impact|exon|..|'")
                 # Format: var="dna|prot|[impact]|[exon]|..|"
                 # NOTE: all fields can contain >1 terms separated with ',' (no spaces). Fields 'dna' and 'prot' are required and 'impacts' and 'exons' are optional
                 # NOTE: there might be additional fields after, eg. 'lineNumber' when data has been parsed from a file
@@ -806,17 +806,20 @@ def match_in_civic(varData, dataType, identifier_type, select_tier="all", varMap
                 # Sanity check for required and optional fields
 
                 # Field 'Variant_dna' must exist and cannot contain empty values
-                cVarArr = parse_input(cVars, "Variant_dna", isRequired=True)
+                cVarArr = parse_input(cVars, "Variant_dna", isRequired=False)
                 # Field 'Variant_prot' must exist but can contain empty values
                 pVarArr = parse_input(pVars, "Variant_prot", isRequired=False)
 # TODO: use a function for this parsing
                 for cVar in cVarArr:
+                    # Sanity check that c. variant is not empty (as this field is not always required)
+                    if not cVar:
+                        continue
                     # Sanity check that variant starts with "c."
                     check_is_cHGVS(cVar)
                     if cVar not in variants:
                         variants.append(cVar)
                 for pVar in pVarArr:
-                    # Sanity check that p. variant is not empty (as this field is not required)
+                    # Sanity check that p. variant is not empty (as this field is not always required)
                     if not pVar:
                         continue
                     # Sanity check that variant starts with "p."
@@ -827,6 +830,10 @@ def match_in_civic(varData, dataType, identifier_type, select_tier="all", varMap
                 impactArr = parse_input(impacts, "Variant_impact", isRequired=False)
                 # Field 'Variant_exon' is optional and can contain empty values
                 exonArr = parse_input(exons, "Variant_exon", isRequired=False)
+
+                # Since c. and p. annotations can be optionally provided for each variant, sanity check that at least 1 annotation was provided (of either type)
+                if not variants:
+                    raise ValueError("At least one non-empty variant annotation (either 'c.' or 'p.') must be provided per variant!")
 
             if dataType == "CNV":
                 # Format: var="cnv|.."
