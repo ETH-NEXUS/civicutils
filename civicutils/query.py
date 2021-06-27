@@ -6,7 +6,7 @@ from utils import check_identifier_type,check_empty_field,check_argument,check_i
 
 def query_civic(genes, identifier_type="entrez_symbol"):
     """
-    Given a list of gene identifiers, query CIViCdb using civic.get_all_genes() and return a nested dictionary summarizing the evidences from the database. Only a selection of the complete record is processed and returned.
+    Given a list of gene identifiers, query CIViCdb using 'civic.get_all_genes()' and return a nested dictionary summarizing the evidences from the database. Only a selection of the complete record is processed and returned.
     :param genes:    A list containing gene identifiers to query.
     :param identifier_type:    ['entrez_symbol', 'entrez_id', 'civic_id']
                         entrez_symbol:   Entrez gene symbol.
@@ -14,7 +14,7 @@ def query_civic(genes, identifier_type="entrez_symbol"):
                         civic_id: CIViCdb internal identifier.
                         Type of gene identifier used in your query
                         This parameter defaults to 'entrez_symbol'.
-    :return:            Returns a nested dictionary from reformat_civic().
+    :return:            Returns a nested dictionary from 'reformat_civic()'.
     """
     # Check arguments
     check_argument(genes,"genes")
@@ -79,7 +79,7 @@ def query_civic(genes, identifier_type="entrez_symbol"):
 def reformat_civic(results, identifier_type="entrez_symbol"):
     """
     Given a list of results from querying genes in CIViCdb, reformat the returned records into a nested dictionary with a specific structure. Only a selection of the complete record from the database is processed and returned.
-    :param results:    A list of objects of class 'civicpy.civic.Gene', returned from querying genes in CIViCdb via civic.get_all_genes(). Can be empty.
+    :param results:    A list of objects of class 'civicpy.civic.Gene', returned from querying genes in CIViCdb via 'civic.get_all_genes()'. Can be empty.
     :param identifier_type:    ['entrez_symbol', 'entrez_id', 'civic_id']
                         entrez_symbol:   Entrez gene symbol.
                         entrez_id: Entrez gene identifier.

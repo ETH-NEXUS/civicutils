@@ -8,13 +8,13 @@ from utils import check_string_filter_arguments,check_cutoff_filter_arguments,ch
 def filter_in(field, fieldName, inList, listName, matchType="exact"):
     """
     Check if a given field is contained in a list of strings to be selected for during filtering.
-    :param field:    A string to check in the provided list. If "NULL", then match will not be attempted (ie. if list is non-empty, then match=False will be returned by the function).
-    :param fieldName:    The name of the field being checked (for error handling).
-    :param inList:    A list of strings to be compared against field. If empty list is provided, then match=True will be returned by the function.
+    :param field:       A string to check in the provided list. If 'NULL', then match will not be attempted (ie. if list is non-empty, then 'match=False' will be returned by the function).
+    :param fieldName:   The name of the field being checked (for error handling).
+    :param inList:      A list of strings to be compared against field. If empty list is provided, then 'match=True' will be returned by the function.
     :param listName:    The name of the list being checked (for error handling).
-    :param matchType:    ['exact', 'partial']
-                        exact:   the exact provided field needs to be found in the list to declare match=True.
-                        partial: partial matches of field in the list is enough to declare match=True.
+    :param matchType:   ['exact', 'partial']
+                        exact:   the exact provided field needs to be found in the list to declare 'match=True'.
+                        partial: partial matches of field in the list is enough to declare 'match=True'.
                         Type of match to be sought.
                         This parameter defaults to 'exact'.
     :return:            Returns a boolean indicating if field should be kept (True) or not (None).
@@ -40,13 +40,13 @@ def filter_in(field, fieldName, inList, listName, matchType="exact"):
 def filter_not_in(field, fieldName, outList, listName, matchType="exact"):
     """
     Check if a given field is contained in a list of strings to be removed during filtering.
-    :param field:    A string to check in the provided list. Can be "NULL" (match will be attempted).
-    :param fieldName:    The name of the field being checked (for error handling).
-    :param outList:    A list of strings to be compared against field. If empty list is provided, then match=False will be returned by the function.
+    :param field:       A string to check in the provided list. Can be 'NULL' (match will still be attempted).
+    :param fieldName:   The name of the field being checked (for error handling).
+    :param outList:     A list of strings to be compared against field. If empty list is provided, then 'match=False' will be returned by the function.
     :param listName:    The name of the list being checked (for error handling).
-    :param matchType:    ['exact', 'partial']
-                        exact:   the exact provided field needs to be found in the list to declare match=True.
-                        partial: partial matches of field in the list is enough to declare match=True.
+    :param matchType:   ['exact', 'partial']
+                        exact:   the exact provided field needs to be found in the list to declare 'match=True'.
+                        partial: partial matches of field in the list is enough to declare 'match=True'.
                         Type of match to be sought.
                         This parameter defaults to 'exact'.
     :return:            Returns a boolean indicating if field should be excluded (True) or not (None).
@@ -69,10 +69,10 @@ def filter_not_in(field, fieldName, outList, listName, matchType="exact"):
 def filter_cutoff(field, fieldName, cutoff, cutoffName):
     """
     Check if a given numeric field is equal or above a certain threshold.
-    :param field:    A number to compare against the provided cutoff. When cutoff!=0, return match=True when field => cutoff.
-    :param fieldName:    The name of the numeric field being checked (for error handling).
-    :param cutoff:    A numeric threshold to be compared against the given field. If cutoff=0, then match=True will be returned by the function.
-    :param cutoffName:    The name of the cutoff value being checked (for error handling).
+    :param field:       A number to compare against the provided cutoff. When cutoff!=0, return 'match=True' when field => cutoff.
+    :param fieldName:   The name of the numeric field being checked (for error handling).
+    :param cutoff:      A numeric threshold to be compared against the given field. If cutoff=0, then 'match=True' will be returned by the function.
+    :param cutoffName:  The name of the cutoff value being checked (for error handling).
     :return:            Returns a boolean indicating if field is equal/above (True) or below (None) the threshold.
     """
     # Sanity check for provided arguments (both should be numeric or floats)
@@ -89,42 +89,42 @@ def filter_cutoff(field, fieldName, cutoff, cutoffName):
 
 def filter_civic(varMap, gene_id_in=[], gene_id_not_in=[], min_variants=0, var_id_in=[], var_id_not_in=[], var_name_in=[], var_name_not_in=[], min_civic_score=0, var_type_in=[], var_type_not_in=[], min_evidence_items=0, evidence_type_in=[], evidence_type_not_in=[], disease_in=[], disease_not_in=[], drug_name_in=[], drug_name_not_in=[], evidence_dir_in=[], evidence_dir_not_in=[], evidence_clinsig_in=[], evidence_clinsig_not_in=[], evidence_level_in=[], evidence_level_not_in=[], evidence_status_in=[], evidence_status_not_in=[], source_status_in=[], source_status_not_in=[], var_origin_in=[], var_origin_not_in=[], source_type_in=[], source_type_not_in=[], min_evidence_rating=0, output_empty=False):
     """
-    Filter a nested dictionary of results from querying genes in CIViCdb. Dictionary is assumed to have been generated via function reformat_civic(). Provided filtering parameters are evaluated in the order in which they are listed in the function definition (ie. not in the order specified during the function call). The logic of any filters applied is always AND. If the desired filter logic in not possible in one single function call, then the function needs to be applied several times subsequently.
-    :param varMap:    Nested dictionary of results from querying genes in CIViCdb. Provided dictionary cannot be annotated with disease specificity, and it is assumed to have been generated via reformat_civic(). There are three types of possible arguments:
-    :param gene_id_in:    List of gene identifiers to filter for (must match the type of identifier used in the provided varMap). Default is empty list. If non-empty, then only gene records matching the provided identifiers will be returned (exact string match is sought).
-    :param gene_id_not_in:    List of gene identifiers to filter out (must match the type of identifier used in the provided varMap). Default is empty list. If non-empty, then any gene records matching the provided identifiers will be excluded from the returned dictionary (exact string match is sought).
-    :param min_variants:    Minimum number of variants the need to be available for the gene. Default is zero. If non-zero, then only genes having an equal or larger number of variants will be returned.
-    :param var_id_in:    List of variant CIViC identifiers to filter for. Default is empty list. If non-empty, then only variant records matching the provided identifiers will be returned (exact string match is sought).
-    :param var_id_not_in:    List of variant CIViC identifiers to filter out. Default is empty list. If non-empty, then variant records matching the provided identifiers will be excluded from the returned dictionary (exact string match is sought).
-    :param var_name_in:    List of variant names to filter for. Default is empty list. If non-empty, then only variant records matching the provided identifiers will be returned (partial string match is sought).
-    :param var_name_not_in:    List of variant names to filter out. Default is empty list. If non-empty, then variant records matching the provided identifiers will be excluded from the returned dictionary (partial string match is sought).
-    :param min_civic_score:    Minimum CIViC score required for the variant record. Default is zero. If non-zero, then only variant records having an equal or larger score will be returned.
-    :param var_type_in:    List of variant types to filter for. Default is empty list. If non-empty, then only variant records associated to at least one type matching the provided list will be returned (partial string match is sought). When there are no variant types available for a given variant record, then NULL will used in this case. Filtering can still be applied if desired, however current filter will always fail for these records.
-    :param var_type_not_in:    List of variant types to filter out. Default is empty list. If non-empty, then variant records associated to at least one type matching the provided list will be excluded from the returned dictionary (partial string match is sought). When there are no variant types available for a given variant record, then NULL will used in this case. Filtering can still be applied if desired, however current filter will never fail for these records.
-    :param min_evidence_items:    Minimum number of evidence items that need to be available for the variant. Default is zero. If non-zero, then only variant records having an equal or larger number of evidences will be returned. This number is computed summing evidences available across all downstream layers (ie. evidence types, directions, clinical significances, diseases, drugs, etc.). Filtering is applied directly on the original value from varMap (ie. before the number of evidences is updated to reflect the records that passed the filter selection).
-    :param evidence_type_in:    List of evidence types to filter for. Default is empty list. If non-empty, then only evidence records matching the provided types will be returned (exact string match is sought).
+    Filter a nested dictionary of results from querying genes in CIViCdb. Dictionary is assumed to have been generated via function 'reformat_civic()'. Provided filtering parameters are evaluated in the order in which they are listed in the function definition (ie. not in the order specified during the function call). The logic of any filters applied is always 'AND'. If the desired filter logic in not possible in one single function call, then the function needs to be applied several times subsequently.
+    :param varMap:                  Nested dictionary of results from querying genes in CIViCdb. Provided dictionary cannot be annotated with disease specificity, and it is assumed to have been generated via 'reformat_civic()'.
+    :param gene_id_in:              List of gene identifiers to filter for (must match the type of identifier used in the provided 'varMap'). Default is empty list. If non-empty, then only gene records matching the provided identifiers will be returned (exact string match is sought).
+    :param gene_id_not_in:          List of gene identifiers to filter out (must match the type of identifier used in the provided 'varMap'). Default is empty list. If non-empty, then any gene records matching the provided identifiers will be excluded from the returned dictionary (exact string match is sought).
+    :param min_variants:            Minimum number of variants the need to be available for the gene. Default is zero. If non-zero, then only genes having an equal or larger number of variants will be returned.
+    :param var_id_in:               List of variant CIViC identifiers to filter for. Default is empty list. If non-empty, then only variant records matching the provided identifiers will be returned (exact string match is sought).
+    :param var_id_not_in:           List of variant CIViC identifiers to filter out. Default is empty list. If non-empty, then variant records matching the provided identifiers will be excluded from the returned dictionary (exact string match is sought).
+    :param var_name_in:             List of variant names to filter for. Default is empty list. If non-empty, then only variant records matching the provided identifiers will be returned (partial string match is sought).
+    :param var_name_not_in:         List of variant names to filter out. Default is empty list. If non-empty, then variant records matching the provided identifiers will be excluded from the returned dictionary (partial string match is sought).
+    :param min_civic_score:         Minimum CIViC score required for the variant record. Default is zero. If non-zero, then only variant records having an equal or larger score will be returned.
+    :param var_type_in:             List of variant types to filter for. Default is empty list. If non-empty, then only variant records associated to at least one type matching the provided list will be returned (partial string match is sought). When there are no variant types available for a given variant record, then 'NULL' will used in this case. Filtering can still be applied if desired, however current filter will always fail for these records.
+    :param var_type_not_in:         List of variant types to filter out. Default is empty list. If non-empty, then variant records associated to at least one type matching the provided list will be excluded from the returned dictionary (partial string match is sought). When there are no variant types available for a given variant record, then 'NULL' will used in this case. Filtering can still be applied if desired, however current filter will never fail for these records.
+    :param min_evidence_items:      Minimum number of evidence items that need to be available for the variant. Default is zero. If non-zero, then only variant records having an equal or larger number of evidences will be returned. This number is computed summing evidences available across all downstream layers (ie. evidence types, directions, clinical significances, diseases, drugs, etc.). Filtering is applied directly on the original value from 'varMap' (ie. before the number of evidences is updated to reflect the records that passed the filter selection).
+    :param evidence_type_in:        List of evidence types to filter for. Default is empty list. If non-empty, then only evidence records matching the provided types will be returned (exact string match is sought).
     :param evidence_type_not_in:    List of evidence types to filter out. Default is empty list. If non-empty, then evidence records matching the provided types will be excluded from the returned dictionary (exact string match is sought).
-    :param disease_in:    List of disease names to filter for. Default is empty list. If non-empty, then only evidence records matching the provided diseases will be returned (partial string match is sought).
-    :param disease_not_in:    List of disease names to filter out. Default is empty list. If non-empty, then evidence records matching the provided diseases will be excluded from the returned dictionary (partial string match is sought).
-    :param drug_name_in:    List of drug names to filter for. Default is empty list. If non-empty, then only evidence records matching the provided drugs will be returned (partial string match is sought). Filtering at this level will only be applied for evidence records of type PREDICTIVE, otherwise NULL is used and filtering is ignored. Drug name can still be NULL for PREDICTIVE evidences in some cases (eg. submitted evidence).
-    :param drug_name_not_in:    List of drug names to filter out. Default is empty list. If non-empty, then evidence records matching the provided drugs will be excluded from the returned dictionary (partial string match is sought). Filtering at this level will only be applied for evidence records of type PREDICTIVE, otherwise NULL is used and filtering is ignored. Drug name can still be NULL for PREDICTIVE evidences in some cases (eg. submitted evidence).
-    :param evidence_dir_in:    List of evidence directions to filter for. Default is empty list. If non-empty, then only evidence records matching the provided directions will be returned (exact string match is sought).
-    :param evidence_dir_not_in:    List of evidence directions to filter out. Default is empty list. If non-empty, then evidence records matching the provided directions will be excluded from the returned dictionary (exact string match is sought).
-    :param evidence_clinsig_in:    List of clinical significances to filter for. Default is empty list. If non-empty, then only evidence records matching the provided significances will be returned (exact string match is sought).
-    :param evidence_clinsig_not_in:    List of clinical significances to filter out. Default is empty list. If non-empty, then evidence records matching the provided significances will be excluded from the returned dictionary (exact string match is sought).
-    :param evidence_level_in:    List of evidence levels to filter for. Default is empty list. If non-empty, then only evidence records matching the provided levels will be returned (exact string match is sought).
-    :param evidence_level_not_in:    List of evidence levels to filter out. Default is empty list. If non-empty, then evidence records matching the provided levels will be excluded from the returned dictionary (exact string match is sought).
-    :param evidence_status_in:    List of evidence statuses to filter for. Default is empty list. If non-empty, then only evidence records matching the provided statuses will be returned (exact string match is sought).
-    :param evidence_status_not_in:    List of evidence statuses to filter out. Default is empty list. If non-empty, then evidence records matching the provided statuses will be excluded from the returned dictionary (exact string match is sought).
-    :param source_status_in:    List of source statuses to filter for. Default is empty list. If non-empty, then only evidence records matching the provided source statuses will be returned (partial string match is sought).
+    :param disease_in:              List of disease names to filter for. Default is empty list. If non-empty, then only evidence records matching the provided diseases will be returned (partial string match is sought).
+    :param disease_not_in:          List of disease names to filter out. Default is empty list. If non-empty, then evidence records matching the provided diseases will be excluded from the returned dictionary (partial string match is sought).
+    :param drug_name_in:            List of drug names to filter for. Default is empty list. If non-empty, then only evidence records matching the provided drugs will be returned (partial string match is sought). Filtering at this level will only be applied for evidence records of type 'PREDICTIVE', otherwise 'NULL' is used and filtering is ignored. Drug name can still be 'NULL' for 'PREDICTIVE' evidences in some cases (eg. submitted evidence).
+    :param drug_name_not_in:        List of drug names to filter out. Default is empty list. If non-empty, then evidence records matching the provided drugs will be excluded from the returned dictionary (partial string match is sought). Filtering at this level will only be applied for evidence records of type 'PREDICTIVE', otherwise 'NULL' is used and filtering is ignored. Drug name can still be 'NULL' for 'PREDICTIVE' evidences in some cases (eg. submitted evidence).
+    :param evidence_dir_in:         List of evidence directions to filter for. Default is empty list. If non-empty, then only evidence records matching the provided directions will be returned (exact string match is sought).
+    :param evidence_dir_not_in:     List of evidence directions to filter out. Default is empty list. If non-empty, then evidence records matching the provided directions will be excluded from the returned dictionary (exact string match is sought).
+    :param evidence_clinsig_in:     List of clinical significances to filter for. Default is empty list. If non-empty, then only evidence records matching the provided significances will be returned (exact string match is sought).
+    :param evidence_clinsig_not_in: List of clinical significances to filter out. Default is empty list. If non-empty, then evidence records matching the provided significances will be excluded from the returned dictionary (exact string match is sought).
+    :param evidence_level_in:       List of evidence levels to filter for. Default is empty list. If non-empty, then only evidence records matching the provided levels will be returned (exact string match is sought).
+    :param evidence_level_not_in:   List of evidence levels to filter out. Default is empty list. If non-empty, then evidence records matching the provided levels will be excluded from the returned dictionary (exact string match is sought).
+    :param evidence_status_in:      List of evidence statuses to filter for. Default is empty list. If non-empty, then only evidence records matching the provided statuses will be returned (exact string match is sought).
+    :param evidence_status_not_in:  List of evidence statuses to filter out. Default is empty list. If non-empty, then evidence records matching the provided statuses will be excluded from the returned dictionary (exact string match is sought).
+    :param source_status_in:        List of source statuses to filter for. Default is empty list. If non-empty, then only evidence records matching the provided source statuses will be returned (partial string match is sought).
     :param source_status_not_in:    List of source statuses to filter out. Default is empty list. If non-empty, then evidence records matching the provided source statuses will be excluded from the returned dictionary (partial string match is sought).
-    :param var_origin_in:    List of variant origins to filter for. Default is empty list. If non-empty, then only evidence records matching the provided variant origins will be returned (partial string match is sought).
-    :param var_origin_not_in:    List of variant origins to filter out. Default is empty list. If non-empty, then evidence records matching the provided variant origins will be excluded from the returned dictionary (partial string match is sought).
-    :param source_type_in:    List of types of sources to filter for. Default is empty list. If non-empty, then only evidence records matching the provided source types will be returned (exact string match is sought).
-    :param source_type_not_in:    List of types of sources to filter out. Default is empty list. If non-empty, then evidence records matching the provided source types will be excluded from the returned dictionary (exact string match is sought).
-    :param min_evidence_rating:    Minimum rating required for the evidence record. Default is zero. If non-zero, then only evidence records having an equal or larger rating will be returned. Some evidence records can have a NULL rating, and in this case it will fail this filter if a cutoff!=0 is set.
-    :param output_empty:    Boolean indicating if empty entries can be contained in the filtered dictionary returned by the function. It is recommended to only use this argument for checking at which level the different records contained in varMap failed the applied filters. It is not recommended to use this argument when intention is to apply other functions from this packge on the returned dictionary (behavior can be unexpected).
-    :return:            Returns a new nested dictionary, containing the filtered results.
+    :param var_origin_in:           List of variant origins to filter for. Default is empty list. If non-empty, then only evidence records matching the provided variant origins will be returned (partial string match is sought).
+    :param var_origin_not_in:       List of variant origins to filter out. Default is empty list. If non-empty, then evidence records matching the provided variant origins will be excluded from the returned dictionary (partial string match is sought).
+    :param source_type_in:          List of types of sources to filter for. Default is empty list. If non-empty, then only evidence records matching the provided source types will be returned (exact string match is sought).
+    :param source_type_not_in:      List of types of sources to filter out. Default is empty list. If non-empty, then evidence records matching the provided source types will be excluded from the returned dictionary (exact string match is sought).
+    :param min_evidence_rating:     Minimum rating required for the evidence record. Default is zero. If non-zero, then only evidence records having an equal or larger rating will be returned. Some evidence records can have a 'NULL' rating, and in this case it will fail this filter if a cutoff!=0 is set.
+    :param output_empty:            Boolean indicating if empty entries can be contained in the filtered dictionary returned by the function. It is recommended to only use this argument for checking at which level the different records contained in 'varMap' failed the applied filters. It is not recommended to use this argument when intention is to apply other functions from this packge on the returned dictionary (behavior can be unexpected).
+    :return:                        Returns a new nested dictionary, containing the filtered results.
     """
 # TODO: add framework for flexibly choosing what is filtered based of constructed argument?
 # eg. feature_name (have a catalogue of available and throw error if not matched) + in/not_in + partial/exact (feature type would determine if expectation is list or cutoff value)
