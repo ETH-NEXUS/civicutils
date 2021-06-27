@@ -3,22 +3,36 @@ import os
 import re
 
 def check_is_none(argument,argName):
-    """Check that a given argument exists and is non-empty
+    """
+    Check that a given argument is not None.
+    :param argument:    An object to check.
+    :param argName:     The name of the argument being checked (for error handling).
+    :return:            None
     """
     if argument is None:
         raise ValueError("Argument '%s' must be provided!" %(argName))
     return None
 
+
 def check_argument(argument,argName):
-    """Check that a given argument exists and is non-empty
+    """
+    Check that a given argument is not None and is non-empty.
+    :param argument:    An object to check.
+    :param argName:     The name of the argument being checked (for error handling).
+    :return:            None
     """
     check_is_none(argument,argName)
     if not argument:
         raise ValueError("Argument '%s' must be provided!" %(argName))
     return None
 
+
 def check_arguments(argList,nameList):
-    """Check that a given list of arguments all exist and are non-empty
+    """
+    Given a list of arguments, check that all exist and are non-empty.
+    :param argList:     A list of objects to check.
+    :param nameList:    A list of object names (for error handling). There must be a 1-1 correspondance of elements with argList.
+    :return:            None
     """
     check_argument(argList,"argList")
     check_argument(nameList,"nameList")
@@ -32,10 +46,14 @@ def check_arguments(argList,nameList):
 
 
 def check_identifier_type(identifier_type):
-    """Check that a given identifier type is valid.
-
-## TODO
-
+    """
+    Check that a given identifier type is valid.
+    :param identifier_type:    ['entrez_symbol', 'entrez_id', 'civic_id']
+                        entrez_symbol:   Entrez gene symbol.
+                        entrez_id: Entrez gene identifier.
+                        civic_id: CIViCdb internal identifier.
+                        String identifier type to check for validity.
+    :return:            None
     """
     check_argument(identifier_type,"identifier_type")
     check_is_str(identifier_type,"identifier_type")
@@ -44,11 +62,16 @@ def check_identifier_type(identifier_type):
         raise ValueError("'%s' is not a valid identifier_type. Please provide one of: %s" %(identifier_type,idTypes))
     return None
 
+
 def check_data_type(dataType):
-    """Check that a given data type is valid.
-
-## TODO
-
+    """
+    Check that a given data type is valid.
+    :param dataType:    ['SNV', 'CNV', 'EXPR']
+                        SNV:   Expect genomic single nucleotide variants and insertions/deletions.
+                        CNV:   Expect genomic copy number variation data.
+                        EXPR:  Expect differential expression gene data.
+                        String data type to check for validity.
+    :return:            None
     """
     check_argument(dataType,"dataType")
     check_is_str(dataType,"dataType")
@@ -59,9 +82,10 @@ def check_data_type(dataType):
 
 
 def check_empty_field(inField):
-    """If a given inField is None or empty string, return 'NULL'; otherwise return the same inField string.
-## TODO
-
+    """
+    Check if the given field is None or empty, and return 'NULL' in this case; otherwise, return the given field.
+    :param inField:    Object to check.
+    :return:           Either 'NULL' (if object is empty or None) or the input object.
     """
     if (inField is None) or (not inField):
         newField = "NULL"
