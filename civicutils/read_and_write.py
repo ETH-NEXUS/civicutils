@@ -222,8 +222,6 @@ def readInExpr(infile):
         lineSplit = line.strip().split("\t")
         gene = lineSplit[genePos].strip()
         logFC = lineSplit[logfcPos].strip()
-        # Sanity check on valid type and number
-        check_logFC(logFC,gene)
 
         rawData[str(nLine)] = [gene,logFC]
         for p in extraPos:
@@ -535,7 +533,3 @@ def write_match(matchMap, varMap, rawMap, header, dataType, outfile, hasSupport=
                 outfile.write(outLine + "\n")
 
     return None
-
-# TODO
-# def write_civic(varMap, outfile):
-#     return None
