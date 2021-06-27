@@ -32,22 +32,20 @@ Three different data types can be handled by the package: `SNV` (genomic single-
 #### SNV
 Assumes header and the following columns:
 * `Gene`: required. One gene symbol per row allowed. Cannot be empty.
-* `Variant_dna`: required. HGVS c. annotation for the variant (can be several possible annotations referring to the same variant, listed in a comma-separated list with no spaces). Cannot be empty.
-* `Variant_prot`: required. HGVS p. annotation for the variant, if available (can can be several possible annotations referring to the same variant, listed in a comma-separated list with no spaces). Can be empty
+* `Variant_dna`: required. HGVS c. annotation for the variant (can be several possible annotations referring to the same variant, listed in a comma-separated list with no spaces). Can be empty, but at least one non-empty variant annotation must be provided across `Variant_dna` and `Variant_prot` per row.
+* `Variant_prot`: required. HGVS p. annotation for the variant, if available (can can be several possible annotations referring to the same variant, listed in a comma-separated list with no spaces). Can be empty, but at least one non-empty variant annotation must be provided across `Variant_dna` and `Variant_prot` per row.
 * `Variant_impact`: optional. Single or comma-separated list of variant impact annotations with no spaces. Such annotations (eg. `intron_variant` or `frameshift_variant`) can be retrieved using tools like eg. VEP or snpEff. Can be empty.
 * `Variant_exon`: optional. Single or comma-separated list of variant exon annotations with no spaces. Such annotations (format: `EXON/N_EXONS` or `INTRON/N_INTRONS`, eg. `1/11`) can be retrieved using tools like eg. VEP or snpEff. If provided, then `Variant_impact` must exist and elements in both list must have a 1-1 correspondance. The reason is that the variant impact tag will be used to determine if the exon annotation is intronic or exonic. Can be empty.
 
 #### CNV
 Assumes header and the following columns:
-* `Gene`: required. Gene symbol of the variant. Cannot be empty.
-TODO
-* `Variant_cnv`: required. (can be several possible annotations referring to the same copy variant, listed in a comma-separated list with no spaces). Cannot be empty.
+* `Gene`: required. One gene symbol per row allowed. Cannot be empty.
+* `Variant_cnv`: required. The ollowing types of copy number variation annotations are allowed as input: `AMPLIFICATION`, `AMP`, `GAIN`, `DUPLICATION`, `DUP`, `DELETION`, `DEL`, `LOSS`. Several possible annotations referring to the same copy variant can be provided in a comma-separated list with no spaces. Cannot be empty.
 
 #### EXPR
 Assumes header and the following columns:
-* `Gene`: required. Gene symbol of the variant. Cannot be empty.
-TODO
-* `logFC`: required. Log fold-change value for the gene. Cannot be empty and only one value allowed.
+* `Gene`: required. One gene symbol per row allowed. Cannot be empty.
+* `logFC`: required. Log fold-change value for the given gene. The sign of the fold-change will be used to match variants in CIViC (either `OVEREXPRESSION` if logFC>0 or `OVEREXPRESSION` if logFC<0). Cannot be empty and only one value allowed per row.
 
 
 ### Querying CIVIC
@@ -184,7 +182,7 @@ from filtering import filter_civic
 from match import match_in_civic,annotate_ct,filter_ct,process_drug_support
 
 # Read in file of input SNV variants
-(rawData,snvData,extraHeader) = readInSnvs(inFile)
+(rawData,snvData,extraHeader) = readInSnvs("civicutils/data/example_snv.txt")
 
 # Query input genes in CIVIC
 varMap = query_civic(list(snvData.keys()), identifier_type="entrez_symbol")

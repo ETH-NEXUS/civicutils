@@ -9,7 +9,7 @@ BinPath = os.path.split(os.path.realpath(__file__))[0]
 
 # FIXME: should this go in init.py?
 def get_dict_aminoacids():
-    f = BinPath + "/data.yml"
+    f = BinPath + "/data/data.yml"
     entry_name = "aminoacids"
     with open(f, 'r') as infile:
         try:
@@ -30,7 +30,7 @@ def get_dict_aminoacids():
 
 # FIXME: should this go in init.py?
 def get_dict_support():
-    f = BinPath + "/data.yml"
+    f = BinPath + "/data/data.yml"
     entry_name = "drug_support"
     with open(f, 'r') as infile:
         try:
