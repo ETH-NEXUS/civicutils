@@ -2,7 +2,7 @@ import sys
 import os
 import re
 
-from utils import check_arguments,check_argument,translate_aa,check_is_dict,check_is_list,check_is_str,check_keys,check_keys_not,check_tier_selection,parse_input,check_empty_input,check_dict_entry,check_is_cHGVS,check_is_pHGVS,check_identifier_type,check_data_type,check_is_bool,uppercase_list,check_is_none
+from utils import check_arguments,check_argument,translate_aa,check_is_dict,check_is_list,check_is_str,check_keys,check_keys_not,check_tier_selection,parse_input,check_empty_input,check_dict_entry,check_is_cHGVS,check_is_pHGVS,check_identifier_type,check_data_type,check_is_bool,uppercase_list,check_is_none,check_logFC
 
 # Given a single CIVIC variant name, extract potential HGVS annotations by
 # parsing and modifying this string using knowledge on CIVIC naming conventions
@@ -285,12 +285,6 @@ def civic_return_all_expr(geneData):
     return matches
 
 
-# TODO: expand framework to provide variant type (SNV or CNV) along with each individual variant, always generate matching strings for both types, and match to one depending on retrieved type -> would allow mixing SNV and CNV variants in the same file/input object
-# Note that rowMap will have a different structure depending on dataType:
-#  - For SNV: gene -> annotationType -> value (either SNV annotation, variant impact or variant exon)
-#  - For CNV: gene -> value (CNV category)
-
-
 # Given a CIVIC variant name and its corresponding hgvs expressions (if available),
 # generate a list of potential strings that will be used to match the variant to our input
 # For CNVs, variant matching is not based on HGVS, since input data is different
@@ -304,7 +298,7 @@ def civic_matchStrings(varName, hgvsExpressions, dataType):
     hgvsExpressions = uppercase_list(hgvsExpressions,"hgvsExpressions")
 
     matchStrings = []
-    ## For CNVs, only the last step 5) is executed, since variant matching is not done at the HGVS level
+    # For dataTypes "CNV" and "EXPR", only the last step 5) is executed, since variant matching is not done at the HGVS level and is only on the variant record name
     if dataType == 'SNV':
         # 1) First, remove reference from annotation (ie. 'transcriptID:')
         # This step will be skipped for CNVs
@@ -332,7 +326,7 @@ def civic_matchStrings(varName, hgvsExpressions, dataType):
             if (start is not None) and (start not in matchStrings): 
                 matchStrings.append(start)
     # 5) Also, add CIVIC variant name to allow for matching using input 'descriptional' strings (eg. EXON 15 MUTATION)
-    ## For CNVs and EXPRESSION data, this string is the only relevant one for matching to CIVIC variants
+    # For dataTypes "CNV" and "EXPR", this string is the only relevant one for matching to CIVIC variants
     matchStrings.append(varName)
 
     return matchStrings
@@ -444,19 +438,20 @@ def input_matchStrings(varAnnotations, dataType, impactAnnots=[], exonAnnots=[])
                 isExact.append(True)
                 isTrueExact.append(False)
 
-    ## Opposite to the SNV case, for CNVs, varAnnotations should correspond to a single element (ie. CNV category)
+    # varAnnotations can contain one or multiple elements which correspond to CNV categories
     if dataType == 'CNV':
         newTags = []
-        ## CIVIC seems to consider that GAIN and AMP are the same CNV
-        if (varAnnotations == 'AMPLIFICATION') or (varAnnotations == 'AMP') or (varAnnotations == 'GAIN') or (varAnnotations == 'DUPLICATION') or (varAnnotations == 'DUP'):
-            newTags.append('AMPLIFICATION')
-        ## CIVIC seems to consider that DELETION and LOSS are the same CNV
-        ## Both CNV categories 'DELETION' and 'LOSS' occur in CIVIC
-        elif (varAnnotations == 'DELETION') or (varAnnotations == 'DEL') or (varAnnotations == 'LOSS'):
-            newTags.append('DELETION')
-            newTags.append('LOSS')
-        newTags.append('COPY NUMBER VARIATION')
-
+        # Iterate individual input annotations and attempt to match in CIVIC using known CNV record names used in the database
+        for varAnnot in varAnnotations:
+            # CIVIC seems to consider that GAIN and AMP are the same CNV
+            if (varAnnot == 'AMPLIFICATION') or (varAnnot == 'AMP') or (varAnnot == 'GAIN') or (varAnnot == 'DUPLICATION') or (varAnnot == 'DUP'):
+                newTags.append('AMPLIFICATION')
+            # CIVIC seems to consider that DELETION and LOSS are the same CNV
+            # Both CNV categories 'DELETION' and 'LOSS' occur in CIVIC
+            elif (varAnnot == 'DELETION') or (varAnnot == 'DEL') or (varAnnot == 'LOSS'):
+                newTags.append('DELETION')
+                newTags.append('LOSS')
+            newTags.append('COPY NUMBER VARIATION')
         for tag in newTags:
             if tag not in matchStrings:
                 matchStrings.append(tag)
@@ -542,7 +537,7 @@ def match_variants_in_civic(gene, variants, varMap, dataType, impacts=[], exons=
     # isExact is a list of equal length to inputStrings, indicating whether a given string corresponds
     # to an exact (True) or positional (False) match
     # allVariants must refer to the same variant, eg. "c." and "p." annotations of the same variant
-    # FIXME: allImpacts and allExons can be empty
+    # allImpacts and allExons can be empty. When exons is provided, then impacts must be provided as well and elements must have a 1-1 correspondance with the impacts.
     (inputStrings,isExact,isTrueExact) = input_matchStrings(variants, dataType, impacts, exons)
 
     ## If gene is in CIVIC, possible tier levels are 1,2,3
@@ -557,8 +552,6 @@ def match_variants_in_civic(gene, variants, varMap, dataType, impacts=[], exons=
             # Returned list always has at least length=1 (in this case, containing only variant name)
             # For dataType=CNV, variant matching is not based on HGVS, so matchStrings will only contain the variant name
             civicStrings = civic_matchStrings(variant_name, hgvs_expressions, dataType)
-
-## TODO: in the future, change this if block to situation of 1) having impact and exon 2) or not
 
             # Iterate input annotations strings and attempt match to any CIVIC variant string
             # The position of each input string corresponds to the type of match (true exact, synonym exact or positional)
@@ -585,24 +578,23 @@ def match_variants_in_civic(gene, variants, varMap, dataType, impacts=[], exons=
                         # There could be 0,1,>1 positional matches
                         if var_id not in match["tier_2"]:
                             match["tier_2"].append(var_id)
-                ## For CNV: When there is no exact match for a 'DELETION', also consider special CIVIC CNV records related to exons (these will be positional matches)
+                # For CNV: When there is no exact match for a 'DELETION', also consider special CIVIC CNV records related to exons (these will be positional matches)
                 else:
-                    ## TODO CNV: Generalize for DELETION and AMPLIFICATION as well
+                    # TODO CNV: Generalize for DELETION and AMPLIFICATION as well
                     if (dataType == 'CNV') and (inputAnnot == 'DELETION'):
-                        ## In CNV case, civicStrings corresponds to the CIVIC variant name (single string)
+                        # In CNV case, civicStrings corresponds to the CIVIC variant name (single string)
                         for tempString in civicStrings:
-                            ## Look for special cases like eg. 'EXON 5 DELETION', 'EXON 1-2 DELETION' or '3' EXON DELETION'
+                            # Look for special cases like eg. 'EXON 5 DELETION', 'EXON 1-2 DELETION' or '3' EXON DELETION'
                             isExon = cnv_is_exon_string(tempString)
                             if isExon:
-                                ## These special cases are accounted for as positional matches (tier 2)
+                                # These special cases are accounted for as positional matches (tier 2)
                                 # There could be 0,1,>1 positional matches
                                 if var_id not in match["tier_2"]:
                                     match["tier_2"].append(var_id)
 
-        ## Once all CIVIC variants have been iterated, determine final tier and corresponding matched variants
-        ## For CNV: either exact or positional matches will occurr due to the implementation design
+        # Once all CIVIC variants have been iterated, determine final tier and corresponding matched variants
 
-        # For CNV: positional matches will correspond to EXON records (eg. EXON 1-2 DELETION, 3' EXON DELETION..)
+        # For CNV: either exact or positional matches will occurr due to the implementation design. Positional matches will correspond to EXON records (eg. EXON 1-2 DELETION, 3' EXON DELETION..)
         # For SNV: if there are positional matches, check for preferential positional matches, ie. general variants (like V600)
         if match["tier_2"] and (dataType == 'SNV'):
             for tmpId in match["tier_2"]:
@@ -616,8 +608,7 @@ def match_variants_in_civic(gene, variants, varMap, dataType, impacts=[], exons=
 
         # If no match was found, then tier case is 3, and return all relevant variants
         if not (match["tier_1"] or match["tier_1b"] or match["tier_2"]):
-            ## For SNV: when input variant could not be matched in CIVIC (tier3), return all CIVIC variants associated
-            ## to the given gene but that do not correspond to a CNV or EXPRESSION related variant
+            # For SNV: when input variant could not be matched in CIVIC (tier3), return all CIVIC variants associated to the given gene but that do not correspond to a CNV or EXPRESSION related variant
             if dataType == 'SNV':
                 match["tier_3"] = civic_return_all_snvs(varMap[gene])
                 # NOTE: Sanity check for situation where gene does not contain any variant records for the requested data type (eg. all are CNVs)
@@ -625,9 +616,9 @@ def match_variants_in_civic(gene, variants, varMap, dataType, impacts=[], exons=
                 if not match["tier_3"]:
                     match["tier_3"] = ["NON_SNV_MATCH_ONLY"]
 
-            ## For CNV: when input cnv could not be matched in CIVIC (tier3), return all CIVIC cnvs associated the given gene (if any)
-            ## ie. not all CIVIC records are returned but only those that are matched to a 'CNV' tags
-            elif dataType == 'CNV':
+            # For CNV: when input cnv could not be matched in CIVIC (tier3), return all CIVIC cnvs associated the given gene (if any)
+            # ie. not all CIVIC records are returned but only those that are matched to a 'CNV' tags
+            if dataType == 'CNV':
                 match["tier_3"] = civic_return_all_cnvs(varMap[gene])
                 # NOTE: Sanity check for situation where gene does not contain any variant records for the requested data type (eg. all are SNVs)
                 # Use dummy variant name to keep track of these situations
@@ -646,7 +637,7 @@ def match_variants_in_civic(gene, variants, varMap, dataType, impacts=[], exons=
 
 
 # For EXPRESSION data
-# TODO: either tier1 match or tier4 (expression record is available in CIVIC for the given gene or not)
+# TODO: tier2 case is not defined for this kind of data (either tier1 when gene is matched, tier3 or tier4)
 def match_expression_in_civic(gene, expression_strings, varMap):
     match = {"tier_1":[], "tier_1b":[], "tier_2":[], "tier_3":[], "tier_4":False}
 
@@ -667,8 +658,8 @@ def match_expression_in_civic(gene, expression_strings, varMap):
             check_dict_entry(varMap[gene][var_id],"varMap","name","name")
             variant_name = varMap[gene][var_id]["name"]
 
-            # For dataType=EXPR (in truth, dataType!=SNV), variant matching is not based on HGVS, so matchStrings will only contain the variant name
-            civicStrings = civic_matchStrings(variant_name, hgvs_expressions, dataType="EXPR")
+            # For dataType=EXPR (in truth, dataType!=SNV), variant matching is not based on HGVS, so matchStrings will only contain the variant name and the list of HGVS is empty
+            civicStrings = civic_matchStrings(variant_name, hgvsExpressions=[], dataType="EXPR")
 
             # Iterate available expression tags for the given gene and attempt match to a CIVIC record for that gene
             # Opposite to the SNV and CNV case, here there is no tier hierarchy, ie. gene expression is either matched in CIVIC or not
@@ -751,7 +742,7 @@ def add_match(matchMap,gene,variant,match):
 
 
 # FIXME
-# TODO: add option to provide user-specified varMap (eg. when filters need to be applied) -> add NOTE or warning about anything not being provided will be interpreted as not available in CIVIC
+# TODO: User can provide their own varMap (eg. when filters need to be applied) -> add NOTE or warning about anything not being provided will be interpreted as not available in CIVIC
 def match_in_civic(varData, dataType, identifier_type, select_tier="all", varMap=None):
     sorted_tiers = ["tier_1","tier_1b","tier_2","tier_3","tier_4"]
 
@@ -809,7 +800,6 @@ def match_in_civic(varData, dataType, identifier_type, select_tier="all", varMap
                 cVarArr = parse_input(cVars, "Variant_dna", isRequired=False)
                 # Field 'Variant_prot' must exist but can contain empty values
                 pVarArr = parse_input(pVars, "Variant_prot", isRequired=False)
-# TODO: use a function for this parsing
                 for cVar in cVarArr:
                     # Sanity check that c. variant is not empty (as this field is not always required)
                     if not cVar:

@@ -1,0 +1,7 @@
+Gene	Variant_dna	Variant_prot
+ARID1A	c.1435C>T,c.4534C>T	p.Gln479Ter,p.Gln1512Ter
+ATR	c.5488C>T	p.Gln1830Ter
+CBL	c.1223G>A	p.Trp408Ter
+ERBB2	c.2033G>A	p.Arg678Gln
+ERBB3	c.308G>A,c.310G>T	p.Arg103His,p.Val104Leu
+NOTCH1	c.3225G>A	p.Trp1075Ter

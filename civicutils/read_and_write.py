@@ -6,10 +6,13 @@ import json
 # TODO: how to specify? or can they be imported as modules are instead?
 BinPath = os.path.split(os.path.realpath(__file__))[0]
 
-
 # FIXME: should this go in init.py?
 def get_dict_aminoacids():
-    f = BinPath + "/data.yml"
+    """
+    Retrieve dictionary from the data.yml file to translate between 1-letter and 3-letter aminoacid codes
+    :return:            Dictionary of 1-letter to 3-letter aminoacid codes.
+    """
+    f = BinPath + "/data/data.yml"
     entry_name = "aminoacids"
     with open(f, 'r') as infile:
         try:
@@ -30,7 +33,11 @@ def get_dict_aminoacids():
 
 # FIXME: should this go in init.py?
 def get_dict_support():
-    f = BinPath + "/data.yml"
+    """
+    Retrieve dictionary from the data.yml file to translate between CIViC evidence directions and clinical significances and their corresponding drug support (assigned by user)
+    :return:            Dictionary of evidence to drug support.
+    """
+    f = BinPath + "/data/data.yml"
     entry_name = "drug_support"
     with open(f, 'r') as infile:
         try:
@@ -49,9 +56,14 @@ def get_dict_support():
     return supportDict
 
 
-# Retrieve a given column name from list of header fields
-# Throw a warning when required column is not found
 def checkHeaderField(name,headerSplit,isRequired=True):
+    """
+    Retrieve the position for a given column name from a list of tab-split header fields. Throw error when a required column is not found.
+    :param name:           A column name to check in the header to retrieve its position.
+    :param headerSplit:    A list of columns from splitting a tab-separated header.
+    :param isRequired:     Boolean indicating if the given column to check is required. If required, throw an error when column is not found.
+    :return:               Either numeric position of the column in the header or None (when non-required column is not found).
+    """
     pos = None
     if name in headerSplit:
         pos = headerSplit.index(name)
@@ -61,13 +73,12 @@ def checkHeaderField(name,headerSplit,isRequired=True):
     return pos
 
 
-# Retrieve the following column names from the given SNV header:
-# - Gene: gene affected by the variant (one gene per row, so variants affecting multiple genes will be reported as separate lines)
-# - Variant_dna: HGVS c. annotation for the variant (one per row)
-# - Variant_prot: HGVS p. annotation (if available) for the variant (one per row)
-# - Variant_impact: optional. Impact of the variant.
-# - Variant_exon: optional. Exon or intron of the variant.
 def processSnvHeader(headerSplit):
+    """
+    Retrieve the required column names expected for the header of an input SNV file. Assume column names are: Gene, Variant_dna, Variant_prot, Variant_impact and Variant_impact. Only the last two are not required.
+    :param headerSplit:    A list of columns from splitting a tab-separated header.
+    :return:               Tuple of column positions for the gene, cHGVS, pHGVS, impact and exon, in that order. Only the last two can be None.
+    """
     genePos = checkHeaderField("Gene",headerSplit,isRequired=True)
     cPos = checkHeaderField("Variant_dna",headerSplit,isRequired=True)
     pPos = checkHeaderField("Variant_prot",headerSplit,isRequired=True)
@@ -76,10 +87,12 @@ def processSnvHeader(headerSplit):
     return (genePos,cPos,pPos,impactPos,exonPos)
 
 
-# TODO
-# Assumes header and that relevant info is contained in the following columns: Variant_dna, Variant_prot, Gene. Optional columns: Variant_impact, Variant_exon
-# For further info, see docs of processSnvHeader()
 def readInSnvs(infile):
+    """
+    Read-in input file of SNV data and process it into structured dictionaries. Assumes header and that relevant info is contained in the following columns: Gene, Variant_dna, Variant_prot. Optional columns:  Variant_impact, Variant_exon.
+    :param infile:    Path to the input SNV file to read in.
+    :return:          Tuple of 3 elements: dictionary containing original rows and fields from input file (lineNumber -> [field1,field2,..]), dictionary of SNV data to be used to match in CIViC (gene -> dna|prot|impact|exon|lineNumber,..) and list of additional columns provided in the input file (which are not required but should be written to output).
+    """
     # dict lineNumber -> [gene,dna,prot,(impact,exon)]
     rawData = {}
     # dict gene -> variant (dna|prot|impact|exon|lineNumber) -> null
@@ -136,20 +149,23 @@ def readInSnvs(infile):
     return (rawData,snvData,extraHeader)
 
 
-# Retrieve the following column names from the given CNV header:
-# - Gene: gene affected by the variant (one gene per row, so variants affecting multiple genes will be reported in different lines)
-# - Variant_cnv: type of CNV variant (should be one of the following terms: 'GAIN', 'DUPLICATION', 'DUP', 'AMPLIFICATION', 'AMP', 'DELETION', 'DEL', 'LOSS')
 def processCnvHeader(headerSplit):
+    """
+    Retrieve the required column names expected for the header of an input CNV file. Assume column names are: Gene, Variant_cnv (both are required). The type of CNV variant should be one of the following terms: 'GAIN', 'DUPLICATION', 'DUP', 'AMPLIFICATION' or 'AMP' (synonyms for AMPLIFICATION), and 'DELETION', 'DEL' or 'LOSS' (synonyms for DELETION).
+    :param headerSplit:    A list of columns from splitting a tab-separated header.
+    :return:               Tuple of column positions for the gene and CNV type.
+    """
     genePos = checkHeaderField("Gene",headerSplit,isRequired=True)
     cnvPos = checkHeaderField("Variant_cnv",headerSplit,isRequired=True)
     return (genePos,cnvPos)
 
 
-# Assumes header and that relevant info is contained in the following columns: Gene, Variant_cnv
-# For further info, see docs of processCnvHeader()
-# TODO
-# FIXME: allow several variants per row?
 def readInCnvs(infile):
+    """
+    Read-in input file of CNV data and process it into structured dictionaries. Assumes header and that relevant info is contained in the following columns: Gene, Variant_cnv.
+    :param infile:    Path to the input CNV file to read in.
+    :return:          Tuple of 3 elements: dictionary containing original rows and fields from input file (lineNumber -> [field1,field2,..]), dictionary of CNV data to be used to match in CIViC (gene -> cnv|lineNumber,..) and list of additional columns provided in the input file (which are not required but should be written to output).
+    """
     # dict lineNumber -> [gene,cnv]
     rawData = {}
     # dict gene -> variant (cnv|lineNumber) -> null
@@ -189,20 +205,23 @@ def readInCnvs(infile):
     return (rawData,cnvData,extraHeader)
 
 
-# Retrieve the following column names from the given EXPR header:
-# - Gene: gene affected by the expression change (one gene per row)
-# - logFC: log fold-change of the gene expression (will be translated into 'OVEREXPRESSION' or 'UNDEREXPRESSION')
 def processExprHeader(headerSplit):
+    """
+    Retrieve the required column names expected for the header of an input Expression file. Assume column names are: Gene, logFC (both are required). The log fold-change value of a differentially expressed gene should be numeric and different from zero (to query CIViC, it will be translated into 'OVEREXPRESSION', if positive, and 'UNDEREXPRESSION', if negative).
+    :param headerSplit:    A list of columns from splitting a tab-separated header.
+    :return:               Tuple of column positions for the gene and log fold-change.
+    """
     genePos = checkHeaderField("Gene",headerSplit,isRequired=True)
     logfcPos = checkHeaderField("logFC",headerSplit,isRequired=True)
     return (genePos,logfcPos)
 
 
-# Assumes header and that relevant info is contained in the following columns: Gene, logFC
-# For further info, see docs of processExprHeader()
-# TODO
-# FIXME: allow several variants per row?
 def readInExpr(infile):
+    """
+    Read-in input file of differentially expressed data and process it into structured dictionaries. Assumes header and that relevant info is contained in the following columns: Gene, logFC.
+    :param infile:    Path to the input expression file to read in.
+    :return:          Tuple of 3 elements: dictionary containing original rows and fields from input file (lineNumber -> [field1,field2,..]), dictionary of EXPR data to be used to match in CIViC (gene -> logFC|lineNumber,..) and list of additional columns provided in the input file (which are not required but should be written to output).
+    """
     # dict lineNumber -> [gene,logFC]
     rawData = {}
     # dict gene -> expression (logFC|lineNumber) -> null
@@ -222,8 +241,6 @@ def readInExpr(infile):
         lineSplit = line.strip().split("\t")
         gene = lineSplit[genePos].strip()
         logFC = lineSplit[logfcPos].strip()
-        # Sanity check on valid type and number
-        check_logFC(logFC,gene)
 
         rawData[str(nLine)] = [gene,logFC]
         for p in extraPos:
@@ -245,12 +262,25 @@ def readInExpr(infile):
 
 
 def write_to_json(inDict, outfile, indent=1):
+    """
+    Write a nested dictionary to file (in json format).
+    :param inDict:     Object of type dict (can be nested).
+    :param outfile:    Path to the output json file to write into.
+    :param indent:     Value of indentation to use as margin.
+    :return:           None
+    """
     with open(outfile, 'w') as f:
         json.dump(inDict, f, ensure_ascii=False, indent=indent)
     return None
 
 
 def write_to_yaml(inDict, outfile):
+    """
+    Write a nested dictionary to file (in yaml format).
+    :param inDict:     Object of type dict (can be nested).
+    :param outfile:    Path to the output yaml file to write into.
+    :return:           None
+    """
     with open(outfile, 'w') as f:
         # Preserve the original order of the entries in the manifest template
         yaml.dump(inDict, f, default_flow_style=False, sort_keys=False)
@@ -258,6 +288,17 @@ def write_to_yaml(inDict, outfile):
 
 
 def write_header_line(dataType,header,writeSupport):
+    """
+    Given a list of sorted column names (from splitting the input header), process it to generate the corresponding output header.
+    :param dataType:        ['SNV', 'CNV', 'EXPR']
+                            SNV:   Expect file of genomic single nucleotide variants and insertions/deletions.
+                            CNV:   Expect file of genomic copy number variation data.
+                            EXPR:  Expect file of differential expression gene data.
+                            String data type of the corresponding input file.
+    :param header:          List of input column names (in order) from splitting the tab-separated header.
+    :param writeSupport:    Boolean indicating if processed drug support from CIViC should be written to output.
+    :return:                Tuple of 4 elements (last 3 are only relevant when 'dataType=SNV'): string containing complete header ready to be written to output, list of column names excluding 'Variant_impact' and 'Variant_exon' (if they were present), boolean indicating if column 'Variant_impact' was present, boolean indicating if column '\tVariant_exon' was present.
+    """
     sorted_evidence_types = ['PREDICTIVE', 'DIAGNOSTIC', 'PROGNOSTIC', 'PREDISPOSING']
 
     # Variables only relevant for dataType="SNV"
@@ -296,6 +337,17 @@ def write_header_line(dataType,header,writeSupport):
 
 
 def write_output_line(tier,mainLine,geneScores,geneVarTypes,drugSupport,resultMap,writeSupport):
+    """
+    Process CIViC information available for a given input line, and generate the corresponding output line. Empty fields are indicated with ".".
+    :param tier:            String with format 'tier_[N]', where N can be: '1', '1b', '2', '3' or '4'. They indicate different tier cases of the variant matching.
+    :param mainLine:        String already containing the required columns to be written to output. This will be extended with the available CIViC information to generate the complete output line.
+    :param geneScores:      List containing the CIViC scores of the matched variants for the given 'tier'. Already formatted as required ie. 'GENE:VARIANT_NAME:SCORE'.
+    :param geneVarTypes:    List containing the variant types of the matched variants in CIViC. Already formatted as required ie. 'GENE:VARIANT_NAME:VAR_TYPE1,..'.
+    :param drugSupport:     List containing the strings of processed drug support for the matched variants. Already formatted as required ie. 'DRUG:CT_TAG:DRUG_SUPPORT'.
+    :param resultMap:       Nested dictionary containing the CIViC evidences associated with each evidence type, already formatted for writing to output.
+    :param writeSupport:    Boolean indicating if processed drug support from CIViC should be written to output.
+    :return:                String containing complete output line ready to be written to output.
+    """
     sorted_evidence_types = ['PREDICTIVE', 'DIAGNOSTIC', 'PROGNOSTIC', 'PREDISPOSING']
 
     # Remove the "tier" tag from the assined tier
@@ -332,10 +384,16 @@ def write_output_line(tier,mainLine,geneScores,geneVarTypes,drugSupport,resultMa
     return outLine
 
 
-# Write information about a single cancer type item into one or more structured strings
-# Report drug names in the string for 'predictive' evidence (writeDrug=True)
-# i.e. DISEASE[|DRUG1,DRUG2..](direction, significance(level(PMID,..,PMID),level(..)));
 def write_evidences(item, writeDrug=False, writeCt=None, writeComplete=False):
+    """
+    Process CIViC information available for a given evidence type, and reformat into structured strings for reporting to output.
+    Format: DISEASE[|DRUG1,DRUG2..](direction, significance(level(PMID,..,PMID),level(..)));
+    :param item:             Nested dictionary containing CIViC evidences associated to a single evidence type (assume a particular structure).
+    :param writeDrug:        Boolean indicating if the current type being evaluated corresponds to 'PREDICTIVE' (ie. these are the only evidences associated to any drug names in CIViC).
+    :param writeCt:          Boolean indicating if the available disease specificity annotations should be included in the output table.
+    :param writeComplete:    Boolean indicating if the complete information string of each CIViC evidence should be written to output. When 'writeComplete=False', only the ids of the associated publications will be reported instead, already formatted as 'SOURCE_ID' (eg. 'PUBMED_12345' or 'ASCO_12345').
+    :return:                 List of complete evidence strings to be written under the current evidence type (one per column).
+    """
     evidences = []
     # For each disease found in the provided item
     for disease in item.keys():
@@ -384,6 +442,25 @@ def write_evidences(item, writeDrug=False, writeCt=None, writeComplete=False):
 
 
 def write_match(matchMap, varMap, rawMap, header, dataType, outfile, hasSupport=True, hasCt=True, writeCt=False, writeSupport=True, writeComplete=False):
+    """
+    Process input data and matched CIViC information, and reformat to write into a tab-separated table.
+    :param matchMap:         Dictionary containing data matched in CIVIC (there must be a correspondance of 'matchMap' and the variant data in 'varMap').
+    :param varMap:           Nested dictionary of results from querying genes in CIViCdb (there must be a correspondance of 'varMap' and the variants matched in 'matchMap').
+    :param rawMap:           Dictionary containing the original rows and fields from the processed input file (lineNumber -> [field1,field2,..])
+    :param header:           List of input column names (in order) from splitting the tab-separated header.
+    :param dataType:         ['SNV', 'CNV', 'EXPR']
+                             SNV:   Expect file of genomic single nucleotide variants and insertions/deletions.
+                             CNV:   Expect file of genomic copy number variation data.
+                             EXPR:  Expect file of differential expression gene data.
+                             String data type of the corresponding input file.
+    :param outfile:          Path to the output file to write the matched CIViC evidences into (tab-separated table with header).
+    :param hasSupport:       Boolean indicating if the provided 'matchMap' is annotated for drug support.
+    :param hasCt:            Boolean indicating if the provided 'varMap' is annotated for disease specificity.
+    :param writeCt:          Boolean indicating if the available disease specificity annotations should be included in the output table. To use this option, 'hasCt' must be True.
+    :param writeSupport:     Boolean indicating if the available drug support annotations should be included in the output table. To use this option, 'hasSupport' must be True.
+    :param writeComplete:    Boolean indicating if the complete information string of each CIViC evidence should be written to output. When 'writeComplete=False', only the ids of the associated publications will be reported instead, already formatted as 'SOURCE_ID' (eg. 'PUBMED_12345' or 'ASCO_12345').
+    :return:                 None
+    """
     # NOTE: uppercase is critical for matching!
     sorted_evidence_types = ['PREDICTIVE', 'DIAGNOSTIC', 'PROGNOSTIC', 'PREDISPOSING']
     evidenceType = "PREDICTIVE"
@@ -535,7 +612,3 @@ def write_match(matchMap, varMap, rawMap, header, dataType, outfile, hasSupport=
                 outfile.write(outLine + "\n")
 
     return None
-
-# TODO
-# def write_civic(varMap, outfile):
-#     return None
