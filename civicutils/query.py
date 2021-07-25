@@ -89,7 +89,6 @@ def reformat_civic(results, identifier_type="entrez_symbol"):
     :return:            Returns a nested dictionary with a specific structure. See README for more details.
     """
     # Check arguments
-    check_argument(results,"results")
     check_is_list(results,"results")
     # Check that id type corresponds to one of the allowed options
     check_identifier_type(identifier_type)

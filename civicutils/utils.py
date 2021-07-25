@@ -408,7 +408,7 @@ def check_match_before_writing(matchMap, varMap, rawMap, hasSupport=True, hasCt=
     varmap_entries = ['name','civic_score','hgvs','types','n_evidence_items','evidence_items']
     special_cases = ["NON_SNV_MATCH_ONLY","NON_CNV_MATCH_ONLY","NON_EXPR_MATCH_ONLY"]
 
-    check_arguments([matchMap,varMap,rawMap],["matchMap","varMap","rawMap"])
+    check_arguments([matchMap,rawMap],["matchMap","rawMap"])
     check_is_none(hasSupport,"hasSupport")
     check_is_none(hasCt,"hasCt")
     check_is_none(writeCt,"writeCt")
