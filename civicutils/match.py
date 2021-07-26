@@ -521,7 +521,7 @@ def match_variants_in_civic(gene, variants, varMap, dataType, impacts=[], exons=
 
     # Sanity check of provided arguments
     check_data_type(dataType)
-    check_arguments([gene,variants,varMap],["gene","variants","varMap"])
+    check_arguments([gene,variants],["gene","variants"])
     check_is_str(gene,"gene")
     check_is_list(variants,"variants")
     check_is_dict(varMap,"varMap")
@@ -642,7 +642,7 @@ def match_expression_in_civic(gene, expression_strings, varMap):
     match = {"tier_1":[], "tier_1b":[], "tier_2":[], "tier_3":[], "tier_4":False}
 
     # Sanity check of provided arguments
-    check_arguments([gene,expression_strings,varMap],["gene","expression_strings","varMap"])
+    check_arguments([gene,expression_strings],["gene","expression_strings"])
     check_is_str(gene,"gene")
     check_is_list(expression_strings,"expression_strings")
     check_is_dict(varMap,"varMap")
@@ -1153,7 +1153,6 @@ def filter_ct(varMap, select_ct):
     varmap_entries = ['name','civic_score','hgvs','types','n_evidence_items','evidence_items']
 
     # Sanity check for the expected object types
-    check_argument(varMap,"varMap")
     check_is_dict(varMap,"varMap")
     # Process and sanity check provided select_ct (expected format, valid values, etc.)
     select_ct = check_tier_selection(select_ct,sorted_cts)
@@ -1223,7 +1222,7 @@ def process_drug_support(matchMap, varMap, supportDict):
     special_cases = ["NON_SNV_MATCH_ONLY","NON_CNV_MATCH_ONLY","NON_EXPR_MATCH_ONLY"]
 
     # Check provided argument
-    check_arguments([matchMap,varMap,supportDict],["matchMap","varMap","supportDict"])
+    check_arguments([matchMap,supportDict],["matchMap","supportDict"])
     check_is_dict(matchMap,"matchMap")
     check_is_dict(varMap,"varMap")
     check_is_dict(supportDict,"supportDict")
