@@ -40,7 +40,7 @@ Assumes header and the following columns:
 #### CNV
 Assumes header and the following columns:
 * `Gene`: required. One gene symbol per row allowed. Cannot be empty.
-* `Variant_cnv`: required. The ollowing types of copy number variation annotations are allowed as input: `AMPLIFICATION`, `AMP`, `GAIN`, `DUPLICATION`, `DUP`, `DELETION`, `DEL`, `LOSS`. Several possible annotations referring to the same copy variant can be provided in a comma-separated list with no spaces. Cannot be empty.
+* `Variant_cnv`: required. The following types of copy number variation annotations are allowed as input: `AMPLIFICATION`, `AMP`, `GAIN`, `DUPLICATION`, `DUP`, `DELETION`, `DEL`, `LOSS`. Several possible annotations referring to the same copy variant can be provided in a comma-separated list with no spaces. Cannot be empty.
 
 #### EXPR
 Assumes header and the following columns:
@@ -58,9 +58,49 @@ from query import query_civic
 varMap = query_civic(genes, identifier_type="entrez_symbol")
 ```
 
+Structure of the returned variant map (ie. dictionary `varMap`):
+```
+varMap
+└── gene_id
+    └── var_id
+        ├── 'name'
+        ├── 'civic_score'
+        ├── 'hgvs'
+        ├── 'types'
+        ├── 'n_evidence_items'
+        └── 'evidence_items'
+            └── evidence_type
+                └── disease
+                    └── drug
+                        └── evidence
+                            └── level
+                                └── evidence_item
+```
+
+Structure of `varMap` after being annotated for disease specificity (ie. `ct`):
+```
+varMap
+└── gene_id
+    └── var_id
+        ├── 'name'
+        ├── 'civic_score'
+        ├── 'hgvs'
+        ├── 'types'
+        ├── 'n_evidence_items'
+        └── 'evidence_items'
+            └── evidence_type
+                └── ct
+                    └── disease
+                        └── drug
+                            └── evidence
+                                └── level
+                                    └── evidence_item
+```
+
+
 ### Matching to CIVIC
 
-Three different types of input data can be provided to function `match_in_civic()`: `SNV`, `CNV` and `EXPR` (see above for more information). (genomic single-nucleotide variants and indels), `CNV` (genomic copy number variants), and `EXPR` (differential expression values per gene).
+Three different types of input data can be provided to function `match_in_civic()`: `SNV`, `CNV` and `EXPR` (see above for more information). `SNV` (genomic single-nucleotide variants and indels), `CNV` (genomic copy number variants), and `EXPR` (differential expression values per gene).
 
 In order to match variants, the package attempts to infer the names of the corresponding CIViC variant records by using: the provided input HGVS strings (only possible for SNV), HGVS expressions available in CIViC (if any exist, and only available for SNV) and most importantly, using a set of rules to translate how variants are normally named when introduced into the database (eg. for variant `p.Val600Glu`, the corresponding record name would be `V600E`). For matching input data of types `CNV` and `EXPR`, the most common variant record names that exist for these in CIViCdb are considered.
 
@@ -76,7 +116,15 @@ from match import match_in_civic
 (matchMap,matchedIds,varMap) = match_in_civic(inData, dataType="SNV", identifier_type="entrez_symbol", select_tier="highest", varMap=varMap)
 ```
 
-TODO
+Structure of the returned match map (ie. dictionary `matchMap`):
+
+```
+matchMap
+└── gene_id
+    └── input_variant
+        └── tier
+            └── var_id
+```
 
 The returned `matchMap` will contain the same genes and variants from `inData`, with additional entries per gene+variant combination for all the available tier categories listing the matches found (if any). The possible tiers are:
 * `tier_1`: perfect match of the variant in CIViCdb, eg. `p.Val600Glu` matched to `V600E`.
@@ -84,6 +132,19 @@ The returned `matchMap` will contain the same genes and variants from `inData`, 
 * `tier_2`: positional matches of the variant in CIViCdb, eg. `V600M`, `V600K` and `V600E`, when `V600E` was provided
 * `tier_3`: gene was found in CIViCdb but no variant could be matched. All CIViC variant records available for the gene that are found to match the given data type will be returned (if any). If a `tier_3` was indicated but no matched variants appear listed, then that means that there were no records found to match the provided data type for the given gene (but that there are records available in CIViCdb for other data types).
 * `tier_4`: gene was not found in CIViCdb. Nothing was returned.
+
+
+Structure of the returned `matchMap` after being annotated for consensus drug support:
+```
+└── matchMap
+    └── gene_id
+        └── input_variant
+            └── tier
+                ├── 'matched'
+                │   └── var_id
+                └── 'drug_support'
+                    └── support
+```
 
 
 ### Filtering
@@ -128,7 +189,7 @@ filteredMap = filter_ct(annotMap, select_ct)
 
 #### Parameters for annotating disease specificity
 
-In other to classify each disease and its associated evidences as cancer specific, general or not specific, lists of terms can be provided. Excluding evidences from undesired diseases can also be done at this step.
+In order to classify each disease and its associated evidences as cancer specific, general or not specific, lists of terms can be provided. Excluding evidences from undesired diseases can also be done at this step.
 
 Relevant and non-allowed disease names or terms can be provided as lists in `disease_name_in` and `disease_name_not_in`, respectively. In both cases, partial matches are sought, eg. `small` will match `non-small cell lung cancer` and `lung small cell carcinoma`, while `non-small` will only match `non-small cell lung cancer`. In the same manner, be aware that `uveal melanoma` will only match `uveal melanoma` and not `melanoma`. As CIVICdb contains some higher-level disease names which are database specific, eg. `cancer` or `solid tumor`, terms provided in the `alt_disease_names` list only allow exact matches, eg. `cancer` will only match `cancer` and not `lung cancer`. Search terms should always be provided as a list, even if only one single term, and multiple words per term are allowed, eg. [`ovarian`,`solid tumor`,`sex cord-stromal`] and [`solid tumor`] are both valid parameter inputs.
 

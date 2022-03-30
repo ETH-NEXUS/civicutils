@@ -1352,3 +1352,148 @@ def process_drug_support(matchMap, varMap, supportDict):
 
     return newMap
 
+
+# TODO
+# For 'predictive' evidence (writeDrug=True), keep dictionary of drug support for the current variant match (one support per tier)
+# Format: drug -> ct -> [support1,support2,..,support1] (keep track of all occurrences)
+def reprocess_drug_support_across_selected_variants(inputData, matchMap, varMap, supportDict, hasSupport=True):
+    sorted_tiers = ["tier_1","tier_1b","tier_2","tier_3","tier_4"]
+    sorted_cts = ["ct","gt","nct"]
+    evidenceType = "PREDICTIVE"
+    special_cases = ["NON_SNV_MATCH_ONLY","NON_CNV_MATCH_ONLY","NON_EXPR_MATCH_ONLY"]
+
+    # Check provided argument
+    check_arguments([matchMap,supportDict],["matchMap","supportDict"])
+    check_is_dict(inputData,"inputData")
+    check_is_dict(matchMap,"matchMap")
+    check_is_dict(varMap,"varMap")
+    check_is_dict(supportDict,"supportDict")
+
+    # Process and aggregate drug support across all the available evidences for the supplied inputData (genes + vaiants)
+    drug_support_strings = []
+    drugMap = {}
+
+    # gene -> variant -> {tier1,tier1b..} -> [matched_vars]
+    # where variant -> var="dna|prot|impact|exon|lineNumber"
+    for gene in inputData.keys():
+        if gene not in matchMap.keys():
+            raise ValueError("Input gene '%s' from 'inputData' could not be found in provided 'matchMap'!" %(gene))
+        for variant in inputData[gene].keys():
+            if variant not in matchMap[gene].keys():
+                raise ValueError("Input variant '%s' (gene '%s') from 'inputData' could not be found in provided 'matchMap'!" %(variant, gene))
+
+            # Sanity check that provided matchMap has expected format (ie. is annotated with drug support)
+            check_keys(list(matchMap[gene][variant].keys()),"matchMap",sorted_tiers,matches_all=True)
+            for tier in matchMap[gene][variant].keys():
+                # Sanity check that provided matchMap has expected format
+                # NOTE: tier4 has specific format compared to the others (boolean vs. list)
+                if tier == "tier_4":
+                    if hasSupport:
+                        check_is_bool(matchMap[gene][variant][tier]["matched"],tier)
+                    else:
+                        check_is_bool(matchMap[gene][variant][tier],tier)
+                else:
+                    if hasSupport:
+                        check_is_list(matchMap[gene][variant][tier]["matched"],tier)
+                    else:
+                        check_is_list(matchMap[gene][variant][tier],tier)
+
+# TODO: drug support for tier 1, 1b and 2 is clear
+# TODO: drug support for tier 3 will not make sense (averaging across variants) -> leave it in case the user is interested
+# TODO: drug support for tier 4 should directly be empty
+                if tier != "tier_4":
+                    if hasSupport:
+                        variant_list = matchMap[gene][variant][tier]["matched"]
+                    else:
+                        variant_list = matchMap[gene][variant][tier]
+                    for varId in variant_list:
+                        # NOTE: check for special case when tier3 but no matching variant returned for the given data type
+                        # This is a dummy tag and not an actual variant record from CIVICdb, so skip checking in varMap
+                        if varId.upper() in special_cases:
+                            # Sanity check that no other variant was matched when this special case was matched (length of matches should always be one)
+                            if len(variant_list) != 1:
+                                raise ValueError("Unexpected: encountered multiple matches in special case of empty tier3 match '%s'!" %(matchMap[gene][variant][tier]))
+                            continue
+
+                        # For matched variants, they must be contained in the provided varMap
+                        check_dict_entry(varMap,"varMap",gene,"gene")
+                        check_dict_entry(varMap[gene],"varMap",varId,"variant")
+                        check_dict_entry(varMap[gene][varId],"varMap","evidence_items","key")
+
+# TODO: ensure that filtering returnEmpty=False does affect other functions
+# TODO: sanity check that all expected evidence types can be found -> use config for expected values of all dicts, etc.
+                        if evidenceType in varMap[gene][varId]['evidence_items'].keys():
+                            # Sanity check that provided varMap has expected format (ie. annotated for disease specificity)
+                            check_keys(list(varMap[gene][varId]['evidence_items'][evidenceType].keys()),"varMap",sorted_cts,matches_all=True)
+                            for ct in varMap[gene][varId]['evidence_items'][evidenceType].keys():
+                                for disease in varMap[gene][varId]['evidence_items'][evidenceType][ct].keys():
+                                    for drug in varMap[gene][varId]['evidence_items'][evidenceType][ct][disease].keys():
+                                        if drug not in drugMap.keys():
+                                            drugMap[drug] = {}
+                                        if ct not in drugMap[drug].keys():
+                                            drugMap[drug][ct] = []
+                                        for evidence in varMap[gene][varId]['evidence_items'][evidenceType][ct][disease][drug].keys():
+                                            # Split the evidence direction and clinical significance
+                                            evidenceArr = evidence.strip().split(':')
+                                            if (len(evidenceArr) != 2):
+                                                raise ValueError("Unexpected format of evidence '%s'! Please provide string as 'EVIDENCE_DIRECTION:CLINICAL_SIGNIFICANCE'." %(evidence))
+                                            direction = evidenceArr[0]
+                                            clin_signf = evidenceArr[1]
+
+                                            # For each evidence (ie combination of direction+clin_signf), count how many different evidence items support it
+                                            # At this stage, we find count evidence items by counting how many different combinations of level+pmids there are for the same drug, disease and evidence
+                                            if ('NULL' in direction) or ('N/A' in direction) or ('NULL' in clin_signf) or ('N/A' in clin_signf):
+# FIXME: have this as part of input config
+                                                thisSupport = 'UNKNOWN_BLANK'
+                                            else:
+                                                if direction not in supportDict.keys():
+                                                    raise ValueError("Could not find evidence direction '%s' in provided 'supportDict'!" %(direction))
+                                                if clin_signf not in supportDict[direction].keys():
+                                                    raise ValueError("Could not find clinical significance '%s' in provided 'supportDict'!" %(clin_signf))
+                                                thisSupport = supportDict[direction][clin_signf]
+
+                                            # Keep track of number of occurrences for each support type for the given drug
+                                            # Here, take into account the number of supporting PMIDs associated to each evidence item
+                                            for evidence_level in varMap[gene][varId]['evidence_items'][evidenceType][ct][disease][drug][evidence].keys():
+                                                for thisString in varMap[gene][varId]['evidence_items'][evidenceType][ct][disease][drug][evidence][evidence_level]:
+                                                    drugMap[drug][ct].append(thisSupport)
+
+    # Process drug support information parsed and aggregated across all provided genes and variants
+    # Drug support for tier 4 will never be available
+    for thisDrug in drugMap.keys():
+        for thisCt in drugMap[thisDrug].keys():
+            # Given the selected ct, count number of occurrences for each possible support type (if any)
+# FIXME: have this as part of input config
+            count_pos = drugMap[thisDrug][thisCt].count('POSITIVE')
+            count_neg = drugMap[thisDrug][thisCt].count('NEGATIVE')
+            count_unk = drugMap[thisDrug][thisCt].count('UNKNOWN_BLANK')
+            count_dns = drugMap[thisDrug][thisCt].count('UNKNOWN_DNS')
+
+            # Pool UNKNOWN_BLANK and UNKNOWN_DNS together (as both result in unknown CIVIC support)
+            count_total_unk = count_unk + count_dns
+            # Sanity check that there is at least some support
+            if (count_pos == 0) and (count_neg == 0) and (count_total_unk == 0):
+                raise ValueError("Encountered unexpected support case when aggregating evidences across provided 'inputData'!")
+
+            # Resolve contradicting evidence (if any) by majority vote
+            tempSupport = ''
+            # For this, pool UNKNOWN_BLANK and UNKNOWN_DNS together
+            # Whenever there is a tie of "confident" (pos or neg) vs "non-confident" (unk), choose the confident one
+            if (count_total_unk > count_pos) and (count_total_unk > count_neg):
+                tempSupport = "CIVIC_UNKNOWN"
+            elif count_pos == count_neg:
+                tempSupport = "CIVIC_CONFLICT"
+            elif (count_pos > count_neg) and (count_pos >= count_total_unk):
+                tempSupport = "CIVIC_SUPPORT"
+            elif (count_neg > count_pos) and (count_neg >= count_total_unk):
+                tempSupport = "CIVIC_RESISTANCE"
+            else:
+                raise ValueError("Encountered unexpected support case when aggregating evidences across provided 'inputData'!")
+
+            # Build support string for each given combination of drug, ct and matched tier
+            # Format: DRUG:CT:SUPPORT
+            drugSupport = thisDrug + ':' + thisCt.upper() + ':' + tempSupport
+            drug_support_strings.append(drugSupport)
+
+    return drug_support_strings
+

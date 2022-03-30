@@ -611,4 +611,5 @@ def write_match(matchMap, varMap, rawMap, header, dataType, outfile, hasSupport=
                 outLine = write_output_line(tier,mainLine,geneScores,geneVarTypes,drugSupport,resultMap,writeSupport)
                 outfile.write(outLine + "\n")
 
+    outfile.close()
     return None
