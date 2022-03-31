@@ -36,7 +36,72 @@ def get_column_position(column_name, header_split):
     return pos
 
 
-def get_relevant_
+def get_clinical_info(evidence_string, has_drug=False):
+    # Sanity check the expected separator character and format
+    # Assume direction and clinical significance are always separated by ","
+    evidence_split = evidence_string.split(",")
+
+    # NOTE: take into account CIViCutils can report several evidence levels and/or publication ids aggregated using separator character ","
+    # E.g.'..(B(PUBMED_17590872:..,PUBMED_19903786:..),C(PUBMED_19223544:..))..'
+    if len(evidence_split) > 2:
+        # Remove entries consisting only of PMIDs to have clinical significance in the last possible position
+        # NOTE: assumes that citation ids are always a series of digits and that evidence levels always correspond to one particular letter
+
+# FIXME: review regex below to ensure it will always work for the new format of CIViC evidences
+
+        evidence_split = [x for x in evidence_split if not re.match('([A-Z]\()?[A-Z]+_\d+(\)+)?', x)]
+
+#                         new_evidence_split = []
+#                         for x in interim_drug_and_evidence_split:
+#                             if not re.match('([A-Z]\()?\d+(\)+)?', x):
+#                                 new_evidence_split.append(x)
+#                         for interim in new_evidence_split:
+#                             drug_and_evidence_split.append(interim)
+#                     else:
+#                         for x in interim_drug_and_evidence_split:
+#                             drug_and_evidence_split.append(x)
+
+    clinical_signf_split = evidence_split[-1].strip().split("(")
+    clinical_signf = clinical_signf_split[0]
+
+    # NOTE: depending on the type of evidence being parsed, the format can be slighly different: either the drug name is available (only 'Predictive' evidence) or the cancer-specificity classification (other evidence types)
+    cond_value = None
+
+    if has_drug:
+        # NOTE: take into account that drug names in CIViC can contain separator character ","
+        # Once publication ids have been removed using get_clinical_significance(), evidences involving a drug name with "," will still have length > 2
+        # E.g. "BEZ235 (NVP-BEZ235, DACTOLISIB)"
+        if len(evidence_split) > 2:
+            evidence_split = [",".join(evidence_split[0:-1])]
+
+        # Split the remaining evidence string further and retrieve the drug name reported from CIViC
+        # E.g. "CETUXIMAB(SUPPORTS,RESISTANCE(..."
+        interim_direction_split = evidence_split[0].strip().split("(")
+
+        # NOTE: take into account that drug names in CIViC can contain separator characters "(" and ")"
+        # E.g. "RAPAMYCIN (SIROLIMUS)"
+        interim_drug = interim_direction_split[0].strip()
+        if len(interim_direction_split) > 2:
+            interim_drug = "(".join(interim_direction_split[0:-1])
+        # Use uppercase to avoid mismatches of the drug names due to case
+        cond_value = interim_drug.upper()
+
+    else:
+        # Split the remaining evidence string further and retrieve the cancer specificity classification reported by CIViCutils
+        # E.g. "NCT(SUPPORTS,RESISTANCE(..."
+        interim_direction_split = evidence_split[0].strip().split("(")
+        # Use lowercase to avoid mismatching of "ct" classes due to case
+        ct_type = interim_direction_split[0].strip().lower()
+        cond_value = ct_type
+
+    # In both cases (drug available or not), the direction reported from CIViC uses the same format
+    direction = interim_direction_split[-1].strip()
+
+    # Sanity check that the term associated with the direction (either drug name or ct type) could be successfully retrieved
+    if cond_value is None:
+        raise ValueError("Encountered unexpected format while parsing evidence string '%s'" %(evidence_string))
+
+    return (direction, clinical_signf, cond_value, evidence_split)
 
 
 
@@ -64,25 +129,60 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping):
     prog_pos = get_column_position("CIViC_PROGNOSTIC", header_split)
     pred_pos = get_column_position("CIViC_PREDISPOSING", header_split)
 
-    # Keep track of several different annotations reported by CIViCutils
+# FIXME
 #     civicLines = 0
 #     parsedDrugs = []
 #     parsedGenes = []
 
-    n_civic_lines = 0
-    n_tier_1 = 0
-    n_tier_1b = 0
-    n_tier_1_agg = 0
-    n_tier_2 = 0
-    n_tier_3 = 0
-    n_tier_4 = 0
 
-    matched_variants_mapping = {}
-    matched_variants = 0
-    n_drug_info = 0
+    ## Keep track of several different annotations reported by CIViCutils
+
+    all_variants = 0                            # all lines
+    all_civic_variants = 0                      # all lines having CIViC info available (tier != 4)
+    n_tier_1 = 0                                # all lines with tier = 1
+    n_tier_1b = 0                               # all lines with tier = 1b
+    n_tier_1_agg = 0                            # all lines with tier = 1 or tier = 1b
+    n_tier_2 = 0                                # all lines with tier = 2
+    n_tier_3 = 0                                # all lines with tier = 3
+    n_tier_4 = 0                                # all lines with tier = 4
+
+    matched_variants = 0                        # keep track of the total number of variants matched overall for the current sample
+    # tier -> # variants
+    matched_variants_mapping = {}               # keep track of the total number of variants matched per tier for the current sample
+
+    # disease -> ct
+    disease_mapping = {}                        # keep track of all disease names parsed across the current sample
+    # tier -> disease -> None
+    per_tier_disease_mapping = {}               # per tier, keep track of all disease names parsed across the current sample
+    # ct -> disease -> None
+    ct_mapping = {}                             # keep track of all disease names assigned to each "ct" class for the current sample
+    # tier -> ct -> disease -> None
+    per_tier_ct_mapping = {}                    # per tier, keep track of all disease names assigned to each "ct" class for the current sample
+
+    matched_diseases = 0                        # keep track of the total number of unique disease names matched overall across all variants for the current sample
+    # ct -> # diseases
+    matched_diseases_ct_mapping = {}            # keep track of the total number of unique disease names matched per "ct" class across all variants for the current sample
+    # tier -> # diseases
+    per_tier_matched_diseases_mapping = {}      # keep track of the total number of unique disease names matched per tier for the current sample
+    # tier -> ct -> # diseases
+    per_tier_matched_diseases_ct_mapping = {}   # keep track of the total number of unique disease names matched per tier and "ct" class for the current sample
+
+    # drug -> ct -> consensus_support
+    consensus_drug_mapping = {}                 # keep track of the total number of unique drug names parsed across the consensus drug support for the current sample
+    # drug -> ct -> consensus_support
+    prior_consensus_drug_mapping = {}           # keep track of the total number of unique drug names parsed across the consensus drug support of the highest available "ct" class for the current sample
+    # tier -> drug -> None
+    per_tier_consensus_drug_mapping = {}        # per tier, keep track of the total number of unique drug names parsed across the consensus drug support for the current sample
+    # tier -> drug -> None
+    per_tier_prior_consensus_drug_mapping = {}  # per tier, keep track of the total number of unique drug names parsed across the consensus drug support of the highest available "ct" class for the current sample
+    # ct -> drug -> consensus_support
+    consensus_ct_mapping = {}                   # keep track of the total number of unique drug names parsed per "ct" class across the consensus drug support for the current sample
+    # ct -> drug -> consensus_support
+    prior_consensus_ct_mapping = {}             # keep track of the total number of unique drug names parsed per highest available "ct" class across the consensus drug support for the current sample
 
     # Each line in the input file corresponds to a single variant in the genome
     for line in infile:
+        all_variants += 1
         line_split = line.strip().split("\t")
 
         ## 1) Process tier of the variant match
@@ -98,7 +198,7 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping):
             continue
 
         # Keep track of the number of variants assigned to each tier in the current sample file
-        n_civic_lines += 1
+        all_civic_variants += 1
         if tier=="tier_3":
             n_tier_3 += 1
         if tier=="tier_2":
@@ -138,23 +238,27 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping):
             if n_variants == 0:
                 raise ValueError("Encountered unexpected case of no associated variant matches from CIViC in line %s" %(line.strip()))
 
-        # Keep track of number of matched variants, keep counts per tier
+        # Keep track of number of matched variants, also keep counts per tier
         # tier -> # CIViC variants matched
         if tier not in matched_variants_mapping.keys():
             matched_variants_mapping[tier] = 0
         matched_variants_mapping[tier] += n_variants
         matched_variants += n_variants
 
-        # NOTE: take into account CIViC variant names containing ":", e.g. 'NTRK1:LMNA::NTRK1 E11-E10:18.5;'
 
 
         ## 3) Process disease names and associated cancer specificity classifications across all evidence types (columns)
 
-# TODO: check across all 4 evidence columns, and retrieve all unique instances of disease_name + ct classification
 # TODO: parse all diseases + ct available for each variant line (and associated tier) -> report # diseases for the whole variant set (patient) as well as counts per tier, and also report # diseases per ct classification for the whole variant set (patient) as well as counts per tier
 # TODO: do not count unique diseases + ct per variant but rather, look at the whole set and retrieve the unique diseases+ct, and look at the tier subsets and retrieve the unique diseases+ct
 
-        # Iterate across the 4 relevant evidence columns present in the file
+        # disease -> None
+        interim_disease_mapping = {}                # keep track of the total number of unique disease names parsed within the current variant line
+        # ct -> disease -> None
+        interim_ct_mapping = {}                     # keep track of the total number of unique disease names assigned to each "ct" class within the current variant line
+
+        # Iterate across the 4 relevant evidence columns assumed to be present in the file
+        # Keep track of all unique instances of disease_name + ct_type parsed across the available CIViC evidences
         for tmp_pos in [drug_pos, diag_pos, prog_pos, pred_pos]:
             # Empty evidence columns should be skipped as no information was found on CIViC
             evidence_infos = str(line_split[tmp_pos].strip())
@@ -162,6 +266,7 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping):
                 continue
 
             # NOTE: assume that independent evidence items are listed using ";" as a separator character
+            # NOTE: assume that cancer-specificity classifications should always be available for all disease names reported, independently of the given evidence type column
             # E.g. CCND1:AMPLIFICATION:LUNG NON-SMALL CELL CARCINOMA|NCT(SUPPORTS,POOR OUTCOME(B(PUBMED_17070615:ACCEPTED:FULLY CURATED:SOMATIC:3)));..
             evidence_infos_list = evidence_infos.split(";")
             for evidence_info in evidence_infos_list:
@@ -169,193 +274,440 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping):
                 # NOTE: assume that evidence annotations retrieved from CIViC will never contain separator character "|"
                 tmp_evidence_split = evidence_info.strip().split("|")
 
+                # Extract relevant information about the gene, variant and disease name reported from CIViC
+                variant_and_disease = tmp_evidence_split[0].strip()
+
+                # Sanity check the expected separator character and format
+                variant_and_disease_split = variant_and_disease.split(":")
+                if len(variant_and_disease_split) < 3:
+                    raise ValueError("Encountered unexpected format of CIViC evidence annotations in column %s of line %s" %(str(tmp_pos+1), line.strip()))
+
+                # NOTE: assume gene and disease names from CIViC can never contain separator character ":"
+                # Use uppercase to avoid mismatches of the gene and disease name due to case
+                gene_name = variant_and_disease_split[0].strip().upper()
+                disease_name = variant_and_disease_split[len(variant_and_disease_split)-1].strip().upper()
+
+                # NOTE: take into account that some CIViC variant names can contain separator character ":"
+                # E.g. "LMNA::NTRK1 E11-E10:18.5"
+                variant_name = variant_and_disease_split[1].strip()
+                if len(variant_and_disease_split) > 3:
+                    variant_name = [":".join(variant_and_disease_split[1:-1])]
+
                 # a) Special case of drug prediction evidences (column 'CIViC_PREDICTIVE')
+                # In this situation, the evidence strings have a slightly different format to include the drug name
                 # E.g. CCND1:AMPLIFICATION:BREAST CANCER|NCT|TAMOXIFEN(DOES NOT SUPPORT,RESISTANCE(B(PUBMED_24367492:ACCEPTED:FULLY CURATED:SOMATIC:3)))
+                interim_evidence_split = None
                 if tmp_pos == drug_pos:
                     # Sanity check the expected separator character and format
                     if len(tmp_evidence_split) != 3:
-                        raise ValueError("Unexpected format of CIViC evidence annotations in column %s of line %s" %(str(tmp_pos+1), line.strip()))
+                        raise ValueError("Encountered unexpected format of CIViC evidence annotations in column %s of line %s" %(str(tmp_pos+1), line.strip()))
 
-                    # Extract relevant information reported by CIViCutils
-                    variant_and_disease = tmp_evidence_split[0].strip()
-                    # Use lowercase to avoid mismatching of "ct" classes due to case
+                    # Retrieve the ct" class assigned by CIViCutils and use lowercase to avoid mismatchings due to case
                     ct_type = tmp_evidence_split[1].strip().lower()
+                    # Split the remaining evidence string further and retrieve the direction, clinical significance and drug name reported from CIViC
                     drug_and_evidence = tmp_evidence_split[2].strip()
-
-                    # Sanity check for expected "ct" classifications provided
-                    if ct_type not in sorted_cts:
-                        raise ValueError("Unexpected cancer-specificity classification '%s' encountered in column %s of line %s" %(ct_type, str(tmp_pos+1), line.strip()))
-
-                    # Sanity check the expected separator character and format
-                    variant_and_disease_split = variant_and_disease.split(":")
-                    if len(variant_and_disease_split) < 3:
-                        raise ValueError("Unexpected format of CIViC evidence annotations in column %s of line %s" %(str(tmp_pos+1), line.strip()))
-
-                    # NOTE: assume gene and disease names from CIViC can never contain separator character ":"
-                    gene_name = variant_and_disease_split[0].strip()
-                    disease_name = variant_and_disease_split[len(variant_and_disease_split)-1].strip()
-
-                    # NOTE: take into account that some CIViC variant names can contain separator character ":"
-                    variant_name = variant_and_disease_split[1].strip()
-                    if len(variant_and_disease_split) > 3:
-                        variant_name = [":".join(variant_and_disease_split[1:-1])]
-
-
-
-                    # Sanity check the expected separator character and format
-                    # Assume direction and clinical significance are always separated by ","
-                    drug_and_evidence_split = drug_and_evidence.split(",")
-
-                    # NOTE: take into account CIViCutils can report several evidence levels and/or publication ids aggregated using separator character ","
-                    # E.g.'..(B(PUBMED_17590872:..,PUBMED_19903786:..),C(PUBMED_19223544:..))..'
-                    if len(drug_and_evidence_split) > 2:
-                        # Remove entries consisting only of PMIDs to have clinical significance in the last possible position
-                        # NOTE: assumes that citation ids are always a series of digits and that evidence levels always correspond to one particular letter
-                        drug_and_evidence_split = [x if not re.match('([A-Z]\()?\d+(\)+)?', x) for x in drug_and_evidence_split]
-
-#                         new_evidence_split = []
-#                         for x in interim_drug_and_evidence_split:
-#                             if not re.match('([A-Z]\()?\d+(\)+)?', x):
-#                                 new_evidence_split.append(x)
-#                         for interim in new_evidence_split:
-#                             drug_and_evidence_split.append(interim)
-#                     else:
-#                         for x in interim_drug_and_evidence_split:
-#                             drug_and_evidence_split.append(x)
-
-
-                    clinical_signf_split = drug_and_evidence_split[-1].strip().split("(")
-                    clinical_signf = clinical_signf_split[0]
-
-                    # NOTE: take into account that drug names in CIViC can contain separator character ","
-                    # Once publication ids have been removed, evidences involving a drug name with "," will still have length > 2
-                    # E.g. "BEZ235 (NVP-BEZ235, DACTOLISIB)"
-                    if len(drug_and_evidence_split) > 2:
-                        drug_and_evidence_split = [",".join(drug_and_evidence_split[0:-1])]
-
-                    drug_and_direction_split = drug_and_evidence_split[0].strip().split("(")
-                    direction = drug_and_direction_split[-1].strip()
-
-                    # NOTE: take into account that drug names in CIViC can contain separator characters "(" and ")"
-                    # E.g. "RAPAMYCIN (SIROLIMUS)"
-                    interim_drug = drug_and_direction_split[0].strip()
-                    if len(drug_and_direction_split) > 2:
-                        interim_drug = "(".join(drug_and_direction_split[0:-1])
-
-                    # At this point, the complete drug name, direction and clinical significance have all been correctly parsed
-                    # This info can be used to split the drug prediction evidence string in turn
-
-                    # Use the first part of the string (now already known) to split and retrieve all evidence items supporting the current claim (i.e. different combinations of evidence level + publication id)
-                    split_pattern = interim_drug + "(" + direction + "," + clinical_signf + "("
-                    # Format of drug_and_evidence: 'DRUG(DIRECTION,CLINICALSIGNF(A(ref1,ref2,..),B(ref1,ref5)..))'
-
-                    # Split returns list containing as many elements as evidence items supporting the current claim
-                    # NOTE: this is the case even when the same publication id is reported across several levels
-                    pub_ids_split = drug_and_evidence.split(split_pattern)[1].strip().split(",")
-
-                    # In CIVIC, drugs can form part of a combinatorial treatment, indicated by 'DRUG1+DRUG2+...'
-                    drug_list = interim_drug.strip().split("+")
-                    for drug in drug_list:
-# FIXME
-#                         if drug not in parsedDrugs:
-#                             parsedDrugs.append(drug)
-
-                        # At this step, it is critical to consider drug synonyms and special names that exist in CIViC
-                        drug_synonyms = [drug]
-
-                        # 1) Handle special cases of the form "SYNONYM 1 (SYNONYM 2)"
-                        # Introduce sanity check for 1 particular case: "BEZ235 (NVP-BEZ235, Dactolisib)"
-                        # Also, careful with "O(6)-BENZYLGUANINE"
-                        if (re.match(r'(\S+)\s+\((.+)\)', drug)) and ("," not in drug):
-                            tmp_drug_list = re.match(r'(\S+)\s+\((.+)\)', drug).groups()
-                            for tmp_drug in tmp_drug_list:
-                                if tmp_drug not in drug_synonyms:
-                                    drug_synonyms.append(tmp_drug)
-
-                        # 2) Handle special cases where the drug in CIVIC corresponds to a known synonym (defined at the beginning of the script using drug_synonyms_mapping)
-                        # CIViC_synonym -> drug_name
-                        if drug in drug_synonyms_mapping.keys():
-                            drug_synonym = drug_synonyms_mapping[drug]
-                            if drug_synonym not in drug_synonyms:
-                                drug_synonyms.append(drug_synonym)
-
-                        # Now, iterate all potential drug synonyms and associate them to all the available drug information
-                        # Duplication is necessary in this case to avoid missing drugs because of a name mismatch
-                        for tmp_synonym in drug_synonyms:
-                            # 2) Keep track of clinical information
-                            if tmp_synonym not in clinInfoDict.keys():
-                                clinInfoDict[tmp_synonym] = {}
-                            if sampleName not in clinInfoDict[tmp_synonym].keys():
-                                clinInfoDict[tmp_synonym][sampleName] = {}
-                            if gene not in clinInfoDict[tmp_synonym][sampleName].keys():
-                                clinInfoDict[tmp_synonym][sampleName][gene] = {}
-                            if tier not in clinInfoDict[tmp_synonym][sampleName][gene].keys():
-                                clinInfoDict[tmp_synonym][sampleName][gene][tier] = {}
-                            # Classify cancer into 'ct' (ie. cancer type specific) or 'nct'
-                            if cancerTag not in clinInfoDict[tmp_synonym][sampleName][gene][tier].keys():
-                                clinInfoDict[tmp_synonym][sampleName][gene][tier][cancerTag] = {}
-                            # clinical significances associated to the same direction
-                            if direction not in clinInfoDict[tmp_synonym][sampleName][gene][tier][cancerTag].keys():
-                                clinInfoDict[tmp_synonym][sampleName][gene][tier][cancerTag][direction] = []
-                            # Keep track of how many different evidence items (level+PMIDs) support this direction+clinicalSignificance
-                            # Also, this way we keep track of supporting evidence items for this direction+clinicalSignificance across multiple variants for gene of interest in one sample
-                            for x in range(0, len(pub_ids_split)): # contains as many elements as evidence items support this claim (even when the same reference is used for many levels)
-                                clinInfoDict[tmp_synonym][sampleName][gene][tier][cancerTag][direction].append(clinSignf)
-
+                    (direction, clinical_signf, interim_drug) = get_clinical_info(drug_and_evidence, has_drug=True)
+                    interim_evidence_split = drug_and_evidence
 
                 # b) All other evidences
                 # E.g. CCND1:AMPLIFICATION:LUNG NON-SMALL CELL CARCINOMA|NCT(SUPPORTS,POOR OUTCOME(B(PUBMED_17070615:ACCEPTED:FULLY CURATED:SOMATIC:3)))
                 else:
                     # Sanity check the expected separator character and format
                     if len(tmp_evidence_split) != 2:
-                        raise ValueError("Unexpected format of CIViC evidence annotations in column %s of line %s" %(str(tmp_pos+1), line.strip()))
+                        raise ValueError("Encountered unexpected format of CIViC evidence annotations in column %s of line %s" %(str(tmp_pos+1), line.strip()))
+                    # Split the remaining evidence string further and retrieve the direction and clinical significance reported from CIViC, as well as the "ct" class assigned by CIViCutils
+                    ct_and_evidence =  tmp_evidence_split[1].strip()
+                    (direction, clinical_signf, ct_type) = get_clinical_info(ct_and_evidence, has_drug=False)
+                    interim_evidence_split = ct_and_evidence
+
+                # Sanity check for expected "ct" classifications provided
+                if ct_type not in sorted_cts:
+                    raise ValueError("Encountered unexpected cancer-specificity classification '%s' in column %s of line %s" %(ct_type, str(tmp_pos+1), line.strip()))
+                # Sanity check that the required split string could be retrieved
+                if interim_evidence_split is None:
+                    raise ValueError("Encountered unexpected format of CIViC evidence annotations in column %s of line %s" %(str(tmp_pos+1), line.strip()))
+
+
+                ## At this point, all relevant clinical information for the current variant line has been correctly parsed (tier, gene, variant, disease, ct, and optionally drug if evidence is 'Predictive')
+
+                ## 1) Keep track of disease information across all variants and evidence columns for the current sample
+
+                # Keep track of unique disease names parsed
+                # disease -> ct
+                if disease_name not in disease_mapping.keys():
+                    disease_mapping[disease_name] = ct_type
+                # Sanity check that the same disease name can only be associated to one "ct" classification across the file
+                else:
+# FIXME
+                    parsed_ct_type = disease_mapping[disease_name]
+                    if ct_type != parsed_ct_type:
+                        raise ValueError("Disease name '%s' was found to be associated to two different 'ct' classifications '%s' and '%s'!" %(disease_name, ct_type, parsed_ct_type))
+
+                # Per tier, keep track of unique disease names parsed across all CIViC predictions
+                # tier -> disease -> None
+                if tier not in per_tier_disease_mapping.keys():
+                    per_tier_disease_mapping[tier] = {}
+                if disease_name not in per_tier_disease_mapping[tier].keys():
+                    per_tier_disease_mapping[tier][disease_name] = None
+
+                # Keep track of unique disease names associated with each 'ct' classification
+                # ct -> disease -> None
+                if ct_type not in ct_mapping.keys():
+                    ct_mapping[ct_type] = {}
+                if disease_name not in ct_mapping[ct_type].keys():
+                    ct_mapping[ct_type][disease_name] = None
+
+                # Per tier, keep track of unique disease names associated with each 'ct' classification
+                # tier -> ct -> disease -> None
+                if tier not in per_tier_ct_mapping.keys():
+                    per_tier_ct_mapping[tier] = {}
+                if ct_type not in per_tier_ct_mapping[tier].keys():
+                    per_tier_ct_mapping[tier][ct_type] = {}
+                if disease_name not in per_tier_ct_mapping[tier][ct_type].keys():
+                    per_tier_ct_mapping[tier][ct_type][disease_name] = None
+
+
+                ## 2) Keep track of disease information only within the current variant line (to compute disease stats across all variants and tiers)
+
+                # Keep track of unique disease names parsed
+                # disease -> None
+                if disease_name not in interim_disease_mapping.keys():
+                    interim_disease_mapping[disease_name] = None
+
+                # Keep track of unique disease names associated with each 'ct' classification
+                # ct -> disease -> None
+                if ct_type not in interim_ct_mapping.keys():
+                    interim_ct_mapping[ct_type] = {}
+                if disease_name not in interim_ct_mapping[ct_type].keys():
+                    interim_ct_mapping[ct_type][disease_name] = None
 
 
 
-                    ct_type = evidence_split[len(evidence_split)-1]
+# FIXME: Selected info can be used to split the evidence strings in turn
+                # Use the first part of the string (now already known) to split and retrieve all evidence items supporting the current claim (i.e. different combinations of evidence level + publication id)
+                if tmp_pos == drug_pos:
+                    # Format of interim_evidence_split (drug_and_evidence): 'DRUG(DIRECTION,CLINICALSIGNF(A(ref1,ref2,..),B(ref1,ref5)..))'
+                    split_pattern = interim_drug + "(" + direction + "," + clinical_signf + "("
+                else:
+                    # Format of interim_evidence_split (ct_and_evidence): 'CT_TYPE(DIRECTION,CLINICALSIGNF(A(ref1,ref2,..),B(ref1,ref5)..))'
+                    split_pattern = ct_type + "(" + direction + "," + clinical_signf + "("
 
-                # NOTE: take into account disease and/or variant names from CIViC that can contain special characters (e.g. ":", "(", ")", etc.)
-
-                evidence_split = tmp_evidence_split[0].strip().split("|")
-
-# if len(tmp_evidence_split) > 3:
-# if len(tmp_evidence_split) > 2:
+                # Split returns list containing as many elements as evidence items supporting the current claim
+                # NOTE: this is the case even when the same publication id is reported across several levels
+                pub_ids_split = interim_evidence_split.split(split_pattern)[1].strip().split(",")
 
 
-        ## 3. TODO: check in the consensus drug support column (double check in the corresponding Predictive column?)
-        # TODO: for each variant line, select only drugs associated with the highest available ct classification (if only nct, then all will be taken into account) -> 
-        # TODO: count # of unique drugs (already filtered for only highest ct) predicted for the whole variant set (patient), as well as counts per tier
-        # TODO: also, per ct classification, report # unique drugs, and also report # unique drugs per tier
-        # TODO: taking into account all available drugs + associated ct, for each unique drug, report # of ct classifications associated with it across the file, also, report counts per tier (then do mean across all drugs for the patient, as well as mean across all variants assigned to each tier)
 
-        drug_infos = line_split[drug_supp_pos].strip()
+#                     # In CIVIC, drugs can form part of a combinatorial treatment, indicated by 'DRUG1+DRUG2+...'
+#                     drug_list = interim_drug.strip().split("+")
+#                     for drug in drug_list:
+# FIXME
+#                         if drug not in parsedDrugs:
+#                             parsedDrugs.append(drug)
+# 
+#                         # At this step, it is critical to consider drug synonyms and special names that exist in CIViC
+#                         drug_synonyms = [drug]
+
+#                         # 1) Handle special cases of the form "SYNONYM 1 (SYNONYM 2)"
+#                         # Introduce sanity check for 1 particular case: "BEZ235 (NVP-BEZ235, Dactolisib)"
+#                         # Also, careful with "O(6)-BENZYLGUANINE"
+#                         if (re.match(r'(\S+)\s+\((.+)\)', drug)) and ("," not in drug):
+#                             tmp_drug_list = re.match(r'(\S+)\s+\((.+)\)', drug).groups()
+#                             for tmp_drug in tmp_drug_list:
+#                                 if tmp_drug not in drug_synonyms:
+#                                     drug_synonyms.append(tmp_drug)
+
+#                         # 2) Handle special cases where the drug in CIVIC corresponds to a known synonym (defined at the beginning of the script using drug_synonyms_mapping)
+#                         # CIViC_synonym -> drug_name
+#                         if drug in drug_synonyms_mapping.keys():
+#                             drug_synonym = drug_synonyms_mapping[drug]
+#                             if drug_synonym not in drug_synonyms:
+#                                 drug_synonyms.append(drug_synonym)
+
+#                         # Now, iterate all potential drug synonyms and associate them to all the available drug information
+#                         # Duplication is necessary in this case to avoid missing drugs because of a name mismatch
+#                         for tmp_synonym in drug_synonyms:
+#                             # 2) Keep track of clinical information
+#                             if tmp_synonym not in clinInfoDict.keys():
+#                                 clinInfoDict[tmp_synonym] = {}
+#                             if sampleName not in clinInfoDict[tmp_synonym].keys():
+#                                 clinInfoDict[tmp_synonym][sampleName] = {}
+#                             if gene not in clinInfoDict[tmp_synonym][sampleName].keys():
+#                                 clinInfoDict[tmp_synonym][sampleName][gene] = {}
+#                             if tier not in clinInfoDict[tmp_synonym][sampleName][gene].keys():
+#                                 clinInfoDict[tmp_synonym][sampleName][gene][tier] = {}
+#                             # Classify cancer into 'ct' (ie. cancer type specific) or 'nct'
+#                             if cancerTag not in clinInfoDict[tmp_synonym][sampleName][gene][tier].keys():
+#                                 clinInfoDict[tmp_synonym][sampleName][gene][tier][cancerTag] = {}
+#                             # clinical significances associated to the same direction
+#                             if direction not in clinInfoDict[tmp_synonym][sampleName][gene][tier][cancerTag].keys():
+#                                 clinInfoDict[tmp_synonym][sampleName][gene][tier][cancerTag][direction] = []
+#                             # Keep track of how many different evidence items (level+PMIDs) support this direction+clinicalSignificance
+#                             # Also, this way we keep track of supporting evidence items for this direction+clinicalSignificance across multiple variants for gene of interest in one sample
+#                             for x in range(0, len(pub_ids_split)): # contains as many elements as evidence items support this claim (even when the same reference is used for many levels)
+#                                 clinInfoDict[tmp_synonym][sampleName][gene][tier][cancerTag][direction].append(clinSignf)
+
+
+        ## At this point, all evidence items available across the 4 evidence type columns have been parsed
+        ## Process and keep track of disease information parsed for the current variant line
+
+        # Keep track of number of unique matched diseases across all variants, also keep counts per tier
+        n_diseases = len(interim_disease_mapping.keys())
+        # tier -> # diseases
+        if tier not in per_tier_matched_diseases_mapping.keys():
+            per_tier_matched_diseases_mapping[tier] = 0
+        per_tier_matched_diseases_mapping[tier] += n_diseases
+        matched_diseases += n_diseases
+
+
+        # Keep track of number of unique matched diseases per "ct" class across all variants, also keep counts per tier
+        # tier -> ct -> # diseases
+        if tier not in per_tier_matched_diseases_ct_mapping.keys():
+            per_tier_matched_diseases_ct_mapping[tier] = {}
+
+        # Iterate all "ct" classes available for the current variant line and keep track of associated disease info
+        # ct -> disease -> None
+        for interim_ct_type in interim_ct_mapping.keys():
+            interim_n_diseases = len(interim_ct_mapping[interim_ct_type].keys())
+            # ct -> # diseases
+            if interim_ct_type not in matched_diseases_ct_mapping.keys():
+                matched_diseases_ct_mapping[interim_ct_type] = 0
+            matched_diseases_ct_mapping[interim_ct_type] += interim_n_diseases
+             # tier -> ct -> # diseases
+            if interim_ct_type not in per_tier_matched_diseases_ct_mapping[tier].keys():
+                per_tier_matched_diseases_ct_mapping[tier][interim_ct_type] = 0
+            per_tier_matched_diseases_ct_mapping[tier][interim_ct_type] += interim_n_diseases
+
+
+
+        ## 4) Process column listing consensus support across available drugs
+
+        drug_infos = str(line_split[drug_supp_pos].strip())
+
+
+        ## 3. TODO: (double check info with the corresponding info parsed from Predictive column?)
+
+        # ct -> drug -> consensus_support
+        interim_consensus_ct_mapping = {}
+
+        # Process further variant lines which have drug consensus information available
         if drug_infos != ".":
-            n_drug_info += 1
+            # Assume multiple consensus support strings can be listed separated by ";"
             # E.g.: 'ENTRECTINIB:NCT:CIVIC_SUPPORT;LAROTRECTINIB:NCT:CIVIC_SUPPORT;..'
             drug_infos_list = drug_infos.split(';')
             if not drug_infos_list:
                 raise ValueError("Encountered unexpected case of no associated variant matches in CIViC for line %s" %(line.strip()))
 
-            ct_mapping = {}
+            n_drug_info += 1
 
-            # Format: 'DRUG_NAME:CT:CIVIC_SUPPORT'
+            # Iterate individual string of consensus drug support
+            # Assume one string per combination of drug name + "ct" class (note the same drug can be available for different "ct" classes)
             for drug_info in drug_infos_list:
-                tmp_drug_split = drug_info.strip().split(":")
-                if len(tmp_drug_split) != 3:
-                    # TODO
-                drug = tmp_drug_split[0].strip()
-                ct_type = tmp_drug_split[1].strip()
-                civic_support = tmp_drug_split[2].strip()
-                if ct_type not in ct_mapping.keys():
-                    ct_mapping[ct_type] = []
+                # Format: 'DRUG_NAME:CT_TYPE:CIVIC_SUPPORT'
+                drug_split = drug_info.strip().split(":")
+                # Sanity check the expected separator character and format
+                if len(drug_split) != 3:
+                    raise ValueError("Encountered unexpected format of CIViC evidence annotations in column %s of line %s" %(str(tmp_pos+1), line.strip()))
+                # Use uppercase for drug names and consensus support strings to avoid mismatches due to case
+                drug = drug_split[0].strip().upper()
+                consensus_support = drug_split[2].strip()
+                # Use lowercase for "ct" classes to avoid mismatches due to case
+                ct_type = drug_split[1].strip().lower()
+
+                # Keep track of all disease names, associated "ct" class, and available consensus drug support strings in column 'CIViC_Drug_Support'
+                # ct -> drug -> [consensus_support]
+                if ct_type not in interim_consensus_ct_mapping.keys():
+                    interim_consensus_ct_mapping[ct_type] = {}
+                if drug not in interim_consensus_ct_mapping[ct_type].keys():
+                    interim_consensus_ct_mapping[ct_type][drug] = []
+                # Sanity check for duplicated consensus support strings for the same disease + "ct" class
+                if consensus_support in interim_consensus_ct_mapping[ct_type][drug]:
+                    print("Warning! Skipping duplicated consensus support '%s' for drug '%s' and cancer-specificity classification '%s' encountered in line %s" %(consensus_support, drug, ct_type, line.strip()))
+                interim_consensus_ct_mapping[ct_type][drug].append(consensus_support)
+
+        # TODO: for each variant line, select only drugs associated with the highest available ct classification (if only nct, then all will be taken into account) -> 
+        # TODO: count # of unique drugs (already filtered for only highest ct) predicted for the whole variant set (patient), as well as counts per tier
+        # TODO: also, per ct classification, report # unique drugs, and also report # unique drugs per tier
+        # TODO: taking into account all available drugs + associated ct, for each unique drug, report # of ct classifications associated with it across the file, also, report counts per tier (then do mean across all drugs for the patient, as well as mean across all variants assigned to each tier)
+
+        # Skip variant lines that are not associated to any consensus drug predictions
+        if not interim_consensus_ct_mapping:
+            continue
+
+
+        # Sort all "ct" classes available for the current sample by the priority order defined at the beginning of this function (i.e. 'sorted_cts')
+        sorted_ct_list = sorted(interim_consensus_ct_mapping.keys(), key=lambda x: sorted_cts.index(x))
+        # Select the "ct" class with the highest priority (at least one will always be available)
+        pick_ct = sorted_ct_list[0]
+
+        # Keep track of the total number of unique (consensus) drug names parsed for the current sample, also keep track per tier and "ct" class available
+        # ct -> drug -> consensus_support
+        for tmp_ct in interim_consensus_ct_mapping.keys():
+            for tmp_drug in interim_consensus_ct_mapping[tmp_ct].keys():
+                # drug -> ct -> consensus_support
+                if tmp_drug not in consensus_drug_mapping.keys():
+                    consensus_drug_mapping[tmp_drug] = {}
+                if tmp_ct not in consensus_drug_mapping[tmp_drug].keys():
+                    consensus_drug_mapping[tmp_drug][tmp_ct] = []
+                # tier -> drug -> None
+                if tier not in per_tier_consensus_drug_mapping.keys():
+                    per_tier_consensus_drug_mapping[tier] = {}
+                if tmp_drug not in per_tier_consensus_drug_mapping[tier].keys():
+                    per_tier_consensus_drug_mapping[tier][tmp_drug] = None
+                # ct -> drug -> consensus_support
+                if tmp_ct not in consensus_ct_mapping.keys():
+                    consensus_ct_mapping[tmp_ct] = {}
+                if tmp_drug not in consensus_ct_mapping[tmp_ct].keys():
+                    consensus_ct_mapping[tmp_ct][tmp_drug] = []
+
+                consensus_list = interim_consensus_ct_mapping[tmp_ct][tmp_drug]
+                # NOTE: expectation is that each combination of disease name + "ct" class can only have one single consensus support string associated
+                if len(consensus_list) > 1:
+                    print("Warning! Encountered multiple consensus support strings ('%s') for drug '%s' and cancer-specificity classification '%s' in line %s" %(consensus_list, tmp_drug, tmp_ct, line.strip()))
+
+                # Keep track of drug information associated with the "ct" class of highest priority for the current variant line
+                if tmp_ct != pick_ct:
+                    continue
+                # drug -> ct -> consensus_support
+                if tmp_drug not in prior_consensus_drug_mapping.keys():
+                    prior_consensus_drug_mapping[tmp_drug] = {}
+                if tmp_ct not in prior_consensus_drug_mapping[tmp_drug].keys():
+                    prior_consensus_drug_mapping[tmp_drug][tmp_ct] = []
+                # tier -> drug -> None
+                if tier not in per_tier_prior_consensus_drug_mapping.keys():
+                    per_tier_prior_consensus_drug_mapping[tier] = {}
+                if tmp_drug not in per_tier_prior_consensus_drug_mapping[tier].keys():
+                    per_tier_prior_consensus_drug_mapping[tier][tmp_drug] = None
+                # ct -> drug -> consensus_support
+                if tmp_ct not in prior_consensus_ct_mapping.keys():
+                    prior_consensus_ct_mapping[tmp_ct] = {}
+                if tmp_drug not in prior_consensus_ct_mapping[tmp_ct].keys():
+                    prior_consensus_ct_mapping[tmp_ct][tmp_drug] = []
+
 
         ## 4. TODO: check in the consensus drug support column: report, out of all unique drugs, how many (%) have associated: a. civic_support, civic_resistance, etc. Also, take into account situations where the same drug is associated to different classifications depending on the ct, variant, etc. -> how to handle?
 
 
-
-
     infile.close()
+# FIXME
     print("Parsed %s lines with available CIViC information associated to %s genes and %s drugs" %(civicLines,len(parsedGenes),len(parsedDrugs)))
+
+
+matched_diseases
+matched_diseases_ct_mapping
+per_tier_matched_diseases_ct_mapping
+
+
+
+# # ct -> # diseases
+# matched_diseases_ct_mapping = {}            # keep track of the total number of unique disease names matched per "ct" class across all variants for the current sample
+
+# # tier -> ct -> # diseases
+# per_tier_matched_diseases_ct_mapping = {}   # keep track of the total number of unique disease names matched per tier and "ct" class for the current sample
+
+
+
+# #diseases, #diseases_tier1, #diseases_tier1b, #diseases_tier2, #diseases_tier3
+# #diseases_ct, #diseases_gt, #diseases_nct, #diseases_tier1_ct, #diseases_tier1_gt, #diseases_tier1_nct, #diseases_tier1b_ct, #diseases_tier1b_gt, #diseases_tier1b_nct, #diseases_tier2_ct, #diseases_tier2_gt, #diseases_tier2_nct, #diseases_tier3_ct, #diseases_tier3_gt, #diseases_tier3_nct
+
+# #drugs, #drugs_tier1, #drugs_tier1b, #drugs_tier2, #drugs_tier3
+# mean_cts_per_drug
+# #drugs_ct, #drugs_gt, #drugs_nct, #drugs_tier1_ct, #drugs_tier1_gt, #drugs_tier1_nct, #drugs_tier1b_ct, #drugs_tier1b_gt, #drugs_tier1b_nct, #drugs_tier2_ct, #drugs_tier2_gt, #drugs_tier2_nct, #drugs_tier3_ct, #drugs_tier3_gt, #drugs_tier3_nct
+
+# #drugs_prior, #drugs_tier1_prior, #drugs_tier1b_prior, #drugs_tier2_prior, #drugs_tier3_prior
+# #drugs_ct_prior, #drugs_gt_prior, #drugs_nct_prior, #drugs_tier1_ct_prior, #drugs_tier1_gt_prior, #drugs_tier1_nct_prior, #drugs_tier1b_ct_prior, #drugs_tier1b_gt_prior, #drugs_tier1b_nct_prior, #drugs_tier2_ct_prior, #drugs_tier2_gt_prior, #drugs_tier2_nct_prior, #drugs_tier3_ct_prior, #drugs_tier3_gt_prior, #drugs_tier3_nct_prior
+
+
+# sample -> [
+
+# #vars, #civic, #tier1, #tier1b, #tier1agg, #tier2, #tier3, #tier4
+# mean_matched_vars, mean_matched_vars_tier1, mean_matched_vars_tier1b, mean_matched_vars_tier2, mean_matched_vars_tier3
+
+    if sample_name not in civic_info_mapping.keys():
+        civic_info_mapping[sample_name] = [all_variants, all_civic_variants, n_tier_1, n_tier_1b, n_tier_1_agg, n_tier_2, n_tier_3, n_tier_4, matched_variants, matched_diseases]
+
+# TODO: sanity check for divisions by 0 (e.g. no variants in sample or no variants with CIViC info)
+
+    # Compute mean number of matched variants for the sample (only makes sense to compute mean on lines that had CIViC matches available)
+    mean_matched_variants = matched_variants / all_civic_variants
+
+    # Per tier, compute mean number of matched variants for the sample (only makes sense to compute mean for tiers != 4)
+    mean_matched_variants_tier1 = 0
+    mean_matched_variants_tier1b = 0
+    mean_matched_variants_tier2 = 0
+    mean_matched_variants_tier3 = 0
+    # tier -> # variants
+    if "tier_1" in matched_variants_mapping.keys():
+        mean_matched_variants_tier1 =⋅matched_variants_mapping["tier_1"] / n_tier_1
+    if "tier_1b" in matched_variants_mapping.keys():
+        mean_matched_variants_tier1b =⋅matched_variants_mapping["tier_1b"] / n_tier_1b
+    if "tier_2" in matched_variants_mapping.keys():
+        mean_matched_variants_tier2 =⋅matched_variants_mapping["tier_2"] / n_tier_2
+    if "tier_3" in matched_variants_mapping.keys():
+        mean_matched_variants_tier3 =⋅matched_variants_mapping["tier_3"] / n_tier_3
+
+    # Compute mean number of matched diseases for the sample (only makes sense to compute mean on lines that had CIViC matches available)
+    mean_matched_diseases = matched_diseases / all_civic_variants
+
+    # Per tier, compute mean number of matched diseases for the sample (only makes sense to compute mean for tiers != 4)
+    mean_matched_diseases_tier1 = 0
+    mean_matched_diseases_tier1b = 0
+    mean_matched_diseases_tier2 = 0
+    mean_matched_diseases_tier3 = 0
+    # tier -> # diseases
+    if "tier_1" in per_tier_matched_diseases_mapping.keys():
+        mean_matched_diseases_tier1 =⋅per_tier_matched_diseases_mapping["tier_1"] / n_tier_1
+    if "tier_1b" in per_tier_matched_diseases_mapping.keys():
+        mean_matched_diseases_tier1b =⋅per_tier_matched_diseases_mapping["tier_1b"] / n_tier_1b
+    if "tier_2" in per_tier_matched_diseases_mapping.keys():
+        mean_matched_diseases_tier2 =⋅per_tier_matched_diseases_mapping["tier_2"] / n_tier_2
+    if "tier_3" in per_tier_matched_diseases_mapping.keys():
+        mean_matched_diseases_tier3 =⋅per_tier_matched_diseases_mapping["tier_3"] / n_tier_3
+
+
+    # Per ct, compute mean number of matched diseases for the sample
+    mean_matched_diseases_ct = 0
+    if "ct" in matched_diseases_ct_mapping.keys():
+        mean_matched_diseases_ct = matched_diseases_ct_mapping["ct"] /
+    mean_matched_diseases_gt = 0
+    if "gt" in matched_diseases_ct_mapping.keys():
+        mean_matched_diseases_gt = matched_diseases_ct_mapping["gt"] / 
+    mean_matched_diseases_nct = 0
+    if "nct" in matched_diseases_ct_mapping.keys():
+        mean_matched_diseases_nct = matched_diseases_ct_mapping["nct"] /
+
+
+    # Get total number of unique disease names parsed across the current sample
+    n_diseases = len(disease_mapping.keys())
+
+
+# TODO
+    # Get total number of unique disease names parsed across the current sample
+    #  len(disease_mapping.keys())
+    # Per tier, get total number of unique disease names parsed across the current sample
+    #  for tier in per_tier_disease_mapping.keys(): len(per_tier_disease_mapping[tier].keys())
+    # Per ct, get total number of unique disease names parsed across the current sample
+    #  for ct in ct_mapping.keys(): len(ct_mapping[ct].keys())
+    # Per tier and ct, get total number of unique disease names parsed across the current sample
+    #  for tier in per_tier_ct_mapping.keys(): for ct in per_tier_ct_mapping[tier].keys(): len(per_tier_ct_mapping[tier][ct].keys())
+
+
+    # Get total number of unique drug names parsed across the current sample
+    #  len(consensus_drug_mapping.keys())
+    # Per tier, get total number of unique drug names parsed across the current sample
+    #  for tier in per_tier_consensus_drug_mapping.keys(): len(per_tier_consensus_drug_mapping[tier].keys())
+    # Per drug, retrieve number of associated "ct" classes across the current sample (no prioritization of "ct" class performed)
+    # Compute mean across all drugs available for the sample
+    #  sum_n_ct_across_drugs = 0 for drug in consensus_drug_mapping.keys(): n_ct = len(consensus_drug_mapping[drug].keys()) sum_n_ct_across_drugs += n_ct (sum_n_ct_across_drugs/n_drugs)
+    # Per ct, get total number of unique drug names parsed across the current sample
+    #  for ct in consensus_ct_mapping.keys(): len(consensus_ct_mapping[ct].keys())
+
+    # Get total number of unique drug names parsed for the highest "ct" class available across the current sample
+    #  len(prior_consensus_drug_mapping.keys())
+    # Per tier, get total number of unique drug names parsed for the highest "ct" class available across the current sample
+    #  for tier in per_tier_prior_consensus_drug_mapping.keys(): len(per_tier_prior_consensus_drug_mapping[tier].keys())
+    # Per ct, get total number of unique drug names parsed for the highest "ct" class available across the current sample
+    #  for ct in prior_consensus_ct_mapping.keys(): len(prior_consensus_ct_mapping[ct].keys())
 
     return (civic_info_mapping)
 
