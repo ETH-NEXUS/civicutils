@@ -785,11 +785,11 @@ def write_results_to_output(sample_order, input_mapping, outfile):
         # sample -> [infos1,..,infosN]
         if sample not in input_mapping.keys():
             raise ValueError("Provided sample name '%s' was not parsed!")
-    civic_infos = input_mapping[sample]
-    if len(civic_infos) != 94:
-        raise ValueError("Expected 94 stat values from processing CIViC annotations for sample '%s'!" %(sample))
-    civic_infos_strings = [str(x) for x in civic_infos]
-    outfile.write("%s\n" %("\t".join(civic_infos_strings)))
+        civic_infos = input_mapping[sample]
+        if len(civic_infos) != 94:
+            raise ValueError("Expected 94 stat values from processing CIViC annotations for sample '%s'!" %(sample))
+        civic_infos_strings = [str(x) for x in civic_infos]
+        outfile.write("%s\t%s\n" %(sample, "\t".join(civic_infos_strings)))
 
 
 
