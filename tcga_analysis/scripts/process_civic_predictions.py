@@ -189,7 +189,7 @@ def process_mean_feature_per_tier(input_mapping, n_tier1, n_tier1b, n_tier2, n_t
 
 # Per "ct" class, compute mean feature for the sample
 # Mean feature can be e.g. mean number of matched variants, diseases or drugs
-def process_mean_feature_per_ct(input_mapping, n_variants)
+def process_mean_feature_per_ct(input_mapping, n_variants):
     mean_feature_ct = 0
     mean_feature_gt = 0
     mean_feature_nct = 0
@@ -214,22 +214,22 @@ def process_mean_feature_per_tier_and_ct(input_mapping, n_tier1, n_tier1b, n_tie
     mean_feature_tier1b_gt = 0
     mean_feature_tier1b_nct = 0
     mean_feature_tier2_ct = 0
-    mean_feature_tier3_gt = 0
+    mean_feature_tier2_gt = 0
     mean_feature_tier2_nct = 0
     mean_feature_tier3_ct = 0
     mean_feature_tier3_gt = 0
     mean_feature_tier3_nct = 0
     # tier -> ct -> # feature
-    if "tier_1" in per_tier_matched_diseases_ct_mapping.keys():
-        (mean_matched_diseases_tier1_ct, mean_matched_diseases_tier1_gt, mean_matched_diseases_tier1_nct) = process_mean_feature_per_ct(per_tier_matched_diseases_ct_mapping["tier_1"], n_tier1)
-    if "tier_1b" in per_tier_matched_diseases_ct_mapping.keys():
-        (mean_matched_diseases_tier1b_ct, mean_matched_diseases_tier1b_gt, mean_matched_diseases_tier1b_nct) = process_mean_feature_per_ct(per_tier_matched_diseases_ct_mapping["tier_1b"], n_tier1b)
-    if "tier_2" in per_tier_matched_diseases_ct_mapping.keys():
-        (mean_matched_diseases_tier2_ct, mean_matched_diseases_tier2_gt, mean_matched_diseases_tier2_nct) = process_mean_feature_per_ct(per_tier_matched_diseases_ct_mapping["tier_2"], n_tier2)
-    if "tier_3" in per_tier_matched_diseases_ct_mapping.keys():
-        (mean_matched_diseases_tier3_ct, mean_matched_diseases_tier3_gt, mean_matched_diseases_tier3_nct) = process_mean_feature_per_ct(per_tier_matched_diseases_ct_mapping["tier_3"], n_tier3)
+    if "tier_1" in input_mapping.keys():
+        (mean_feature_tier1_ct, mean_feature_tier1_gt, mean_feature_tier1_nct) = process_mean_feature_per_ct(input_mapping["tier_1"], n_tier1)
+    if "tier_1b" in input_mapping.keys():
+        (mean_feature_tier1b_ct, mean_feature_tier1b_gt, mean_feature_tier1b_nct) = process_mean_feature_per_ct(input_mapping["tier_1b"], n_tier1b)
+    if "tier_2" in input_mapping.keys():
+        (mean_feature_tier2_ct, mean_feature_tier2_gt, mean_feature_tier2_nct) = process_mean_feature_per_ct(input_mapping["tier_2"], n_tier2)
+    if "tier_3" in input_mapping.keys():
+        (mean_feature_tier3_ct, mean_feature_tier3_gt, mean_feature_tier3_nct) = process_mean_feature_per_ct(input_mapping["tier_3"], n_tier3)
 
-    return (mean_feature_tier1_ct, mean_feature_tier1_gt, mean_feature_tier1_nct, mean_matched_diseases_tier1b_ct, mean_matched_diseases_tier1b_gt, mean_matched_diseases_tier1b_nct, mean_matched_diseases_tier2_ct, mean_matched_diseases_tier2_gt, mean_matched_diseases_tier2_nct, mean_matched_diseases_tier3_ct, mean_matched_diseases_tier3_gt, mean_matched_diseases_tier3_nct)
+    return (mean_feature_tier1_ct, mean_feature_tier1_gt, mean_feature_tier1_nct, mean_feature_tier1b_ct, mean_feature_tier1b_gt, mean_feature_tier1b_nct, mean_feature_tier2_ct, mean_feature_tier2_gt, mean_feature_tier2_nct, mean_feature_tier3_ct, mean_feature_tier3_gt, mean_feature_tier3_nct)
 
 
 # Parse and process CIViC annotations available for the variants in the provided input file (corresponding to a given sample name)
@@ -340,7 +340,7 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping):
         # NOTE: assume that variant names are listed using ";" as a separator character, and that duplicates are not possible
         civic_scores = str(line_split[civic_score_pos].strip())
         if civic_scores == ".":
-            if not (tier=="3" or tier=="4"):
+            if not (tier=="tier_3" or tier=="tier_4"):
                 raise ValueError("Encountered unexpected case of variant with tier!=3 and tier!=4 but no associated variant matches from CIViC in line %s" %(line.strip()))
             n_variants = 0
         else:
@@ -775,7 +775,7 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping):
     if sample_name in civic_info_mapping.keys():
         raise ValueError("Sample name '%s' was already parsed!")
 
-   civic_info_mapping[sample_name] = [all_variants, all_civic_variants, n_tier_1, n_tier_1b, n_tier_1_agg, n_tier_2, n_tier_3, n_tier_4, mean_matched_vars, mean_matched_vars_tier1, mean_matched_vars_tier1b, mean_matched_vars_tier2, mean_matched_vars_tier3, mean_matched_diseases, mean_matched_diseases_tier1, mean_matched_diseases_tier1b, mean_matched_diseases_tier2, mean_matched_diseases_tier3, mean_matched_diseases_ct, mean_matched_diseases_gt, mean_matched_diseases_nct, mean_matched_diseases_tier1_ct, mean_matched_diseases_tier1_gt, mean_matched_diseases_tier1_nct, mean_matched_diseases_tier1b_ct, mean_matched_diseases_tier1b_gt, mean_matched_diseases_tier1b_nct, mean_matched_diseases_tier2_ct, mean_matched_diseases_tier2_gt, mean_matched_diseases_tier2_nct, mean_matched_diseases_tier3_ct, mean_matched_diseases_tier3_gt, mean_matched_diseases_tier3_nct, n_diseases, n_diseases_tier1, n_diseases_tier1b, n_diseases_tier2, n_diseases_tier3, n_diseases_ct, n_diseases_gt, n_diseases_nct, n_diseases_tier1_ct, n_diseases_tier1_gt, n_diseases_tier1_nct, n_diseases_tier1b_ct, n_diseases_tier1b_gt, n_diseases_tier1b_nct, n_diseases_tier2_ct, n_diseases_tier2_gt, n_diseases_tier2_nct, n_diseases_tier3_ct, n_diseases_tier3_gt, n_diseases_tier3_nct, n_drugs_all, mean_ct_classes_avail, n_drugs_all_tier1, n_drugs_all_tier1b, n_drugs_all_tier2, n_drugs_all_tier3, n_drugs_all_ct, n_drugs_all_gt, n_drugs_all_nct, n_drugs_prior, n_drugs_prior_tier1, n_drugs_prior_tier1b, n_drugs_prior_tier2, n_drugs_prior_tier3, n_drugs_prior_ct, n_drugs_prior_gt, n_drugs_prior_nct, n_drugs_tier1_ct, n_drugs_tier1_gt, n_drugs_tier1_nct, n_drugs_tier1b_ct, n_drugs_tier1b_gt, n_drugs_tier1b_nct, n_drugs_tier2_ct, n_drugs_tier2_gt, n_drugs_tier2_nct, n_drugs_tier3_ct, n_drugs_tier3_gt, n_drugs_tier3_nct, n_drugs_tier1_ct_prior, n_drugs_tier1_gt_prior, n_drugs_tier1_nct_prior, n_drugs_tier1b_ct_prior, n_drugs_tier1b_gt_prior, n_drugs_tier1b_nct_prior, n_drugs_tier2_ct_prior, n_drugs_tier2_gt_prior, n_drugs_tier2_nct_prior, n_drugs_tier3_ct_prior, n_drugs_tier3_gt_prior, n_drugs_tier3_nct_prior]
+    civic_info_mapping[sample_name] = [all_variants, all_civic_variants, n_tier_1, n_tier_1b, n_tier_1_agg, n_tier_2, n_tier_3, n_tier_4, mean_matched_variants, mean_matched_variants_tier1, mean_matched_variants_tier1b, mean_matched_variants_tier2, mean_matched_variants_tier3, mean_matched_diseases, mean_matched_diseases_tier1, mean_matched_diseases_tier1b, mean_matched_diseases_tier2, mean_matched_diseases_tier3, mean_matched_diseases_ct, mean_matched_diseases_gt, mean_matched_diseases_nct, mean_matched_diseases_tier1_ct, mean_matched_diseases_tier1_gt, mean_matched_diseases_tier1_nct, mean_matched_diseases_tier1b_ct, mean_matched_diseases_tier1b_gt, mean_matched_diseases_tier1b_nct, mean_matched_diseases_tier2_ct, mean_matched_diseases_tier2_gt, mean_matched_diseases_tier2_nct, mean_matched_diseases_tier3_ct, mean_matched_diseases_tier3_gt, mean_matched_diseases_tier3_nct, n_diseases, n_diseases_tier1, n_diseases_tier1b, n_diseases_tier2, n_diseases_tier3, n_diseases_ct, n_diseases_gt, n_diseases_nct, n_diseases_tier1_ct, n_diseases_tier1_gt, n_diseases_tier1_nct, n_diseases_tier1b_ct, n_diseases_tier1b_gt, n_diseases_tier1b_nct, n_diseases_tier2_ct, n_diseases_tier2_gt, n_diseases_tier2_nct, n_diseases_tier3_ct, n_diseases_tier3_gt, n_diseases_tier3_nct, n_drugs_all, mean_ct_classes_avail, n_drugs_all_tier1, n_drugs_all_tier1b, n_drugs_all_tier2, n_drugs_all_tier3, n_drugs_all_ct, n_drugs_all_gt, n_drugs_all_nct, n_drugs_prior, n_drugs_prior_tier1, n_drugs_prior_tier1b, n_drugs_prior_tier2, n_drugs_prior_tier3, n_drugs_prior_ct, n_drugs_prior_gt, n_drugs_prior_nct, n_drugs_tier1_ct, n_drugs_tier1_gt, n_drugs_tier1_nct, n_drugs_tier1b_ct, n_drugs_tier1b_gt, n_drugs_tier1b_nct, n_drugs_tier2_ct, n_drugs_tier2_gt, n_drugs_tier2_nct, n_drugs_tier3_ct, n_drugs_tier3_gt, n_drugs_tier3_nct, n_drugs_tier1_ct_prior, n_drugs_tier1_gt_prior, n_drugs_tier1_nct_prior, n_drugs_tier1b_ct_prior, n_drugs_tier1b_gt_prior, n_drugs_tier1b_nct_prior, n_drugs_tier2_ct_prior, n_drugs_tier2_gt_prior, n_drugs_tier2_nct_prior, n_drugs_tier3_ct_prior, n_drugs_tier3_gt_prior, n_drugs_tier3_nct_prior]
     return civic_info_mapping
 
 
@@ -786,9 +786,10 @@ def write_results_to_output(sample_order, input_mapping, outfile):
         if sample not in input_mapping.keys():
             raise ValueError("Provided sample name '%s' was not parsed!")
     civic_infos = input_mapping[sample]
-    if len(civic_infos) != 93:
-        raise ValueError("Expected 93 stat values from processing CIViC annotations for sample '%s'!" %(sample))
-    outfile.write("%s\n" %("\t".join(civic_infos)))
+    if len(civic_infos) != 94:
+        raise ValueError("Expected 94 stat values from processing CIViC annotations for sample '%s'!" %(sample))
+    civic_infos_strings = [str(x) for x in civic_infos]
+    outfile.write("%s\n" %("\t".join(civic_infos_strings)))
 
 
 
@@ -850,8 +851,10 @@ output_header = "sample_name\tall_variants\tall_civic_variants\tn_tier_1\tn_tier
 outfile_snv.write(output_header + "\n")
 outfile_cnv.write(output_header + "\n")
 
-write_results_to_output(sample_order, civic_info_mapping_snv, outfile_snv)
-write_results_to_output(sample_order, civic_info_mapping_cnv, outfile_cnv)
+sorted_samples = sorted(set(seen_samples_snvs))
+
+write_results_to_output(sorted_samples, civic_info_mapping_snv, outfile_snv)
+write_results_to_output(sorted_samples, civic_info_mapping_cnv, outfile_cnv)
 
 outfile_snv.close()
 outfile_cnv.close()
