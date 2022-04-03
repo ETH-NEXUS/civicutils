@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 
 '''
-Process and combine variant info from CIViCutils
+Parse CIViCutils annotations for a set of samples
+SNVs and CNVs provided separately
+
 Lourdes Rosano, Feb 2022
 '''
 
@@ -17,7 +19,7 @@ import copy
 # drug_synonyms_mapping = {'DOVITINIB DILACTIC ACID (TKI258 DILACTIC ACID)':'DOVITINIB', '5-FLUOROURACIL':'FLUOROURACIL', '5-FU':'FLUOROURACIL', 'ADO-TRASTUZUMAB EMTANSINE':'TRASTUZUMAB EMTANSINE', 'PD0325901':'PD-0325901', 'PD173074':'PD-173074', 'BGJ-398':'INFIGRATINIB', 'BGJ398':'INFIGRATINIB'}
 
 ## Dictionary that allows prioritization of CIViC support categories (in oncoprint) when >1 gene has CIViC info for a given drug+sample
-supportPrior = {'civic_support':1, 'civic_resistance':1, 'civic_conflict':2, 'civic_unknown':3, 'civic_unspecific_vars':4, 'dgidb_only':5}
+# support_mapping = {'civic_support':1, 'civic_resistance':1, 'civic_conflict':2, 'civic_unknown':3, 'civic_unspecific_vars':4, 'dgidb_only':5}
 
 
 
@@ -36,7 +38,7 @@ def get_column_position(column_name, header_split):
     return pos
 
 
-# FIXME
+# Process evidence string reported by CIViCutils and retrieve the evidence direction, clinical significance and either the drug name of the cancer-specificity classification of the disease (depending on the given evidence type)
 def get_clinical_info(evidence_string, has_drug=False):
     # Sanity check the expected separator character and format
     # Assume direction and clinical significance are always separated by ","
@@ -232,10 +234,8 @@ def process_mean_feature_per_tier_and_ct(input_mapping, n_tier1, n_tier1b, n_tie
     return (mean_feature_tier1_ct, mean_feature_tier1_gt, mean_feature_tier1_nct, mean_feature_tier1b_ct, mean_feature_tier1b_gt, mean_feature_tier1b_nct, mean_feature_tier2_ct, mean_feature_tier2_gt, mean_feature_tier2_nct, mean_feature_tier3_ct, mean_feature_tier3_gt, mean_feature_tier3_nct)
 
 
-# Parse and process CIViC annotations available for the variants in the provided input file (corresponding to a given sample name)
+# Parse and process CIViCutils annotations reported for the variants of a given sample, in the provided input file
 def parse_input_file(sample_file, sample_name, civic_info_mapping):
-# FIXME
-# def parse_input_file(sample_file,sample_name,civic_info_mapping,drugsToVariants):
     print("Sample %s. File: %s" %(sample_name, sample_file))
     sorted_cts = ["ct","gt","nct"]              # define order of priority of "ct" classes assigned by CIViCutils
 
@@ -309,11 +309,10 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping):
         line_split = line.strip().split("\t")
 
         ## 1) Process tier of the variant match
-        tier = str(line_split[tier_pos].strip())
 
+        tier = str(line_split[tier_pos].strip())
         # Avoid having issues due to using numbers/strings for the tiers
         tier = "tier_" + tier
-
         # Tier=4 should be skipped as no information was found on CIViC for the current gene
         # (i.e. all associated columns will be empty)
         if tier=="tier_4":
@@ -449,9 +448,8 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping):
                 # disease -> ct
                 if disease_name not in disease_mapping.keys():
                     disease_mapping[disease_name] = ct_type
-                # Sanity check that the same disease name can only be associated to one "ct" classification across the file
                 else:
-# FIXME
+                    # Sanity check that the same disease name can only be associated to one "ct" classification across the file
                     parsed_ct_type = disease_mapping[disease_name]
                     if ct_type != parsed_ct_type:
                         raise ValueError("Disease name '%s' was found to be associated to two different 'ct' classifications '%s' and '%s'!" %(disease_name, ct_type, parsed_ct_type))
@@ -554,7 +552,7 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping):
 
         ## 4) Process column listing consensus support across available drugs
 
-# TODO: (double check info with the corresponding info parsed from Predictive column?)
+## TODO: (double check info with the corresponding info parsed from Predictive column?)
 
         # Only process further variant lines which have consensus drug prediction information available in column 'CIViC_Drug_Support'
         drug_infos = str(line_split[drug_supp_pos].strip())
@@ -779,25 +777,29 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping):
     return civic_info_mapping
 
 
+# Write to output a series of statistics retrieved from parsing and processing CIViCutils annotations for a set of samples
 def write_results_to_output(sample_order, input_mapping, outfile):
     # Iterate sample names to be reported to output in the provided order
     for sample in sample_order:
         # sample -> [infos1,..,infosN]
         if sample not in input_mapping.keys():
             raise ValueError("Provided sample name '%s' was not parsed!")
+        # Retrieve and sanity check available CIViCutils info for the current sample
         civic_infos = input_mapping[sample]
         if len(civic_infos) != 94:
             raise ValueError("Expected 94 stat values from processing CIViC annotations for sample '%s'!" %(sample))
+        # Reported numeric values must be converted into strings before writing to output
         civic_infos_strings = [str(x) for x in civic_infos]
+        # Write each sample in a separate line
         outfile.write("%s\t%s\n" %(sample, "\t".join(civic_infos_strings)))
-
+    return None
 
 
 '''
 Script
 '''
 
-parser = argparse.ArgumentParser(description='Combine SNV, CNV, DRS and CIViC drug predictions.')
+parser = argparse.ArgumentParser(description='Parse and process CIViCutils annotations reported for SNVs and CNVs of a set of samples.')
 parser.add_argument('--input_dir_civic_snv', dest='input_dir_civic_snv', required=True, help='Input directory with SNV CIViC files of format [sample].civic_snv.txt.')
 parser.add_argument('--input_dir_civic_cnv', dest='input_dir_civic_cnv', required=True, help='Input directory with CNV CIViC files of format [sample].civic_cnv.txt.')
 parser.add_argument('--file_suffix_snv', dest='file_suffix_snv', required=True, help='To retrieve correct input files, specify the desired file ending ("civic_snv.txt" for SNV data).')
@@ -842,15 +844,17 @@ for file in os.listdir(args.input_dir_civic_cnv):
 if (set(seen_samples_snvs) != set(seen_samples_cnvs)):
     raise ValueError("Sample names in provided SNV and CNV input directories do not match!")
 
+# Write stats of CIViCutils annotations for all samples separately for SNVs and CNVs
 outfile_snv = open(args.outfile_tag + ".snvs.tsv",'w') # Results from processing SNV annotations from CIViCutils
 outfile_cnv = open(args.outfile_tag + ".cnvs.tsv",'w') # Results from processing CNV annotations from CIViCutils
 
+# Header is identical for both output tables
 output_header = "sample_name\tall_variants\tall_civic_variants\tn_tier_1\tn_tier_1b\tn_tier_1_agg\tn_tier_2\tn_tier_3\tn_tier_4\tmean_matched_vars\tmean_matched_vars_tier1\tmean_matched_vars_tier1b\tmean_matched_vars_tier2\tmean_matched_vars_tier3\tmean_matched_diseases\tmean_matched_diseases_tier1\tmean_matched_diseases_tier1b\tmean_matched_diseases_tier2\tmean_matched_diseases_tier3\tmean_matched_diseases_ct\tmean_matched_diseases_gt\tmean_matched_diseases_nct\tmean_matched_diseases_tier1_ct\tmean_matched_diseases_tier1_gt\tmean_matched_diseases_tier1_nct\tmean_matched_diseases_tier1b_ct\tmean_matched_diseases_tier1b_gt\tmean_matched_diseases_tier1b_nct\tmean_matched_diseases_tier2_ct\tmean_matched_diseases_tier2_gt\tmean_matched_diseases_tier2_nct\tmean_matched_diseases_tier3_ct\tmean_matched_diseases_tier3_gt\tmean_matched_diseases_tier3_nct\tn_diseases\tn_diseases_tier1\tn_diseases_tier1b\tn_diseases_tier2\tn_diseases_tier3\tn_diseases_ct\tn_diseases_gt\tn_diseases_nct\tn_diseases_tier1_ct\tn_diseases_tier1_gt\tn_diseases_tier1_nct\tn_diseases_tier1b_ct\tn_diseases_tier1b_gt\tn_diseases_tier1b_nct\tn_diseases_tier2_ct\tn_diseases_tier2_gt\tn_diseases_tier2_nct\tn_diseases_tier3_ct\tn_diseases_tier3_gt\tn_diseases_tier3_nct\tn_drugs_all\tmean_ct_classes_avail\tn_drugs_all_tier1\tn_drugs_all_tier1b\tn_drugs_all_tier2\tn_drugs_all_tier3\tn_drugs_all_ct\tn_drugs_all_gt\tn_drugs_all_nct\tn_drugs_prior\tn_drugs_prior_tier1\tn_drugs_prior_tier1b\tn_drugs_prior_tier2\tn_drugs_prior_tier3\tn_drugs_prior_ct\tn_drugs_prior_gt\tn_drugs_prior_nct\tn_drugs_tier1_ct\tn_drugs_tier1_gt\tn_drugs_tier1_nct\tn_drugs_tier1b_ct\tn_drugs_tier1b_gt\tn_drugs_tier1b_nct\tn_drugs_tier2_ct\tn_drugs_tier2_gt\tn_drugs_tier2_nct\tn_drugs_tier3_ct\tn_drugs_tier3_gt\tn_drugs_tier3_nct\tn_drugs_tier1_ct_prior\tn_drugs_tier1_gt_prior\tn_drugs_tier1_nct_prior\tn_drugs_tier1b_ct_prior\tn_drugs_tier1b_gt_prior\tn_drugs_tier1b_nct_prior\tn_drugs_tier2_ct_prior\tn_drugs_tier2_gt_prior\tn_drugs_tier2_nct_prior\tn_drugs_tier3_ct_prior\tn_drugs_tier3_gt_prior\tn_drugs_tier3_nct_prior"
 
-# Header is identical for both output tables
 outfile_snv.write(output_header + "\n")
 outfile_cnv.write(output_header + "\n")
 
+# Use same order of the reported samples in both output tables
 sorted_samples = sorted(set(seen_samples_snvs))
 
 write_results_to_output(sorted_samples, civic_info_mapping_snv, outfile_snv)
