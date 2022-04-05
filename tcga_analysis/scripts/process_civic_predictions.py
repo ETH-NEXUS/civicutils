@@ -109,53 +109,53 @@ def get_clinical_info(evidence_string, has_drug=False):
 # Per tier, get total number of features parsed for the sample (only makes sense to compute mean for tiers != 4)
 # Feature can be e.g. diseases or drugs
 def process_feature_per_tier(input_mapping):
-    n_items_tier1 = 0
-    n_items_tier1b = 0
-    n_items_tier2 = 0
-    n_items_tier3 = 0
+    n_items_tier1 = 0.0
+    n_items_tier1b = 0.0
+    n_items_tier2 = 0.0
+    n_items_tier3 = 0.0
     # tier -> feature -> None
     if "tier_1" in input_mapping.keys():
-        n_items_tier1 = len(input_mapping["tier_1"].keys())
+        n_items_tier1 = float(len(input_mapping["tier_1"].keys()))
     if "tier_1b" in input_mapping.keys():
-        n_items_tier1b = len(input_mapping["tier_1b"].keys())
+        n_items_tier1b = float(len(input_mapping["tier_1b"].keys()))
     if "tier_2" in input_mapping.keys():
-        n_items_tier2 = len(input_mapping["tier_2"].keys())
+        n_items_tier2 = float(len(input_mapping["tier_2"].keys()))
     if "tier_3" in input_mapping.keys():
-        n_items_tier3 = len(input_mapping["tier_3"].keys())
+        n_items_tier3 = float(len(input_mapping["tier_3"].keys()))
     return (n_items_tier1, n_items_tier1b, n_items_tier2, n_items_tier3)
 
 
 # Per "ct" class, get total number of features parsed for the sample
 # Feature can be e.g. diseases or drugs
 def process_feature_per_ct(input_mapping):
-    n_items_ct = 0
-    n_items_gt = 0
-    n_items_nct = 0
+    n_items_ct = 0.0
+    n_items_gt = 0.0
+    n_items_nct = 0.0
     # ct -> feature -> None
     if "ct" in input_mapping.keys():
-        n_items_ct = len(input_mapping["ct"].keys())
+        n_items_ct = float(len(input_mapping["ct"].keys()))
     if "gt" in input_mapping.keys():
-        n_items_gt = len(input_mapping["gt"].keys())
+        n_items_gt = float(len(input_mapping["gt"].keys()))
     if "nct" in input_mapping.keys():
-        n_items_nct = len(input_mapping["nct"].keys())
+        n_items_nct = float(len(input_mapping["nct"].keys()))
     return (n_items_ct, n_items_gt, n_items_nct)
 
 
 # Per tier and "ct" class, get total number of features parsed for the sample (only makes sense to compute mean for tiers != 4)
 # Feature can be e.g. diseases or drugs
 def process_feature_per_tier_and_ct(input_mapping):
-    n_items_tier1_ct = 0
-    n_items_tier1_gt = 0
-    n_items_tier1_nct = 0
-    n_items_tier1b_ct = 0
-    n_items_tier1b_gt = 0
-    n_items_tier1b_nct = 0
-    n_items_tier2_ct = 0
-    n_items_tier2_gt = 0
-    n_items_tier2_nct = 0
-    n_items_tier3_ct = 0
-    n_items_tier3_gt = 0
-    n_items_tier3_nct = 0
+    n_items_tier1_ct = 0.0
+    n_items_tier1_gt = 0.0
+    n_items_tier1_nct = 0.0
+    n_items_tier1b_ct = 0.0
+    n_items_tier1b_gt = 0.0
+    n_items_tier1b_nct = 0.0
+    n_items_tier2_ct = 0.0
+    n_items_tier2_gt = 0.0
+    n_items_tier2_nct = 0.0
+    n_items_tier3_ct = 0.0
+    n_items_tier3_gt = 0.0
+    n_items_tier3_nct = 0.0
     # tier -> ct -> feature -> None
     if "tier_1" in input_mapping.keys():
         (n_items_tier1_ct, n_items_tier1_gt, n_items_tier1_nct) = process_feature_per_ct(input_mapping["tier_1"])
@@ -172,55 +172,55 @@ def process_feature_per_tier_and_ct(input_mapping):
 # Per tier, compute mean feature for the sample (only makes sense to compute mean for tiers != 4)
 # Mean feature can be e.g. mean number of matched variants, diseases or drugs
 def process_mean_feature_per_tier(input_mapping, n_tier1, n_tier1b, n_tier2, n_tier3):
-    mean_feature_tier1 = 0
-    mean_feature_tier1b = 0
-    mean_feature_tier2 = 0
-    mean_feature_tier3 = 0
+    mean_feature_tier1 = 0.0
+    mean_feature_tier1b = 0.0
+    mean_feature_tier2 = 0.0
+    mean_feature_tier3 = 0.0
     # tier -> # feature
     # Sanity check for divisions by 0
     if ("tier_1" in input_mapping.keys()) and n_tier1:
-        mean_feature_tier1 = input_mapping["tier_1"] / n_tier1
+        mean_feature_tier1 = float(float(input_mapping["tier_1"]) / float(n_tier1))
     if ("tier_1b" in input_mapping.keys()) and n_tier1b:
-        mean_feature_tier1b = input_mapping["tier_1b"] / n_tier1b
+        mean_feature_tier1b = float(float(input_mapping["tier_1b"]) / float(n_tier1b))
     if ("tier_2" in input_mapping.keys()) and n_tier2:
-        mean_feature_tier2 = input_mapping["tier_2"] / n_tier2
+        mean_feature_tier2 = float(float(input_mapping["tier_2"]) / float(n_tier2))
     if ("tier_3" in input_mapping.keys()) and n_tier3:
-        mean_feature_tier3 = input_mapping["tier_3"] / n_tier3
+        mean_feature_tier3 = float(float(input_mapping["tier_3"]) / float(n_tier3))
     return (mean_feature_tier1, mean_feature_tier1b, mean_feature_tier2, mean_feature_tier3)
 
 
 # Per "ct" class, compute mean feature for the sample
 # Mean feature can be e.g. mean number of matched variants, diseases or drugs
 def process_mean_feature_per_ct(input_mapping, n_variants):
-    mean_feature_ct = 0
-    mean_feature_gt = 0
-    mean_feature_nct = 0
+    mean_feature_ct = 0.0
+    mean_feature_gt = 0.0
+    mean_feature_nct = 0.0
     # ct -> # feature
     # Sanity check for divisions by 0
     if ("ct" in input_mapping.keys()) and n_variants:
-        mean_feature_ct = input_mapping["ct"] / n_variants
+        mean_feature_ct = float(float(input_mapping["ct"]) / float(n_variants))
     if ("gt" in input_mapping.keys()) and n_variants:
-        mean_feature_gt = input_mapping["gt"] / n_variants
+        mean_feature_gt = float(float(input_mapping["gt"]) / float(n_variants))
     if ("nct" in input_mapping.keys()) and n_variants:
-        mean_feature_nct = input_mapping["nct"] /n_variants
+        mean_feature_nct = float(float(input_mapping["nct"]) / float(n_variants))
     return (mean_feature_ct, mean_feature_gt, mean_feature_nct)
 
 
 # Per tier and "ct" class, compute mean feature for the current sample (only makes sense to compute mean for tiers != 4)
 # Mean feature can be e.g. mean number of matched variants, diseases or drugs
 def process_mean_feature_per_tier_and_ct(input_mapping, n_tier1, n_tier1b, n_tier2, n_tier3):
-    mean_feature_tier1_ct = 0
-    mean_feature_tier1_gt = 0
-    mean_feature_tier1_nct = 0
-    mean_feature_tier1b_ct = 0
-    mean_feature_tier1b_gt = 0
-    mean_feature_tier1b_nct = 0
-    mean_feature_tier2_ct = 0
-    mean_feature_tier2_gt = 0
-    mean_feature_tier2_nct = 0
-    mean_feature_tier3_ct = 0
-    mean_feature_tier3_gt = 0
-    mean_feature_tier3_nct = 0
+    mean_feature_tier1_ct = 0.0
+    mean_feature_tier1_gt = 0.0
+    mean_feature_tier1_nct = 0.0
+    mean_feature_tier1b_ct = 0.0
+    mean_feature_tier1b_gt = 0.0
+    mean_feature_tier1b_nct = 0.0
+    mean_feature_tier2_ct = 0.0
+    mean_feature_tier2_gt = 0.0
+    mean_feature_tier2_nct = 0.0
+    mean_feature_tier3_ct = 0.0
+    mean_feature_tier3_gt = 0.0
+    mean_feature_tier3_nct = 0.0
     # tier -> ct -> # feature
     if "tier_1" in input_mapping.keys():
         (mean_feature_tier1_ct, mean_feature_tier1_gt, mean_feature_tier1_nct) = process_mean_feature_per_ct(input_mapping["tier_1"], n_tier1)
@@ -254,17 +254,17 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping):
 
     ## Keep track of several different annotations reported by CIViCutils
 
-    all_variants = 0                            # all lines
-    all_civic_variants = 0                      # all lines having CIViC info available (tier != 4)
-    n_tier_1 = 0                                # all lines with tier = 1
-    n_tier_1b = 0                               # all lines with tier = 1b
-    n_tier_1_agg = 0                            # all lines with tier = 1 or tier = 1b
-    n_tier_2 = 0                                # all lines with tier = 2
-    n_tier_3 = 0                                # all lines with tier = 3
-    n_tier_4 = 0                                # all lines with tier = 4
-    n_drug_info = 0                             # all lines having consensus drug support info available
+    all_variants = 0.0                            # all lines
+    all_civic_variants = 0.0                      # all lines having CIViC info available (tier != 4)
+    n_tier_1 = 0.0                                # all lines with tier = 1
+    n_tier_1b = 0.0                               # all lines with tier = 1b
+    n_tier_1_agg = 0.0                            # all lines with tier = 1 or tier = 1b
+    n_tier_2 = 0.0                                # all lines with tier = 2
+    n_tier_3 = 0.0                                # all lines with tier = 3
+    n_tier_4 = 0.0                                # all lines with tier = 4
+    n_drug_info = 0.0                             # all lines having consensus drug support info available
 
-    matched_variants = 0                        # keep track of the total number of variants matched overall for the current sample
+    matched_variants = 0.0                        # keep track of the total number of variants matched overall for the current sample
     # tier -> # variants
     matched_variants_mapping = {}               # keep track of the total number of variants matched per tier for the current sample
 
@@ -277,7 +277,7 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping):
     # tier -> ct -> disease -> None
     per_tier_ct_mapping = {}                    # per tier, keep track of all disease names assigned to each "ct" class for the current sample
 
-    matched_diseases = 0                        # keep track of the total number of unique disease names matched overall across all variants for the current sample
+    matched_diseases = 0.0                        # keep track of the total number of unique disease names matched overall across all variants for the current sample
     # ct -> # diseases
     matched_diseases_ct_mapping = {}            # keep track of the total number of unique disease names matched per "ct" class across all variants for the current sample
     # tier -> # diseases
@@ -305,7 +305,7 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping):
 
     # Each line in the input file corresponds to a single variant in the genome
     for line in infile:
-        all_variants += 1
+        all_variants += 1.0
         line_split = line.strip().split("\t")
 
         ## 1) Process tier of the variant match
@@ -316,21 +316,21 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping):
         # Tier=4 should be skipped as no information was found on CIViC for the current gene
         # (i.e. all associated columns will be empty)
         if tier=="tier_4":
-            n_tier_4 += 1
+            n_tier_4 += 1.0
             continue
 
         # Keep track of the number of variants assigned to each tier in the current sample file
-        all_civic_variants += 1
+        all_civic_variants += 1.0
         if tier=="tier_3":
-            n_tier_3 += 1
+            n_tier_3 += 1.0
         if tier=="tier_2":
-            n_tier_2 += 1
+            n_tier_2 += 1.0
         if tier=="tier_1b":
-            n_tier_1b += 1
+            n_tier_1b += 1.0
         if tier=="tier_1":
-            n_tier_1 += 1
+            n_tier_1 += 1.0
         if tier=="tier_1" or tier=="tier_1b":
-            n_tier_1_agg += 1
+            n_tier_1_agg += 1.0
 
 
         ## 2) Process number of CIViC variants matched per line (and associated tier)
@@ -341,24 +341,24 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping):
         if civic_scores == ".":
             if not (tier=="tier_3" or tier=="tier_4"):
                 raise ValueError("Encountered unexpected case of variant with tier!=3 and tier!=4 but no associated variant matches from CIViC in line %s" %(line.strip()))
-            n_variants = 0
+            n_variants = 0.0
         else:
             # NOTE: for SNVs, all variant matches are ensured to originate from a single variant annotation + gene
             # NOTE: for CNVs, several variant matches arising from different genes (but same associated tier) can happen within the same line
             civic_score_list = civic_scores.split(';')
-            n_variants = len(civic_score_list)
+            n_variants = float(len(civic_score_list))
 
             # Sanity check there are no duplicated CIViC variant entries reported within the same line
-            if n_variants != len(set(civic_score_list)):
+            if (str(float(n_variants)) != str(float(len(set(civic_score_list))))):
                 raise ValueError("Encountered duplicated variant matches from CIViC in line %s" %(line.strip()))
             # Sanity check that at least 1 variant should have been matched if column is not empty
-            if n_variants == 0:
+            if n_variants == 0.0:
                 raise ValueError("Encountered unexpected case of no associated variant matches from CIViC in line %s" %(line.strip()))
 
         # Keep track of number of matched variants, also keep counts per tier
         # tier -> # CIViC variants matched
         if tier not in matched_variants_mapping.keys():
-            matched_variants_mapping[tier] = 0
+            matched_variants_mapping[tier] = 0.0
         matched_variants_mapping[tier] += n_variants
         matched_variants += n_variants
 
@@ -523,10 +523,10 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping):
         ## Process and keep track of disease information parsed for the current variant line
 
         # Keep track of number of unique matched diseases across all variants, also keep counts per tier
-        n_diseases = len(interim_disease_mapping.keys())
+        n_diseases = float(len(interim_disease_mapping.keys()))
         # tier -> # diseases
         if tier not in per_tier_matched_diseases_mapping.keys():
-            per_tier_matched_diseases_mapping[tier] = 0
+            per_tier_matched_diseases_mapping[tier] = 0.0
         per_tier_matched_diseases_mapping[tier] += n_diseases
         matched_diseases += n_diseases
 
@@ -538,14 +538,14 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping):
         # Iterate all "ct" classes available for the current variant line and keep track of associated disease info
         # ct -> disease -> None
         for interim_ct_type in interim_ct_mapping.keys():
-            interim_n_diseases = len(interim_ct_mapping[interim_ct_type].keys())
+            interim_n_diseases = float(len(interim_ct_mapping[interim_ct_type].keys()))
             # ct -> # diseases
             if interim_ct_type not in matched_diseases_ct_mapping.keys():
-                matched_diseases_ct_mapping[interim_ct_type] = 0
+                matched_diseases_ct_mapping[interim_ct_type] = 0.0
             matched_diseases_ct_mapping[interim_ct_type] += interim_n_diseases
              # tier -> ct -> # diseases
             if interim_ct_type not in per_tier_matched_diseases_ct_mapping[tier].keys():
-                per_tier_matched_diseases_ct_mapping[tier][interim_ct_type] = 0
+                per_tier_matched_diseases_ct_mapping[tier][interim_ct_type] = 0.0
             per_tier_matched_diseases_ct_mapping[tier][interim_ct_type] += interim_n_diseases
 
 
@@ -565,7 +565,7 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping):
         if not drug_infos_list:
             raise ValueError("Encountered unexpected case of consensus drug support annotations in line %s" %(line.strip()))
         # Keep track of all variant lines having non-empty consensus drug support info
-        n_drug_info += 1
+        n_drug_info += 1.0
 
         # ct -> drug -> [consensus_support_1,..,consensus_support_N]
         interim_consensus_ct_mapping = {}
@@ -672,20 +672,20 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping):
 
 
     # Compute mean number of matched variants for the sample (only makes sense to compute mean on lines that had CIViC matches available)
-    mean_matched_variants = 0
+    mean_matched_variants = 0.0
     # Sanity check for divisions by 0
     if all_civic_variants:
-        mean_matched_variants = matched_variants / all_civic_variants
+        mean_matched_variants = float(float(matched_variants) / float(all_civic_variants))
 
     # Per tier, compute mean number of matched variants for the sample
     # tier -> # variants
     (mean_matched_variants_tier1, mean_matched_variants_tier1b, mean_matched_variants_tier2, mean_matched_variants_tier3) = process_mean_feature_per_tier(matched_variants_mapping, n_tier_1, n_tier_1b, n_tier_2, n_tier_3)
 
     # Compute mean number of matched diseases for the sample (only makes sense to compute mean on lines that had CIViC matches available)
-    mean_matched_diseases = 0
+    mean_matched_diseases = 0.0
     # Sanity check for divisions by 0
     if all_civic_variants:
-        mean_matched_diseases = matched_diseases / all_civic_variants
+        mean_matched_diseases = float(float(matched_diseases) / float(all_civic_variants))
 
     # Per tier, compute mean number of matched diseases for the sample
     # tier -> # diseases
@@ -727,12 +727,12 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping):
     n_drugs_all = len(consensus_drug_mapping.keys())
 
     # Compute mean number of "ct" classes available per drug parsed across the current sample
-    interim_ct_sum = 0
+    interim_ct_sum = 0.0
     # Per drug, retrieve number of "ct" classes parsed for the current sample (important to use version of dict without prioritization of "ct" class performed!)
     for this_drug in consensus_drug_mapping.keys():
-        n_ct_classes_avail = len(consensus_drug_mapping[this_drug].keys())
+        n_ct_classes_avail = float(len(consensus_drug_mapping[this_drug].keys()))
         interim_ct_sum += n_ct_classes_avail
-    mean_ct_classes_avail = 0
+    mean_ct_classes_avail = 0.0
     # Sanity check for divisions by 0
     if n_drugs_all:
         mean_ct_classes_avail = interim_ct_sum / n_drugs_all
@@ -789,7 +789,7 @@ def write_results_to_output(sample_order, input_mapping, outfile):
         if len(civic_infos) != 94:
             raise ValueError("Expected 94 stat values from processing CIViC annotations for sample '%s'!" %(sample))
         # Reported numeric values must be converted into strings before writing to output
-        civic_infos_strings = [str(x) for x in civic_infos]
+        civic_infos_strings = [str(round(x, 2)) for x in civic_infos]
         # Write each sample in a separate line
         outfile.write("%s\t%s\n" %(sample, "\t".join(civic_infos_strings)))
     return None
