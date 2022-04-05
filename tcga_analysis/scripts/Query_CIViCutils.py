@@ -577,7 +577,7 @@ variant_mapping = query_civic(genes, identifier_type="entrez_symbol")
 # print('\nGenes with no CIVIC data: {}'.format(','.join(unmatched)))
 
 # Filter undesired evidences to avoid matching later on
-variant_mapping = filter_civic(variant_mapping, evidence_status_in = ['ACCEPTED'], var_origin_not_in = ['GERMLINE'], output_empty=False)
+variant_mapping = filter_civic(variant_mapping, evidence_type_not_in=["FUNCTIONAL", "ONCOGENIC"], evidence_status_in = ['ACCEPTED'], var_origin_not_in = ['GERMLINE'], output_empty=False)
 
 
 # Match input SNV variants in CIVIC, pick highest tier available per input gene+variant
