@@ -53,16 +53,6 @@ def get_clinical_info(evidence_string, has_drug=False):
 # FIXME: review regex below to ensure it will always work for the new format of CIViC evidences
         evidence_split = [x for x in evidence_split if not re.match('([A-Z]\()?[A-Z]+_\d+(\)+)?', x)]
 
-#                         new_evidence_split = []
-#                         for x in interim_drug_and_evidence_split:
-#                             if not re.match('([A-Z]\()?\d+(\)+)?', x):
-#                                 new_evidence_split.append(x)
-#                         for interim in new_evidence_split:
-#                             drug_and_evidence_split.append(interim)
-#                     else:
-#                         for x in interim_drug_and_evidence_split:
-#                             drug_and_evidence_split.append(x)
-
     clinical_signf_split = evidence_split[-1].strip().split("(")
     clinical_signf = clinical_signf_split[0]
 
@@ -262,45 +252,61 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping):
     n_tier_2 = 0.0                                # all lines with tier = 2
     n_tier_3 = 0.0                                # all lines with tier = 3
     n_tier_4 = 0.0                                # all lines with tier = 4
-    n_drug_info = 0.0                             # all lines having consensus drug support info available
 
     matched_variants = 0.0                        # keep track of the total number of variants matched overall for the current sample
     # tier -> # variants
-    matched_variants_mapping = {}               # keep track of the total number of variants matched per tier for the current sample
+    matched_variants_mapping = {}                 # keep track of the total number of variants matched per tier for the current sample
 
     # disease -> ct
-    disease_mapping = {}                        # keep track of all disease names parsed across the current sample
+    disease_mapping = {}                          # keep track of all disease names parsed across the current sample
+    # disease -> ct
+    disease_mapping_no_tier3 = {}                 # keep track of all disease names parsed across the current sample (excluding tier3 matches with can introduce biases)
     # tier -> disease -> None
-    per_tier_disease_mapping = {}               # per tier, keep track of all disease names parsed across the current sample
+    per_tier_disease_mapping = {}                 # per tier, keep track of all disease names parsed across the current sample
     # ct -> disease -> None
-    ct_mapping = {}                             # keep track of all disease names assigned to each "ct" class for the current sample
+    ct_mapping = {}                               # keep track of all disease names assigned to each "ct" class for the current sample
+    # ct -> disease -> None
+    ct_mapping_no_tier3 = {}                      # keep track of all disease names assigned to each "ct" class for the current sample (excluding tier3 matches with can introduce biases)
     # tier -> ct -> disease -> None
-    per_tier_ct_mapping = {}                    # per tier, keep track of all disease names assigned to each "ct" class for the current sample
+    per_tier_ct_mapping = {}                      # per tier, keep track of all disease names assigned to each "ct" class for the current sample
 
     matched_diseases = 0.0                        # keep track of the total number of unique disease names matched overall across all variants for the current sample
+    matched_diseases_no_tier3 = 0.0               # keep track of the total number of unique disease names matched overall across all variants for the current sample (excluding tier3 matches with can introduce biases)
     # ct -> # diseases
-    matched_diseases_ct_mapping = {}            # keep track of the total number of unique disease names matched per "ct" class across all variants for the current sample
+    matched_diseases_ct_mapping = {}              # keep track of the total number of unique disease names matched per "ct" class across all variants for the current sample
+    # ct -> # diseases
+    matched_diseases_ct_mapping_no_tier3 = {}     # keep track of the total number of unique disease names matched per "ct" class across all variants for the current sample (excluding tier3 matches with can introduce biases)
     # tier -> # diseases
-    per_tier_matched_diseases_mapping = {}      # keep track of the total number of unique disease names matched per tier for the current sample
+    per_tier_matched_diseases_mapping = {}        # keep track of the total number of unique disease names matched per tier for the current sample
     # tier -> ct -> # diseases
-    per_tier_matched_diseases_ct_mapping = {}   # keep track of the total number of unique disease names matched per tier and "ct" class for the current sample
+    per_tier_matched_diseases_ct_mapping = {}     # keep track of the total number of unique disease names matched per tier and "ct" class for the current sample
 
+    n_drug_info = 0.0                             # all lines having consensus drug support info available
+    n_drug_info_no_tier3 = 0.0                    # all lines having consensus drug support info available (excluding tier3 matches with can introduce biases)
     # drug -> ct -> consensus_support
-    consensus_drug_mapping = {}                 # keep track of the total number of unique drug names parsed across the consensus drug support for the current sample
+    consensus_drug_mapping = {}                   # keep track of the total number of unique drug names parsed across the consensus drug support for the current sample
     # drug -> ct -> consensus_support
-    prior_consensus_drug_mapping = {}           # keep track of the total number of unique drug names parsed across the consensus drug support of the highest available "ct" class for the current sample
+    consensus_drug_mapping_no_tier3 = {}          # keep track of the total number of unique drug names parsed across the consensus drug support for the current sample (excluding tier3 matches with can introduce biases)
+    # drug -> ct -> consensus_support
+    prior_consensus_drug_mapping = {}             # keep track of the total number of unique drug names parsed across the consensus drug support of the highest available "ct" class for the current sample
+    # drug -> ct -> consensus_support
+    prior_consensus_drug_mapping_no_tier3 = {}    # keep track of the total number of unique drug names parsed across the consensus drug support of the highest available "ct" class for the current sample (excluding tier3 matches with can introduce biases)
     # tier -> drug -> None
-    per_tier_consensus_drug_mapping = {}        # per tier, keep track of the total number of unique drug names parsed across the consensus drug support for the current sample
+    per_tier_consensus_drug_mapping = {}          # per tier, keep track of the total number of unique drug names parsed across the consensus drug support for the current sample
     # tier -> drug -> None
-    per_tier_prior_consensus_drug_mapping = {}  # per tier, keep track of the total number of unique drug names parsed across the consensus drug support of the highest available "ct" class for the current sample
+    per_tier_prior_consensus_drug_mapping = {}    # per tier, keep track of the total number of unique drug names parsed across the consensus drug support of the highest available "ct" class for the current sample
     # ct -> drug -> consensus_support
-    consensus_ct_mapping = {}                   # keep track of the total number of unique drug names parsed per "ct" class across the consensus drug support for the current sample
+    consensus_ct_mapping = {}                     # keep track of the total number of unique drug names parsed per "ct" class across the consensus drug support for the current sample
     # ct -> drug -> consensus_support
-    prior_consensus_ct_mapping = {}             # keep track of the total number of unique drug names parsed per highest available "ct" class across the consensus drug support for the current sample
+    consensus_ct_mapping_no_tier3 = {}            # keep track of the total number of unique drug names parsed per "ct" class across the consensus drug support for the current sample (excluding tier3 matches with can introduce biases)
+    # ct -> drug -> consensus_support
+    prior_consensus_ct_mapping = {}               # keep track of the total number of unique drug names parsed per highest available "ct" class across the consensus drug support for the current sample
+    # ct -> drug -> consensus_support
+    prior_consensus_ct_mapping_no_tier3 = {}      # keep track of the total number of unique drug names parsed per highest available "ct" class across the consensus drug support for the current sample (excluding tier3 matches with can introduce biases)
     # tier -> ct -> drug -> None
-    per_tier_consensus_ct_mapping = {}          # per tier, keep track of the total number of unique drug names parsed per "ct" class across the consensus drug support for the current sample
+    per_tier_consensus_ct_mapping = {}            # per tier, keep track of the total number of unique drug names parsed per "ct" class across the consensus drug support for the current sample
     # tier -> ct -> drug -> None
-    per_tier_prior_consensus_ct_mapping = {}    # per tier, keep track of the total number of unique drug names parsed per highest available "ct" class across the consensus drug support for the current sample
+    per_tier_prior_consensus_ct_mapping = {}      # per tier, keep track of the total number of unique drug names parsed per highest available "ct" class across the consensus drug support for the current sample
 
 
     # Each line in the input file corresponds to a single variant in the genome
@@ -670,6 +676,15 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping):
 
     infile.close()
 
+    ## A) Stats on mean number of matched variants
+
+    # Keep track of the total number of variants matched overall for the current sample, excluding tier3 matches with can introduce biases
+    matched_variants_no_tier3 = 0.0
+    for tmp_tier in matched_variants_mapping.keys():
+        if tmp_tier == "tier_3":
+            continue
+        matched_variants_no_tier3 += float(matched_variants_mapping[tmp_tier])
+
 
     # Compute mean number of matched variants for the sample (only makes sense to compute mean on lines that had CIViC matches available)
     mean_matched_variants = 0.0
@@ -677,9 +692,23 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping):
     if all_civic_variants:
         mean_matched_variants = float(float(matched_variants) / float(all_civic_variants))
 
+    # Also compute mean number of matched variants excluding tier3 matches (can introduce biases as this is an unspecific match)
+    mean_matched_variants_no_tier3 = 0.0
+    # Get total number of parsed variants, excluding those classified with a tier3 (unspecific match)
+    n_civic_variants_no_tier3 = n_tier_1 + n_tier_1b + n_tier_2
+    if n_civic_variants_no_tier3:
+        mean_matched_variants_no_tier3 = float(float(matched_variants_no_tier3) / float(n_civic_variants_no_tier3))
+
     # Per tier, compute mean number of matched variants for the sample
     # tier -> # variants
     (mean_matched_variants_tier1, mean_matched_variants_tier1b, mean_matched_variants_tier2, mean_matched_variants_tier3) = process_mean_feature_per_tier(matched_variants_mapping, n_tier_1, n_tier_1b, n_tier_2, n_tier_3)
+
+
+# FIXME
+# TBC
+
+
+    ## B) Stats on mean number of matched diseases
 
     # Compute mean number of matched diseases for the sample (only makes sense to compute mean on lines that had CIViC matches available)
     mean_matched_diseases = 0.0
