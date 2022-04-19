@@ -1341,8 +1341,8 @@ def process_drug_support(matchMap, varMap, supportDict):
                             raise ValueError("Encountered unexpected support case for gene '%s'." %(gene))
 
                         # Build support string for each given combination of drug, ct and matched tier
-                        # Format: DRUG:CT:SUPPORT
-                        drugSupport = thisDrug + ':' + thisCt.upper() + ':' + tempSupport
+                        # Format: DRUG:CT:SUPPORT:#pos|#neg|#unk|#dns
+                        drugSupport = thisDrug + ':' + thisCt.upper() + ':' + tempSupport + ':' + str(count_pos) + '|' + str(count_neg) + '|' + str(count_unk) + '|' + str(count_dns)
                         newMap[gene][variant][tier]['drug_support'].append(drugSupport)
 
 # TODO: Loop for all available tiers that are not tier 4 (could be indicated in the config) -> to make it robust to changes in the tier categories
@@ -1491,8 +1491,8 @@ def reprocess_drug_support_across_selected_variants(inputData, matchMap, varMap,
                 raise ValueError("Encountered unexpected support case when aggregating evidences across provided 'inputData'!")
 
             # Build support string for each given combination of drug, ct and matched tier
-            # Format: DRUG:CT:SUPPORT
-            drugSupport = thisDrug + ':' + thisCt.upper() + ':' + tempSupport
+            # Format: DRUG:CT:SUPPORT:#pos|#neg|#unk|#dns
+            drugSupport = thisDrug + ':' + thisCt.upper() + ':' + tempSupport + ':' + str(count_pos) + '|' + str(count_neg) + '|' + str(count_unk) + '|' + str(count_dns)
             drug_support_strings.append(drugSupport)
 
     return drug_support_strings
