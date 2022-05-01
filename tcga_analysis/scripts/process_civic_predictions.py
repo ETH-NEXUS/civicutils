@@ -252,6 +252,14 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping):
     n_tier_2 = 0.0                                # all lines with tier = 2
     n_tier_3 = 0.0                                # all lines with tier = 3
     n_tier_4 = 0.0                                # all lines with tier = 4
+    n_predictive = 0.0                            # all lines with 'Predictive' CIViC evidence available
+    n_diagnostic = 0.0                            # all lines with 'Diagnostic' CIViC evidence available
+    n_prognostic = 0.0                            # all lines with 'Prognostic' CIViC evidence available
+    n_predisposing = 0.0                          # all lines with 'Predisposing' CIViC evidence available
+    n_predictive_no_tier3 = 0.0                   # all lines with 'Predictive' CIViC evidence available (excluding tier3 matches which can introduce biases)
+    n_diagnostic_no_tier3 = 0.0                   # all lines with 'Diagnostic' CIViC evidence available (excluding tier3 matches which can introduce biases)
+    n_prognostic_no_tier3 = 0.0                   # all lines with 'Prognostic' CIViC evidence available (excluding tier3 matches which can introduce biases)
+    n_predisposing_no_tier3 = 0.0                 # all lines with 'Predisposing' CIViC evidence available (excluding tier3 matches which can introduce biases)
 
     matched_variants = 0.0                        # keep track of the total number of variants matched overall for the current sample
     # tier -> # variants
@@ -379,6 +387,7 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping):
         # Keep track of all unique instances of disease_name + ct_type parsed across the available CIViC evidences
         for tmp_pos in [drug_pos, diag_pos, prog_pos, pred_pos]:
             # Empty evidence columns should be skipped as no information was found on CIViC
+            has_evidence = False
             evidence_infos = str(line_split[tmp_pos].strip())
             if evidence_infos == ".":
                 continue
@@ -514,9 +523,41 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping):
                 if disease_name not in interim_ct_mapping[ct_type].keys():
                     interim_ct_mapping[ct_type][disease_name] = None
 
+                # Keep track of whether the currently evaluated column (i.e. evidence type) has at least 1 evidence item available
+                # NOTE: at this point, all sanity checks for the expected format of the column and listed evidence items have already been performed (see above)
+                has_evidence = True
+
+            ## End of loop that iterates individual evidence items found within the same column
+
+            # Check whether the currently evaluated evidence type had any evidence items listed
+            if has_evidence:
+                # Keep track of the number of variants having some info available for each evidence type
+                if tmp_pos == drug_pos:
+                    n_predictive += 1.0
+                elif tmp_pos == diag_pos:
+                    n_diagnostic += 1.0
+                elif tmp_pos == prog_pos:
+                    n_prognostic += 1.0
+                elif tmp_pos == pred_pos:
+                    n_predisposing += 1.0
+                else:
+                    raise ValueError("Encountered unexpected condition while parsing Evidence type annotations in line %s" %(line.strip()))
+
+                # Also keep track of total number of variants with each evidence type available, excluding tier3 matches which can introduce biases
+                if tier != "tier_3":
+                    if tmp_pos == drug_pos:
+                        n_predictive_no_tier3 += 1.0
+                    elif tmp_pos == diag_pos:
+                        n_diagnostic_no_tier3 += 1.0
+                    elif tmp_pos == prog_pos:
+                        n_prognostic_no_tier3 += 1.0
+                    elif tmp_pos == pred_pos:
+                        n_predisposing_no_tier3 += 1.0
+
+        ## End of loop that iterates across all evidence type columns
+
 
 # FIXME: Selected info can be used to split the evidence strings in turn
-
 #                 # Use the first part of the string (now already known) to split and retrieve all evidence items supporting the current claim (i.e. different combinations of evidence level + publication id)
 #                 if tmp_pos == drug_pos:
 #                     # Format of interim_evidence_split (drug_and_evidence): 'DRUG(DIRECTION,CLINICALSIGNF(A(ref1,ref2,..),B(ref1,ref5)..))'
@@ -528,7 +569,6 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping):
 #                 # Split returns list containing as many elements as evidence items supporting the current claim
 #                 # NOTE: this is the case even when the same publication id is reported across several levels
 #                 pub_ids_split = interim_evidence_split.split(split_pattern)[1].strip().split(",")
-
 
 # FIXME: taken from 'https://gitlab.ethz.ch/nexus/thalmann_seiler_tcga_2017/-/blob/master/scripts/combine_all_civic_prediction.py'
 #                     # In CIVIC, drugs can form part of a combinatorial treatment, indicated by 'DRUG1+DRUG2+...'
@@ -912,11 +952,11 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping):
 
     ## Keep track of all computed info and stats per sample across the entire patient cohort being processed
 
-    # sample -> [#vars, #civic, #tier1, #tier1b, #tier1agg, #tier2, #tier3, #tier4, mean_matched_vars, mean_matched_vars_no_tier3, mean_matched_vars_tier1, mean_matched_vars_tier1b, mean_matched_vars_tier2, mean_matched_vars_tier3, mean_matched_diseases, mean_matched_diseases_no_tier3, mean_matched_diseases_tier1, mean_matched_diseases_tier1b, mean_matched_diseases_tier2, mean_matched_diseases_tier3, mean_matched_diseases_ct, mean_matched_diseases_gt, mean_matched_diseases_nct, mean_matched_diseases_ct_no_tier3, mean_matched_diseases_gt_no_tier3, mean_matched_diseases_nct_no_tier3, mean_matched_diseases_tier1_ct, mean_matched_diseases_tier1_gt, mean_matched_diseases_tier1_nct, mean_matched_diseases_tier1b_ct, mean_matched_diseases_tier1b_gt, mean_matched_diseases_tier1b_nct, mean_matched_diseases_tier2_ct, mean_matched_diseases_tier2_gt, mean_matched_diseases_tier2_nct, mean_matched_diseases_tier3_ct, mean_matched_diseases_tier3_gt, mean_matched_diseases_tier3_nct, #diseases, #diseases_no_tier3, #diseases_tier1, #diseases_tier1b, #diseases_tier2, #diseases_tier3, #diseases_ct, #diseases_gt, #diseases_nct, #diseases_ct_no_tier3, #diseases_gt_no_tier3, #diseases_nct_no_tier3, #diseases_tier1_ct, #diseases_tier1_gt, #diseases_tier1_nct, #diseases_tier1b_ct, #diseases_tier1b_gt, #diseases_tier1b_nct, #diseases_tier2_ct, #diseases_tier2_gt, #diseases_tier2_nct, #diseases_tier3_ct, #diseases_tier3_gt, #diseases_tier3_nct, #drugs, #drugs_no_tier3, mean_cts_per_drug, mean_cts_per_drug_no_tier3, #drugs_tier1, #drugs_tier1b, #drugs_tier2, #drugs_tier3, #drugs_ct, #drugs_gt, #drugs_nct, #drugs_ct_no_tier3, #drugs_gt_no_tier3, #drugs_nct_no_tier3, #drugs_prior, #drugs_prior_no_tier3, #drugs_tier1_prior, #drugs_tier1b_prior, #drugs_tier2_prior, #drugs_tier3_prior, #drugs_ct_prior, #drugs_gt_prior, #drugs_nct_prior, #drugs_ct_prior_no_tier3, #drugs_gt_prior_no_tier3, #drugs_nct_prior_no_tier3, #drugs_tier1_ct, #drugs_tier1_gt, #drugs_tier1_nct, #drugs_tier1b_ct, #drugs_tier1b_gt, #drugs_tier1b_nct, #drugs_tier2_ct, #drugs_tier2_gt, #drugs_tier2_nct, #drugs_tier3_ct, #drugs_tier3_gt, #drugs_tier3_nct, drugs_tier1_ct_prior, #drugs_tier1_gt_prior, #drugs_tier1_nct_prior,, #drugs_tier1b_ct_prior, #drugs_tier1b_gt_prior, #drugs_tier1b_nct_prior, #drugs_tier2_ct_prior, #drugs_tier2_gt_prior, #drugs_tier2_nct_prior, #drugs_tier3_ct_prior, #drugs_tier3_gt_prior, #drugs_tier3_nct_prior]
+    # sample -> [#vars, #civic, #civic_no_tier3, #tier1, #tier1b, #tier1agg, #tier2, #tier3, #tier4, #predictive, #diagnostic, #prognostic, #predisposing, #predictive_no_tier3, #diagnostic_no_tier3, #prognostic_no_tier3, #predisposing_no_tier3, mean_matched_vars, mean_matched_vars_no_tier3, mean_matched_vars_tier1, mean_matched_vars_tier1b, mean_matched_vars_tier2, mean_matched_vars_tier3, mean_matched_diseases, mean_matched_diseases_no_tier3, mean_matched_diseases_tier1, mean_matched_diseases_tier1b, mean_matched_diseases_tier2, mean_matched_diseases_tier3, mean_matched_diseases_ct, mean_matched_diseases_gt, mean_matched_diseases_nct, mean_matched_diseases_ct_no_tier3, mean_matched_diseases_gt_no_tier3, mean_matched_diseases_nct_no_tier3, mean_matched_diseases_tier1_ct, mean_matched_diseases_tier1_gt, mean_matched_diseases_tier1_nct, mean_matched_diseases_tier1b_ct, mean_matched_diseases_tier1b_gt, mean_matched_diseases_tier1b_nct, mean_matched_diseases_tier2_ct, mean_matched_diseases_tier2_gt, mean_matched_diseases_tier2_nct, mean_matched_diseases_tier3_ct, mean_matched_diseases_tier3_gt, mean_matched_diseases_tier3_nct, #diseases, #diseases_no_tier3, #diseases_tier1, #diseases_tier1b, #diseases_tier2, #diseases_tier3, #diseases_ct, #diseases_gt, #diseases_nct, #diseases_ct_no_tier3, #diseases_gt_no_tier3, #diseases_nct_no_tier3, #diseases_tier1_ct, #diseases_tier1_gt, #diseases_tier1_nct, #diseases_tier1b_ct, #diseases_tier1b_gt, #diseases_tier1b_nct, #diseases_tier2_ct, #diseases_tier2_gt, #diseases_tier2_nct, #diseases_tier3_ct, #diseases_tier3_gt, #diseases_tier3_nct, #drugs, #drugs_no_tier3, mean_cts_per_drug, mean_cts_per_drug_no_tier3, #drugs_tier1, #drugs_tier1b, #drugs_tier2, #drugs_tier3, #drugs_ct, #drugs_gt, #drugs_nct, #drugs_ct_no_tier3, #drugs_gt_no_tier3, #drugs_nct_no_tier3, #drugs_prior, #drugs_prior_no_tier3, #drugs_tier1_prior, #drugs_tier1b_prior, #drugs_tier2_prior, #drugs_tier3_prior, #drugs_ct_prior, #drugs_gt_prior, #drugs_nct_prior, #drugs_ct_prior_no_tier3, #drugs_gt_prior_no_tier3, #drugs_nct_prior_no_tier3, #drugs_tier1_ct, #drugs_tier1_gt, #drugs_tier1_nct, #drugs_tier1b_ct, #drugs_tier1b_gt, #drugs_tier1b_nct, #drugs_tier2_ct, #drugs_tier2_gt, #drugs_tier2_nct, #drugs_tier3_ct, #drugs_tier3_gt, #drugs_tier3_nct, drugs_tier1_ct_prior, #drugs_tier1_gt_prior, #drugs_tier1_nct_prior,, #drugs_tier1b_ct_prior, #drugs_tier1b_gt_prior, #drugs_tier1b_nct_prior, #drugs_tier2_ct_prior, #drugs_tier2_gt_prior, #drugs_tier2_nct_prior, #drugs_tier3_ct_prior, #drugs_tier3_gt_prior, #drugs_tier3_nct_prior]
     if sample_name in civic_info_mapping.keys():
         raise ValueError("Sample name '%s' was already parsed!")
 
-    civic_info_mapping[sample_name] = [all_variants, all_civic_variants, n_tier_1, n_tier_1b, n_tier_1_agg, n_tier_2, n_tier_3, n_tier_4, mean_matched_variants, mean_matched_variants_no_tier3, mean_matched_variants_tier1, mean_matched_variants_tier1b, mean_matched_variants_tier2, mean_matched_variants_tier3, mean_matched_diseases, mean_matched_diseases_no_tier3, mean_matched_diseases_tier1, mean_matched_diseases_tier1b, mean_matched_diseases_tier2, mean_matched_diseases_tier3, mean_matched_diseases_ct, mean_matched_diseases_gt, mean_matched_diseases_nct, mean_matched_diseases_ct_no_tier3, mean_matched_diseases_gt_no_tier3, mean_matched_diseases_nct_no_tier3, mean_matched_diseases_tier1_ct, mean_matched_diseases_tier1_gt, mean_matched_diseases_tier1_nct, mean_matched_diseases_tier1b_ct, mean_matched_diseases_tier1b_gt, mean_matched_diseases_tier1b_nct, mean_matched_diseases_tier2_ct, mean_matched_diseases_tier2_gt, mean_matched_diseases_tier2_nct, mean_matched_diseases_tier3_ct, mean_matched_diseases_tier3_gt, mean_matched_diseases_tier3_nct, n_diseases, n_diseases_no_tier3, n_diseases_tier1, n_diseases_tier1b, n_diseases_tier2, n_diseases_tier3, n_diseases_ct, n_diseases_gt, n_diseases_nct, n_diseases_ct_no_tier3, n_diseases_gt_no_tier3, n_diseases_nct_no_tier3, n_diseases_tier1_ct, n_diseases_tier1_gt, n_diseases_tier1_nct, n_diseases_tier1b_ct, n_diseases_tier1b_gt, n_diseases_tier1b_nct, n_diseases_tier2_ct, n_diseases_tier2_gt, n_diseases_tier2_nct, n_diseases_tier3_ct, n_diseases_tier3_gt, n_diseases_tier3_nct, n_drugs_all, n_drugs_all_no_tier3, mean_ct_classes_avail, mean_ct_classes_avail_no_tier3, n_drugs_all_tier1, n_drugs_all_tier1b, n_drugs_all_tier2, n_drugs_all_tier3, n_drugs_all_ct, n_drugs_all_gt, n_drugs_all_nct, n_drugs_all_ct_no_tier3, n_drugs_all_gt_no_tier3, n_drugs_all_nct_no_tier3, n_drugs_prior, n_drugs_prior_no_tier3, n_drugs_prior_tier1, n_drugs_prior_tier1b, n_drugs_prior_tier2, n_drugs_prior_tier3, n_drugs_prior_ct, n_drugs_prior_gt, n_drugs_prior_nct, n_drugs_prior_ct_no_tier3, n_drugs_prior_gt_no_tier3, n_drugs_prior_nct_no_tier3, n_drugs_tier1_ct, n_drugs_tier1_gt, n_drugs_tier1_nct, n_drugs_tier1b_ct, n_drugs_tier1b_gt, n_drugs_tier1b_nct, n_drugs_tier2_ct, n_drugs_tier2_gt, n_drugs_tier2_nct, n_drugs_tier3_ct, n_drugs_tier3_gt, n_drugs_tier3_nct, n_drugs_tier1_ct_prior, n_drugs_tier1_gt_prior, n_drugs_tier1_nct_prior, n_drugs_tier1b_ct_prior, n_drugs_tier1b_gt_prior, n_drugs_tier1b_nct_prior, n_drugs_tier2_ct_prior, n_drugs_tier2_gt_prior, n_drugs_tier2_nct_prior, n_drugs_tier3_ct_prior, n_drugs_tier3_gt_prior, n_drugs_tier3_nct_prior]
+    civic_info_mapping[sample_name] = [all_variants, all_civic_variants, n_civic_variants_no_tier3, n_tier_1, n_tier_1b, n_tier_1_agg, n_tier_2, n_tier_3, n_tier_4, n_predictive, n_diagnostic, n_prognostic, n_predisposing, n_predictive_no_tier3, n_diagnostic_no_tier3, n_prognostic_no_tier3, n_predisposing_no_tier3, mean_matched_variants, mean_matched_variants_no_tier3, mean_matched_variants_tier1, mean_matched_variants_tier1b, mean_matched_variants_tier2, mean_matched_variants_tier3, mean_matched_diseases, mean_matched_diseases_no_tier3, mean_matched_diseases_tier1, mean_matched_diseases_tier1b, mean_matched_diseases_tier2, mean_matched_diseases_tier3, mean_matched_diseases_ct, mean_matched_diseases_gt, mean_matched_diseases_nct, mean_matched_diseases_ct_no_tier3, mean_matched_diseases_gt_no_tier3, mean_matched_diseases_nct_no_tier3, mean_matched_diseases_tier1_ct, mean_matched_diseases_tier1_gt, mean_matched_diseases_tier1_nct, mean_matched_diseases_tier1b_ct, mean_matched_diseases_tier1b_gt, mean_matched_diseases_tier1b_nct, mean_matched_diseases_tier2_ct, mean_matched_diseases_tier2_gt, mean_matched_diseases_tier2_nct, mean_matched_diseases_tier3_ct, mean_matched_diseases_tier3_gt, mean_matched_diseases_tier3_nct, n_diseases, n_diseases_no_tier3, n_diseases_tier1, n_diseases_tier1b, n_diseases_tier2, n_diseases_tier3, n_diseases_ct, n_diseases_gt, n_diseases_nct, n_diseases_ct_no_tier3, n_diseases_gt_no_tier3, n_diseases_nct_no_tier3, n_diseases_tier1_ct, n_diseases_tier1_gt, n_diseases_tier1_nct, n_diseases_tier1b_ct, n_diseases_tier1b_gt, n_diseases_tier1b_nct, n_diseases_tier2_ct, n_diseases_tier2_gt, n_diseases_tier2_nct, n_diseases_tier3_ct, n_diseases_tier3_gt, n_diseases_tier3_nct, n_drugs_all, n_drugs_all_no_tier3, mean_ct_classes_avail, mean_ct_classes_avail_no_tier3, n_drugs_all_tier1, n_drugs_all_tier1b, n_drugs_all_tier2, n_drugs_all_tier3, n_drugs_all_ct, n_drugs_all_gt, n_drugs_all_nct, n_drugs_all_ct_no_tier3, n_drugs_all_gt_no_tier3, n_drugs_all_nct_no_tier3, n_drugs_prior, n_drugs_prior_no_tier3, n_drugs_prior_tier1, n_drugs_prior_tier1b, n_drugs_prior_tier2, n_drugs_prior_tier3, n_drugs_prior_ct, n_drugs_prior_gt, n_drugs_prior_nct, n_drugs_prior_ct_no_tier3, n_drugs_prior_gt_no_tier3, n_drugs_prior_nct_no_tier3, n_drugs_tier1_ct, n_drugs_tier1_gt, n_drugs_tier1_nct, n_drugs_tier1b_ct, n_drugs_tier1b_gt, n_drugs_tier1b_nct, n_drugs_tier2_ct, n_drugs_tier2_gt, n_drugs_tier2_nct, n_drugs_tier3_ct, n_drugs_tier3_gt, n_drugs_tier3_nct, n_drugs_tier1_ct_prior, n_drugs_tier1_gt_prior, n_drugs_tier1_nct_prior, n_drugs_tier1b_ct_prior, n_drugs_tier1b_gt_prior, n_drugs_tier1b_nct_prior, n_drugs_tier2_ct_prior, n_drugs_tier2_gt_prior, n_drugs_tier2_nct_prior, n_drugs_tier3_ct_prior, n_drugs_tier3_gt_prior, n_drugs_tier3_nct_prior]
     return civic_info_mapping
 
 
@@ -929,13 +969,14 @@ def write_results_to_output(sample_order, input_mapping, outfile):
             raise ValueError("Provided sample name '%s' was not parsed!")
         # Retrieve and sanity check available CIViCutils info for the current sample
         civic_infos = input_mapping[sample]
-        if len(civic_infos) != 112:
-            raise ValueError("Expected 112 stat values from processing CIViC annotations for sample '%s'!" %(sample))
+        if len(civic_infos) != 121:
+            raise ValueError("Expected 121 stat values from processing CIViC annotations for sample '%s'!" %(sample))
         # Reported numeric values must be converted into strings before writing to output
         civic_infos_strings = [str(round(x, 2)) for x in civic_infos]
         # Write each sample in a separate line
         outfile.write("%s\t%s\n" %(sample, "\t".join(civic_infos_strings)))
     return None
+
 
 
 '''
@@ -992,7 +1033,7 @@ outfile_snv = open(args.outfile_tag + ".snvs.tsv",'w') # Results from processing
 outfile_cnv = open(args.outfile_tag + ".cnvs.tsv",'w') # Results from processing CNV annotations from CIViCutils
 
 # Header is identical for both output tables
-output_header = "sample_name\tall_variants\tall_civic_variants\tn_tier_1\tn_tier_1b\tn_tier_1_agg\tn_tier_2\tn_tier_3\tn_tier_4\tmean_matched_vars\tmean_matched_vars_no_tier3\tmean_matched_vars_tier1\tmean_matched_vars_tier1b\tmean_matched_vars_tier2\tmean_matched_vars_tier3\tmean_matched_diseases\tmean_matched_diseases_no_tier3\tmean_matched_diseases_tier1\tmean_matched_diseases_tier1b\tmean_matched_diseases_tier2\tmean_matched_diseases_tier3\tmean_matched_diseases_ct\tmean_matched_diseases_gt\tmean_matched_diseases_nct\tmean_matched_diseases_ct_no_tier3\tmean_matched_diseases_gt_no_tier3\tmean_matched_diseases_nct_no_tier3\tmean_matched_diseases_tier1_ct\tmean_matched_diseases_tier1_gt\tmean_matched_diseases_tier1_nct\tmean_matched_diseases_tier1b_ct\tmean_matched_diseases_tier1b_gt\tmean_matched_diseases_tier1b_nct\tmean_matched_diseases_tier2_ct\tmean_matched_diseases_tier2_gt\tmean_matched_diseases_tier2_nct\tmean_matched_diseases_tier3_ct\tmean_matched_diseases_tier3_gt\tmean_matched_diseases_tier3_nct\tn_diseases\tn_diseases_no_tier3\tn_diseases_tier1\tn_diseases_tier1b\tn_diseases_tier2\tn_diseases_tier3\tn_diseases_ct\tn_diseases_gt\tn_diseases_nct\tn_diseases_ct_no_tier3\tn_diseases_gt_no_tier3\tn_diseases_nct_no_tier3\tn_diseases_tier1_ct\tn_diseases_tier1_gt\tn_diseases_tier1_nct\tn_diseases_tier1b_ct\tn_diseases_tier1b_gt\tn_diseases_tier1b_nct\tn_diseases_tier2_ct\tn_diseases_tier2_gt\tn_diseases_tier2_nct\tn_diseases_tier3_ct\tn_diseases_tier3_gt\tn_diseases_tier3_nct\tn_drugs_all\tn_drugs_all_no_tier3\tmean_ct_classes_avail\tmean_ct_classes_avail_no_tier3\tn_drugs_all_tier1\tn_drugs_all_tier1b\tn_drugs_all_tier2\tn_drugs_all_tier3\tn_drugs_all_ct\tn_drugs_all_gt\tn_drugs_all_nct\tn_drugs_all_ct_no_tier3\tn_drugs_all_gt_no_tier3\tn_drugs_all_nct_no_tier3\tn_drugs_prior\tn_drugs_prior_no_tier3\tn_drugs_prior_tier1\tn_drugs_prior_tier1b\tn_drugs_prior_tier2\tn_drugs_prior_tier3\tn_drugs_prior_ct\tn_drugs_prior_gt\tn_drugs_prior_nct\tn_drugs_prior_ct_no_tier3\tn_drugs_prior_gt_no_tier3\tn_drugs_prior_nct_no_tier3\tn_drugs_tier1_ct\tn_drugs_tier1_gt\tn_drugs_tier1_nct\tn_drugs_tier1b_ct\tn_drugs_tier1b_gt\tn_drugs_tier1b_nct\tn_drugs_tier2_ct\tn_drugs_tier2_gt\tn_drugs_tier2_nct\tn_drugs_tier3_ct\tn_drugs_tier3_gt\tn_drugs_tier3_nct\tn_drugs_tier1_ct_prior\tn_drugs_tier1_gt_prior\tn_drugs_tier1_nct_prior\tn_drugs_tier1b_ct_prior\tn_drugs_tier1b_gt_prior\tn_drugs_tier1b_nct_prior\tn_drugs_tier2_ct_prior\tn_drugs_tier2_gt_prior\tn_drugs_tier2_nct_prior\tn_drugs_tier3_ct_prior\tn_drugs_tier3_gt_prior\tn_drugs_tier3_nct_prior"
+output_header = "sample_name\tall_variants\tall_civic_variants\tall_civic_variants_no_tier3\tn_tier_1\tn_tier_1b\tn_tier_1_agg\tn_tier_2\tn_tier_3\tn_tier_4\tn_predictive_vars\tn_diagnostic_vars\tn_prognostic_vars\tn_predisposing_vars\tn_predictive_vars_no_tier3\tn_diagnostic_vars_no_tier3\tn_prognostic_vars_no_tier3\tn_predisposing_vars_no_tier3\tmean_matched_vars\tmean_matched_vars_no_tier3\tmean_matched_vars_tier1\tmean_matched_vars_tier1b\tmean_matched_vars_tier2\tmean_matched_vars_tier3\tmean_matched_diseases\tmean_matched_diseases_no_tier3\tmean_matched_diseases_tier1\tmean_matched_diseases_tier1b\tmean_matched_diseases_tier2\tmean_matched_diseases_tier3\tmean_matched_diseases_ct\tmean_matched_diseases_gt\tmean_matched_diseases_nct\tmean_matched_diseases_ct_no_tier3\tmean_matched_diseases_gt_no_tier3\tmean_matched_diseases_nct_no_tier3\tmean_matched_diseases_tier1_ct\tmean_matched_diseases_tier1_gt\tmean_matched_diseases_tier1_nct\tmean_matched_diseases_tier1b_ct\tmean_matched_diseases_tier1b_gt\tmean_matched_diseases_tier1b_nct\tmean_matched_diseases_tier2_ct\tmean_matched_diseases_tier2_gt\tmean_matched_diseases_tier2_nct\tmean_matched_diseases_tier3_ct\tmean_matched_diseases_tier3_gt\tmean_matched_diseases_tier3_nct\tn_diseases\tn_diseases_no_tier3\tn_diseases_tier1\tn_diseases_tier1b\tn_diseases_tier2\tn_diseases_tier3\tn_diseases_ct\tn_diseases_gt\tn_diseases_nct\tn_diseases_ct_no_tier3\tn_diseases_gt_no_tier3\tn_diseases_nct_no_tier3\tn_diseases_tier1_ct\tn_diseases_tier1_gt\tn_diseases_tier1_nct\tn_diseases_tier1b_ct\tn_diseases_tier1b_gt\tn_diseases_tier1b_nct\tn_diseases_tier2_ct\tn_diseases_tier2_gt\tn_diseases_tier2_nct\tn_diseases_tier3_ct\tn_diseases_tier3_gt\tn_diseases_tier3_nct\tn_drugs_all\tn_drugs_all_no_tier3\tmean_ct_classes_avail\tmean_ct_classes_avail_no_tier3\tn_drugs_all_tier1\tn_drugs_all_tier1b\tn_drugs_all_tier2\tn_drugs_all_tier3\tn_drugs_all_ct\tn_drugs_all_gt\tn_drugs_all_nct\tn_drugs_all_ct_no_tier3\tn_drugs_all_gt_no_tier3\tn_drugs_all_nct_no_tier3\tn_drugs_prior\tn_drugs_prior_no_tier3\tn_drugs_prior_tier1\tn_drugs_prior_tier1b\tn_drugs_prior_tier2\tn_drugs_prior_tier3\tn_drugs_prior_ct\tn_drugs_prior_gt\tn_drugs_prior_nct\tn_drugs_prior_ct_no_tier3\tn_drugs_prior_gt_no_tier3\tn_drugs_prior_nct_no_tier3\tn_drugs_tier1_ct\tn_drugs_tier1_gt\tn_drugs_tier1_nct\tn_drugs_tier1b_ct\tn_drugs_tier1b_gt\tn_drugs_tier1b_nct\tn_drugs_tier2_ct\tn_drugs_tier2_gt\tn_drugs_tier2_nct\tn_drugs_tier3_ct\tn_drugs_tier3_gt\tn_drugs_tier3_nct\tn_drugs_tier1_ct_prior\tn_drugs_tier1_gt_prior\tn_drugs_tier1_nct_prior\tn_drugs_tier1b_ct_prior\tn_drugs_tier1b_gt_prior\tn_drugs_tier1b_nct_prior\tn_drugs_tier2_ct_prior\tn_drugs_tier2_gt_prior\tn_drugs_tier2_nct_prior\tn_drugs_tier3_ct_prior\tn_drugs_tier3_gt_prior\tn_drugs_tier3_nct_prior"
 
 outfile_snv.write(output_header + "\n")
 outfile_cnv.write(output_header + "\n")
