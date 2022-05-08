@@ -12,6 +12,7 @@ library(scales)
 library(reshape2)
 library(plyr)
 library(ggplot2)
+library(stringr)
 
 
 ##################
@@ -119,6 +120,7 @@ aggregate_tier_fraction_across_patients = function(df_tier){
   return(list(tier1=mean_fraction_tier1, tier1b=mean_fraction_tier1b, tier2=mean_fraction_tier2, tier3=mean_fraction_tier3))
 }
 
+
 # 
 prepare_fraction_tier_data_for_plotting = function(dataset, header){
   n_tier_columns = c("sample_name", "all_civic_variants", "n_tier_1", "n_tier_1b", "n_tier_2", "n_tier_3")
@@ -139,7 +141,6 @@ prepare_fraction_tier_data_for_plotting = function(dataset, header){
   new_subdata = subset(subdata, select=c("sample_name", "fraction_tier_1", "fraction_tier_1b", "fraction_tier_2", "fraction_tier_3"))
   new_subdata_sorted = new_subdata[with(new_subdata, order(fraction_tier_1, fraction_tier_1b, fraction_tier_2, fraction_tier_3)),]
   # new_subdata_sorted = new_subdata[with(new_subdata, order(fraction_tier_3, fraction_tier_2, fraction_tier_1b, fraction_tier_1)),]
-  new_subdata_sorted = new_subdata[with(new_subdata, order(fraction_tier_1, fraction_tier_1b, fraction_tier_2, fraction_tier_3)),]
   sample_order = new_subdata_sorted$sample_name
   
   # Reformat dataset in preparation for plotting
@@ -228,7 +229,7 @@ if (!identical(samples_names_snv, samples_names_cnv)){
 
 ## A1) NUMBER OF VARIANTS MATCHED IN CIVIC
 
-## Plot version showing absolute variant numbers
+## Barplot version showing absolute variant numbers
 
 # Sanity check that required input columns can be found
 n_civic_columns = c("all_variants", "all_civic_variants")
@@ -267,7 +268,7 @@ df_civic_cnv_sorted = prepare_data_for_plotting(data_cnv, n_civic_columns, input
 # ggsave(outfile_civic_cnv, p1b, width=10, height=8, units="in", dpi=1200)
 
 
-## Plot version showing fraction of total variants having CIViCutils results
+## Barplot version showing fraction of total variants having CIViCutils results
 
 # Sanity check that required input columns can be found
 df_civic_snv_fraction = prepare_fraction_civic_data_for_plotting(data_snv, input_colnames)
@@ -298,7 +299,7 @@ df_civic_cnv_fraction = prepare_fraction_civic_data_for_plotting(data_cnv, input
 # ggsave(outfile_civic_cnv, p1b, width=10, height=8, units="in", dpi=1200)
 
 
-## Plot combined version of this plot, showing SNVs and CNVs as facets (same axis, use sample sorting from SNV dataset)
+## Combined version of barplot, showing SNVs and CNVs as facets (shared axis, use sample sorting from SNV dataset)
 
 # Sanity check that required input columns can be found
 plotting_columns = c("sample_name", "fraction", "sample_order")
@@ -321,7 +322,7 @@ df_civic_fraction =  combine_snv_and_cnv_for_plotting(df_civic_snv_fraction, df_
 # plot(p1c)
 # ggsave(outfile_civic, p1c, width=10, height=8, units="in", dpi=1200)
 
-outfile_civic = paste0(opt$outfile_tag, ".fraction_variants_in_civic.pdf")
+outfile_civic = paste0(opt$outfile_tag, ".barplot_fraction_variants_in_civic.pdf")
 p1c = ggplot(df_civic_fraction, aes(x=sample_order, y=fraction, fill="#0072B2")) +
   geom_bar(stat='identity', position = "identity", width=.7) +
   ylab("Percent of variants") + 
@@ -335,6 +336,24 @@ p1c = ggplot(df_civic_fraction, aes(x=sample_order, y=fraction, fill="#0072B2"))
 ggsave(outfile_civic, p1c, width=10, height=8, units="in", dpi=1200)
 
 # TODO: look into "cutting" a section of the y-axis, to avoid having a very broad range just to show tier4 variants (have a "gap" instead, and show only relevant part of the barplot + max value of the y-axis)
+
+
+## Combined version of boxplot (to display variance across cohort), showing SNVs and CNVs as facets (shared axis, use sample sorting from SNV dataset)
+
+outfile_civic_box = paste0(opt$outfile_tag, ".boxplot_fraction_variants_in_civic.pdf")
+p1d = ggplot(df_civic_fraction, aes(x=dataset, y=fraction, fill=dataset)) +
+  geom_boxplot(outlier.shape=NA, outlier.size=0, notch=FALSE) +
+  geom_jitter(aes(color=dataset), size=1, alpha=0.9) +
+  ylab("Percent of variants matched in CIViC") + 
+  xlab("") +
+  theme(axis.text=element_text(size=12, color="black"),
+        axis.title=element_text(size=15, color="black")) +
+  theme(legend.position="none")
+  # theme(legend.justification = c(1, 1),legend.position = c(1,1)) 
+  # scale_fill_manual(name="Variants", labels=c("Matched in CIViC"), values=c("#0072B2"))
+# plot(p1d)
+ggsave(outfile_civic_box, p1d, width=10, height=8, units="in", dpi=1200)
+
 
 
 
@@ -381,7 +400,7 @@ ggsave(outfile_civic_pie, p1, width=10, height=8, units="in", dpi=1200)
 
 ## B1) DISTRIBUTION OF TIER CLASSIFICATION (only for variants matched in CIVIC)
 
-## Plot version showing absolute variant numbers
+## Barplot version showing absolute variant numbers
 
 # Sanity check that required input columns can be found
 n_tier_columns = c("n_tier_1", "n_tier_1b", "n_tier_2", "n_tier_3", "all_civic_variants")
@@ -433,13 +452,13 @@ tier_cols = c("n_tier_1" = "red", "n_tier_1b" = "#0072B2", "n_tier_2" = "gold", 
 # ggsave(outfile_tier_cnv, p2b, width=10, height=8, units="in", dpi=1200)
 
 
-## Plot version showing fraction of total variants having CIViCutils results
+## Barplot version showing fraction of total variants having CIViCutils results
 
 df_tier_snv_fraction = prepare_fraction_tier_data_for_plotting(data_snv, input_colnames)
 df_tier_cnv_fraction = prepare_fraction_tier_data_for_plotting(data_cnv, input_colnames)
 
 
-## Plot combined version of this plot, showing SNVs and CNVs as facets (same axis, use sample sorting from SNV dataset)
+## Combined version of barplot, showing SNVs and CNVs as facets (shared axis, use sample sorting from SNV dataset)
 
 # Sanity check that required input columns can be found
 plotting_columns_tier = c("sample_name", "variable", "value", "label_ypos", "sample_order", "tier_order")
@@ -450,7 +469,7 @@ tier_cols = c("fraction_tier_1" = "red", "fraction_tier_1b" = "#0072B2", "fracti
 
 # NOTE: barplot shown below is stacked and not overlaying!
 
-outfile_tier = paste0(opt$outfile_tag, ".fraction_variants_tier_distribution.pdf")
+outfile_tier = paste0(opt$outfile_tag, ".barplot_fraction_variants_tier_distribution.pdf")
 p2c = ggplot(df_tier_fraction, aes(x=sample_order, y=value, fill=tier_order)) +
   geom_bar(stat='identity', position = "stack", width=.7) +
   ylab("Percent of variants matched in CIViC") + 
@@ -464,6 +483,28 @@ p2c = ggplot(df_tier_fraction, aes(x=sample_order, y=value, fill=tier_order)) +
   scale_fill_manual(name="Tier class", breaks=c("fraction_tier_1", "fraction_tier_1b", "fraction_tier_2", "fraction_tier_3"), labels=c("tier1", "tier1b", "tier2", "tier3"), values=tier_cols)
 # plot(p2c)
 ggsave(outfile_tier, p2c, width=10, height=8, units="in", dpi=1200)
+
+
+## Combined version of boxplot (to display variance across cohort), showing SNVs and CNVs as facets
+
+outfile_tier_box = paste0(opt$outfile_tag, ".boxplot_fraction_variants_tier_distribution.pdf")
+# p2d = ggplot(df_tier_fraction, aes(x=variable, y=value, fill=variable)) +
+p2d = ggplot(df_tier_fraction, aes(x=variable, y=value)) +
+  # geom_boxplot(outlier.shape=NA, outlier.size=0, notch=FALSE) +
+  geom_boxplot(fill="grey", outlier.shape=NA, outlier.size=0, notch=FALSE) +
+  geom_jitter(aes(color=variable), size=1, alpha=0.9) +
+  ylab("Percent of variants matched in CIViC") + 
+  xlab("") +
+  theme(axis.text=element_text(size=12, color="black"),
+        axis.title=element_text(size=15, color="black")) +
+  theme(legend.justification = c(1, 1)) +
+  facet_grid(dataset ~ .) +
+  scale_x_discrete(breaks=c("fraction_tier_1", "fraction_tier_1b", "fraction_tier_2", "fraction_tier_3"), labels=c("tier1", "tier1b", "tier2", "tier3")) +
+  # scale_fill_manual(name="Tier class", breaks=c("fraction_tier_1", "fraction_tier_1b", "fraction_tier_2", "fraction_tier_3"), labels=c("tier1", "tier1b", "tier2", "tier3"), values=tier_cols) +
+  scale_color_manual(name="Tier class", breaks=c("fraction_tier_1", "fraction_tier_1b", "fraction_tier_2", "fraction_tier_3"), labels=c("tier1", "tier1b", "tier2", "tier3"), values=tier_cols)
+# plot(p2d)
+ggsave(outfile_tier_box, p2d, width=10, height=8, units="in", dpi=1200)
+
 
 
 ## B2) TOTAL DISTRIBUTION OF TIER CLASSIFICATION ACROSS PATIENTS
@@ -516,60 +557,152 @@ ggsave(outfile_tier_pie, p2, width=10, height=8, units="in", dpi=1200)
 
 ## C1) DISTRIBUTION OF EVIDENCE TYPES (only for variants matched in CIVIC)
 
-## Plot version showing absolute variant numbers
+
+## Barplot version showing absolute variant numbers
 ## (to avoid interpretation bias, since the same variant can be accounted for toward several evidence types)
 
 # Sanity check that required input columns can be found
 n_evidence_columns = c("n_predictive_vars", "n_diagnostic_vars", "n_prognostic_vars", "n_predisposing_vars",
                        "n_predictive_vars_no_tier3", "n_diagnostic_vars_no_tier3", "n_prognostic_vars_no_tier3", "n_predisposing_vars_no_tier3")
 
-df_evidence_snv_sorted = prepare_data_for_plotting(data_snv, n_evidence_columns, input_colnames, "n_predictive_vars_no_tier3")
-df_evidence_cnv_sorted = prepare_data_for_plotting(data_cnv, n_evidence_columns, input_colnames, "n_predictive_vars_no_tier3")
-
-df_evidence_snv_sorted$evidence_type = gsub("_no_tier3", "", gsub("_vars", "", gsub("n_", "", df_evidence_snv_sorted$variable)))
-df_evidence_snv_sorted$tier3_variants = ifelse(grepl("_no_tier3", df_evidence_snv_sorted$variable), "Excluding", "Including")
-df_evidence_cnv_sorted$evidence_type = gsub("_no_tier3", "", gsub("_vars", "", gsub("n_", "", df_evidence_cnv_sorted$variable)))
-df_evidence_cnv_sorted$tier3_variants = ifelse(grepl("_no_tier3", df_evidence_cnv_sorted$variable), "Excluding", "Including")
-
-
-## Plot combined version of this plot, showing SNVs and CNVs as facets (same axis, use sample sorting from SNV dataset)
-
-# Sanity check that required input columns can be found
-plotting_columns_evidence = c("sample_name", "variable", "value", "label_ypos", "sample_order", "evidence_type", "tier3_variants")
-df_evidence_fraction =  combine_snv_and_cnv_for_plotting(df_evidence_snv_sorted, df_evidence_cnv_sorted, plotting_columns_evidence)
-
 # Choose color scheme for plot
 tier3_colors = c("Including" = "grey", "Excluding" = "#0072B2")
 
-# TODO: camel case for Evidence Types
-# TODO: check Predisposing is never available and if so, entirely remove from plot
+df_evidence_snv_sorted = prepare_data_for_plotting(data_snv, n_evidence_columns, input_colnames, "n_predictive_vars_no_tier3")
+
+# Extract relevant features from the variable names in preparation for plotting
+df_evidence_snv_sorted$evidence_type = gsub("_no_tier3", "", gsub("_vars", "", gsub("n_", "", df_evidence_snv_sorted$variable)))
+df_evidence_snv_sorted$tier3_variants = ifelse(grepl("_no_tier3", df_evidence_snv_sorted$variable), "Excluding", "Including")
+
+# Confirm evidence type "predisposing" is never available and entirely remove from plot
+df_evidence_snv_sorted = subset(df_evidence_snv_sorted, subset = evidence_type != "predisposing")
+# table(subset(df_evidence_snv_sorted, subset = evidence_type == "predisposing", select=value))
+
+# Use camel case for displaying the Evidence Types in the facets of the plot
+df_evidence_snv_sorted$evidence_type = str_to_title(df_evidence_snv_sorted$evidence_type)
+df_evidence_snv_sorted$evidence_type = as.character(df_evidence_snv_sorted$evidence_type)
+df_evidence_snv_sorted$evidence_type = factor(df_evidence_snv_sorted$evidence_type, levels= c("Predictive", "Prognostic", "Diagnostic"))
+
+
+# outfile_evidence_snv = paste0(opt$outfile_tag, ".barplot_snvs_evidence_type_distribution.pdf")
+# p3a = ggplot(df_evidence_snv_sorted, aes(x=sample_order, y=value, fill=tier3_variants)) +
+#   geom_bar(stat='identity', position = "stack", width=.7) +
+#   ylab("Number of SNVs") + 
+#   xlab("Patient") +
+#   # ggtitle("") +
+#   theme(axis.text.x=element_blank(), axis.ticks.x=element_blank()) +
+#   theme(legend.justification = c(1, 1)) +
+#   facet_grid(evidence_type ~ .) +
+#   scale_fill_manual(name="Tier3 variants", values=tier3_colors)
+# # plot(p3a)
+# ggsave(outfile_evidence_snv, p3a, width=10, height=8, units="in", dpi=1200)
+
+
+df_evidence_cnv_sorted = prepare_data_for_plotting(data_cnv, n_evidence_columns, input_colnames, "n_predictive_vars_no_tier3")
+
+# Extract relevant features from the variable names in preparation for plotting
+df_evidence_cnv_sorted$evidence_type = gsub("_no_tier3", "", gsub("_vars", "", gsub("n_", "", df_evidence_cnv_sorted$variable)))
+df_evidence_cnv_sorted$tier3_variants = ifelse(grepl("_no_tier3", df_evidence_cnv_sorted$variable), "Excluding", "Including")
+
+# Confirm evidence type "predisposing" is never available and entirely remove from plot
+df_evidence_cnv_sorted = subset(df_evidence_cnv_sorted, subset = evidence_type != "predisposing")
+# table(subset(df_evidence_cnv_sorted, subset = evidence_type == "predisposing", select=value))
+
+# Use camel case for displaying the Evidence Types in the facets of the plot
+df_evidence_cnv_sorted$evidence_type = str_to_title(df_evidence_cnv_sorted$evidence_type)
+df_evidence_cnv_sorted$evidence_type = as.character(df_evidence_cnv_sorted$evidence_type)
+df_evidence_cnv_sorted$evidence_type = factor(df_evidence_cnv_sorted$evidence_type, levels= c("Predictive", "Prognostic", "Diagnostic"))
+
+
+# outfile_evidence_cnv = paste0(opt$outfile_tag, ".barplot_cnvs_evidence_type_distribution.pdf")
+# p3b = ggplot(df_evidence_cnv_sorted, aes(x=sample_order, y=value, fill=tier3_variants)) +
+#   geom_bar(stat='identity', position = "stack", width=.7) +
+#   ylab("Number of CNVs") + 
+#   xlab("Patient") +
+#   # ggtitle("") +
+#   theme(axis.text.x=element_blank(), axis.ticks.x=element_blank()) +
+#   theme(legend.justification = c(1, 1)) +
+#   facet_grid(evidence_type ~ .) +
+#   scale_fill_manual(name="Tier3 variants", values=tier3_colors)
+# # plot(p3b)
+# ggsave(outfile_evidence_cnv, p3b, width=10, height=8, units="in", dpi=1200)
+
+
+## Combined version of barplot
+## Showing Evidence types as facets in X-axis (use different sorting per Evidence type)
+## Showing SNVs and CNVs as facets in Y-axis (shared axis, use sample sorting from SNV dataset)
+
+# Sanity check that required input columns can be found
+plotting_columns_evidence = c("sample_name", "variable", "value", "label_ypos", "sample_order", "evidence_type", "tier3_variants")
+df_evidence =  combine_snv_and_cnv_for_plotting(df_evidence_snv_sorted, df_evidence_cnv_sorted, plotting_columns_evidence)
+
+# Confirm evidence type "predisposing" is never available and entirely remove from plot
+df_evidence = subset(df_evidence, subset = evidence_type != "predisposing")
+# table(subset(df_evidence, subset = evidence_type == "predisposing", select=value))
+
+# Use camel case for displaying the Evidence Types in the facets of the plot
+df_evidence$evidence_type = str_to_title(df_evidence$evidence_type)
+df_evidence$evidence_type = as.character(df_evidence$evidence_type)
+df_evidence$evidence_type = factor(df_evidence$evidence_type, levels=c("Predictive", "Prognostic", "Diagnostic"))
+
+df_evidence$tier3_variants = factor(df_evidence$tier3_variants, levels=c("Including", "Excluding"))
+
 # TODO: use different layout -> I believe the X-axis just repeats the same set of Patients 4 times?
 
 
 # NOTE: barplot shown below is stacked and not overlaying!
 
-outfile_evidence = paste0(opt$outfile_tag, ".variants_evidence_type_distribution.pdf")
-p3c = ggplot(df_evidence_fraction, aes(x=sample_order, y=value, fill=tier3_variants)) +
+outfile_evidence = paste0(opt$outfile_tag, ".barplot_variants_evidence_type_distribution.pdf")
+p3c = ggplot(df_evidence, aes(x=sample_order, y=value, fill=tier3_variants)) +
   geom_bar(stat='identity', position = "stack", width=.7) +
   ylab("Number of variants") + 
   xlab("Patient") +
-  # ggtitle("") +
   theme(axis.text.x=element_blank(), axis.ticks.x=element_blank()) +
-  # theme(legend.justification = c(1, 1), legend.position = c(1,1)) +
   theme(legend.justification = c(1, 1)) +
   facet_grid(dataset ~ evidence_type) +
-  # facet_grid(dataset ~ ., switch="both") +
   scale_fill_manual(name="Tier3 variants", values=tier3_colors)
-plot(p3c)
-# ggsave(outfile_evidence, p3c, width=10, height=8, units="in", dpi=1200)
+# plot(p3c)
+ggsave(outfile_evidence, p3c, width=10, height=8, units="in", dpi=1200)
 
 
+
+## Combined version of boxplot
+## Showing SNVs and CNVs as facets in Y-axis
+## Showing Evidence types in X-axis and grouped by exclusion/inclusion version of variant numbers
+
+# sub_df_tier3 = subset(df_evidence, subset = tier3_variants == "Including", select = c(sample_order, value, evidence_type, dataset))
+# sub_df_no_tier3 = subset(df_evidence, subset = tier3_variants == "Excluding", select = c(sample_order, value, evidence_type, dataset))
+
+outfile_evidence_box = paste0(opt$outfile_tag, ".boxplot_variants_evidence_type_distribution.pdf")
+p3d = ggplot(df_evidence, aes(x=evidence_type, y=value, fill=tier3_variants)) +
+  geom_boxplot(outlier.shape=NA, outlier.size=0, notch=FALSE) +
+  # geom_jitter(aes(x=evidence_type, color=tier3_variants), size=1, alpha=0.9) +
+  geom_point(position=position_jitterdodge(jitter.width=0.65, jitter.height=0.65), aes(color=tier3_variants), size=1, alpha=0.9) +
+  ylab("Number of variants") + 
+  xlab("") +
+  theme(axis.text=element_text(size=12, color="black"),
+        axis.title=element_text(size=15, color="black")) +
+  theme(legend.justification = c(1, 1)) +
+  facet_grid(dataset ~ .) +
+  scale_fill_manual(name="Tier3 variants", values=tier3_colors) +
+  scale_color_manual(name="Tier3 variants", values=tier3_colors)
+# plot(p3d)
+ggsave(outfile_evidence_box, p3d, width=10, height=8, units="in", dpi=1200)
+
+
+
+# TODO
 ## C2) TOTAL DISTRIBUTION OF EVIDENCE TYPES ACROSS PATIENTS
 
 
 
+# TODO: look into plotting fraction of disease names categorized as ct, gt and nct per patient
+# IDEA: compute as n_diseases_ct / n_diseases? And also, the tier3 vs. no_tier3 distributions can be shown together and compared
+
 
 ## D) DISEASE DISTRIBUTION OF CT CLASSIFICATION
+
+
 
 # Sanity check that required input columns can be found
 n_disease_columns = c("n_diseases", "n_diseases_ct", "n_diseases_gt", "n_diseases_nct")
@@ -590,26 +723,148 @@ disease_cols = c("n_diseases_ct" = "red", "n_diseases_gt" = "gold", "n_diseases_
 
 # NOTE: barplots shown below are stacked and not overlaying!
 
-outfile_disease_snv = paste0(opt$outfile_tag, ".snvs_ct_distribution.pdf")
-p3a = ggplot(df_disease_snv_sorted, aes(x=sample_order, y=value, fill=ct_order)) +
-  geom_bar(stat='identity', position = "stack", width=.7) +
-  ylab("Number of disease names (SNVs)") + 
-  xlab("Patient") +
-  theme(axis.text.x=element_blank(), axis.ticks.x=element_blank()) +
-  theme(legend.justification = c(1, 1),legend.position = c(1,1)) +
-  # coord_cartesian(ylim=c(0, 30)) +
-  # scale_y_continuous(breaks=seq(0, 70, by = 10)) +
-  scale_fill_manual(name="Cancer specificity", breaks=c("n_diseases_ct", "n_diseases_gt", "n_diseases_nct"), labels=c("ct", "gt", "nct"), values=disease_cols)
-# plot(p)
-ggsave(outfile_disease_snv, p3a, width=10, height=8, units="in", dpi=1200)
+# outfile_disease_snv = paste0(opt$outfile_tag, ".barplot_snvs_ct_distribution.pdf")
+# p4a = ggplot(df_disease_snv_sorted, aes(x=sample_order, y=value, fill=ct_order)) +
+#   geom_bar(stat='identity', position = "stack", width=.7) +
+#   ylab("Number of disease names (SNVs)") + 
+#   xlab("Patient") +
+#   theme(axis.text.x=element_blank(), axis.ticks.x=element_blank()) +
+#   theme(legend.justification = c(1, 1),legend.position = c(1,1)) +
+#   scale_fill_manual(name="Cancer specificity", breaks=c("n_diseases_ct", "n_diseases_gt", "n_diseases_nct"), labels=c("ct", "gt", "nct"), values=disease_cols)
+# # plot(p4a)
+# ggsave(outfile_disease_snv, p4a, width=10, height=8, units="in", dpi=1200)
 
-outfile_disease_cnv = paste0(opt$outfile_tag, ".cnvs_ct_distribution.pdf")
-p3b = ggplot(df_disease_cnv_sorted, aes(x=sample_order, y=value, fill=ct_order)) +
+# outfile_disease_cnv = paste0(opt$outfile_tag, ".barplot_cnvs_ct_distribution.pdf")
+# p4b = ggplot(df_disease_cnv_sorted, aes(x=sample_order, y=value, fill=ct_order)) +
+#   geom_bar(stat='identity', position = "stack", width=.7) +
+#   ylab("Number of disease names (CNVs)") + 
+#   xlab("Patient") +
+#   theme(axis.text.x=element_blank(), axis.ticks.x=element_blank()) +
+#   theme(legend.justification = c(1, 1),legend.position = c(1,1)) +
+#   scale_fill_manual(name="Cancer specificity", breaks=c("n_diseases_ct", "n_diseases_gt", "n_diseases_nct"), labels=c("ct", "gt", "nct"), values=disease_cols)
+# # plot(p4b)
+# ggsave(outfile_disease_cnv, p4b, width=10, height=8, units="in", dpi=1200)
+
+
+
+## Barplot version showing fraction of total variants having CIViCutils results
+
+
+# df_tier_snv_fraction = prepare_fraction_disease_data_for_plotting(data_snv, input_colnames)
+# df_tier_cnv_fraction = prepare_fraction_disease_data_for_plotting(data_cnv, input_colnames)
+
+
+
+# Sanity check that required input columns can be found
+n_disease_columns = c("n_diseases", "n_diseases_ct", "n_diseases_gt", "n_disease_nct", 
+                      "n_diseases_no_tier3", "n_diseases_ct_no_tier3", "n_diseases_gt_no_tier3", "n_disease_nct_no_tier3")
+
+# Choose color scheme for plot
+tier3_colors = c("Including" = "grey", "Excluding" = "#0072B2")
+
+df_disease_snv_sorted = prepare_data_for_plotting(data_snv, n_disease_columns, input_colnames, "n_disease_nct")
+
+
+###
+
+# Extract relevant features from the variable names in preparation for plotting
+df_disease_snv_sorted$evidence_type = gsub("_no_tier3", "", gsub("_vars", "", gsub("n_", "", df_disease_snv_sorted$variable)))
+df_disease_snv_sorted$tier3_variants = ifelse(grepl("_no_tier3", df_disease_snv_sorted$variable), "Excluding", "Including")
+
+# Confirm evidence type "predisposing" is never available and entirely remove from plot
+df_disease_snv_sorted = subset(df_disease_snv_sorted, subset = evidence_type != "predisposing")
+# table(subset(df_disease_snv_sorted, subset = evidence_type == "predisposing", select=value))
+
+# Use camel case for displaying the Evidence Types in the facets of the plot
+df_disease_snv_sorted$evidence_type = str_to_title(df_disease_snv_sorted$evidence_type)
+df_disease_snv_sorted$evidence_type = as.character(df_disease_snv_sorted$evidence_type)
+df_disease_snv_sorted$evidence_type = factor(df_disease_snv_sorted$evidence_type, levels= c("Predictive", "Prognostic", "Diagnostic"))
+
+
+###
+
+prepare_fraction_disease_data_for_plotting = function(dataset, header){
+  n_disease_columns = c("sample_name", "n_diseases", "n_diseases_ct", "n_diseases_gt", "n_disease_nct", 
+                        "n_diseases_no_tier3", "n_diseases_ct_no_tier3", "n_diseases_gt_no_tier3", "n_disease_nct_no_tier3")
+  check_column_names(n_disease_columns, header)
+  subdata = subset(dataset, select=n_disease_columns)
+  
+  # Avoid having NaN in the results due to patients having n_diseases=0
+  skip_rows = subdata$n_diseases!=0
+  subdata$fraction_ct = 0
+  subdata$fraction_gt = 0
+  subdata$fraction_nct = 0
+  subdata[skip_rows,]$fraction_ct = (subdata[skip_rows,]$n_diseases_ct / subdata[skip_rows,]$n_diseases)*100
+  subdata[skip_rows,]$fraction_gt = (subdata[skip_rows,]$n_diseases_gt / subdata[skip_rows,]$n_diseases)*100
+  subdata[skip_rows,]$fraction_nct = (subdata[skip_rows,]$n_disease_nct / subdata[skip_rows,]$n_diseases)*100
+  
+  # Also apply computation to version of stats excluding tier3 variants
+  skip_rows = subdata$n_diseases_no_tier3!=0
+  subdata$fraction_ct_no_tier3 = 0
+  subdata$fraction_gt_no_tier3 = 0
+  subdata$fraction_nct_no_tier3 = 0
+  subdata[skip_rows,]$fraction_ct_no_tier3 = (subdata[skip_rows,]$n_diseases_ct_no_tier3 / subdata[skip_rows,]$n_diseases_no_tier3)*100
+  subdata[skip_rows,]$fraction_gt_no_tier3 = (subdata[skip_rows,]$n_diseases_gt_no_tier3 / subdata[skip_rows,]$n_diseases_no_tier3)*100
+  subdata[skip_rows,]$fraction_nct_no_tier3 = (subdata[skip_rows,]$n_disease_nct_no_tier3 / subdata[skip_rows,]$n_diseases_no_tier3)*100
+  
+  new_subdata = subset(subdata, select=c("sample_name", "fraction_ct", "fraction_gt", "fraction_nct", "fraction_ct_no_tier3", "fraction_gt_no_tier3", "fraction_nct_no_tier3"))
+  new_subdata_sorted = new_subdata[with(new_subdata, order(fraction_ct, fraction_gt, fraction_nct, fraction_ct_no_tier3, fraction_gt_no_tier3, fraction_nct_no_tier3)),]
+  sample_order = new_subdata_sorted$sample_name
+  
+  # Reformat dataset in preparation for plotting
+  df = melt(new_subdata, id="sample_name")
+  df_sorted = arrange(df, sample_name) #, increasing = TRUE)
+  df_sorted = ddply(df_sorted, "sample_name", transform, label_ypos = value)
+  
+  # Sort samples by provided variable (decreasing order)
+  df_sorted$sample_order = factor(df_sorted$sample_name, levels=sample_order)
+  ct_order = c("fraction_tier_3", "fraction_tier_2", "fraction_tier_1b", "fraction_tier_1")
+  df_sorted$ct_order = factor(df_sorted$variable, levels=ct_order)
+  return(df_sorted)
+}
+
+
+
+###
+
+
+## Combined version of barplot, showing SNVs and CNVs as facets in Y-axis (shared axis, use sample sorting from SNV dataset)
+
+# Sanity check that required input columns can be found
+plotting_columns_disease_ct = c("sample_name", "variable", "value", "label_ypos", "sample_order", "ct_order")
+df_disease_ct =  combine_snv_and_cnv_for_plotting(df_disease_snv_sorted, df_disease_cnv_sorted, plotting_columns_disease_ct)
+
+# NOTE: barplot shown below is stacked and not overlaying!
+
+outfile_disease = paste0(opt$outfile_tag, ".barplot_variants_ct_distribution.pdf")
+p4c = ggplot(df_disease_ct, aes(x=sample_order, y=value, fill=ct_order)) +
   geom_bar(stat='identity', position = "stack", width=.7) +
-  ylab("Number of disease names (CNVs)") + 
+  ylab("Number of disease names") + 
   xlab("Patient") +
+  facet_grid(dataset ~ .) +
   theme(axis.text.x=element_blank(), axis.ticks.x=element_blank()) +
   theme(legend.justification = c(1, 1),legend.position = c(1,1)) +
   scale_fill_manual(name="Cancer specificity", breaks=c("n_diseases_ct", "n_diseases_gt", "n_diseases_nct"), labels=c("ct", "gt", "nct"), values=disease_cols)
-# plot(p)
-ggsave(outfile_disease_cnv, p3b, width=10, height=8, units="in", dpi=1200)
+# plot(p4c)
+ggsave(outfile_disease, p4c, width=10, height=8, units="in", dpi=1200)
+
+
+## Combined version of boxplot, showing SNVs and CNVs as facets in Y-axis and ct classes in X-axis
+
+outfile_disease_box = paste0(opt$outfile_tag, ".boxplot_variants_ct_distribution.pdf")
+p4d = ggplot(df_disease_ct, aes(x=ct_order, y=value)) +
+  geom_boxplot(fill="grey", outlier.shape=NA, outlier.size=0, notch=FALSE) +
+  geom_jitter(aes(color=ct_order), size=1, alpha=0.9) +
+  ylab("Number of disease names") + 
+  xlab("") +
+  facet_grid(dataset ~ .) +
+  theme(legend.justification = c(1, 1)) +
+  theme(axis.text=element_text(size=12, color="black"),
+        axis.title=element_text(size=15, color="black")) +
+  scale_x_discrete(breaks=c("n_diseases_nct", "n_diseases_gt", "n_diseases_ct"), labels=c("nct", "gt", "ct")) +
+  scale_fill_manual(name="Cancer specificity", breaks=c("n_diseases_ct", "n_diseases_gt", "n_diseases_nct"), labels=c("ct", "gt", "nct"), values=disease_cols) +
+  scale_color_manual(name="Cancer specificity", breaks=c("n_diseases_ct", "n_diseases_gt", "n_diseases_nct"), labels=c("ct", "gt", "nct"), values=disease_cols)
+# plot(p4d)
+ggsave(outfile_disease_box, p4d, width=10, height=8, units="in", dpi=1200)
+
+
