@@ -178,8 +178,8 @@ def reformat_civic(results, identifier_type="entrez_symbol"):
                     disease = "NULL"
                 evidence_status = evidence_record.status.strip().upper()
                 source_type = evidence_record.source.source_type.strip().upper()
-                source_status = evidence_record.source.status.strip().upper()
-                evidence_id = evidence_record.source.citation_id.strip()        # expected to be entirely numeric
+                source_status = evidence_record.status.strip().upper()
+                evidence_id = str(evidence_record.source.citation_id).strip()        # expected to be entirely numeric
 
                 if evidence_type not in varMap[gene_key][variant_id]['evidence_items'].keys():
                     varMap[gene_key][variant_id]['evidence_items'][evidence_type] = {}
