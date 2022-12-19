@@ -2,7 +2,9 @@ import sys
 import os
 import re
 
+sys.path.insert(0, '/cluster/work/nexus/antoine/Projects/2022_12_integrate_Civicutils/git_files/civicutils/civicutils/')
 from utils import check_identifier_type,check_empty_field,check_argument,check_is_list
+sys.path.remove('/cluster/work/nexus/antoine/Projects/2022_12_integrate_Civicutils/git_files/civicutils/civicutils/')
 
 def query_civic(genes, identifier_type="entrez_symbol"):
     """
@@ -17,8 +19,8 @@ def query_civic(genes, identifier_type="entrez_symbol"):
     :return:            Returns a nested dictionary from 'reformat_civic()'.
     """
     # Check arguments
-    check_argument(genes,"genes")
-    check_is_list(genes,"genes")
+    #check_argument(genes,"genes")
+    #check_is_list(genes,"genes")
     # Check that id type corresponds to one of the allowed options
     check_identifier_type(identifier_type)
 
@@ -178,8 +180,8 @@ def reformat_civic(results, identifier_type="entrez_symbol"):
                     disease = "NULL"
                 evidence_status = evidence_record.status.strip().upper()
                 source_type = evidence_record.source.source_type.strip().upper()
-                source_status = evidence_record.source.status.strip().upper()
-                evidence_id = evidence_record.source.citation_id.strip()        # expected to be entirely numeric
+                source_status = evidence_record.status.strip().upper()
+                evidence_id = str(evidence_record.source.citation_id).strip()        # expected to be entirely numeric
 
                 if evidence_type not in varMap[gene_key][variant_id]['evidence_items'].keys():
                     varMap[gene_key][variant_id]['evidence_items'][evidence_type] = {}

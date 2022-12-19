@@ -2,7 +2,9 @@ import sys
 import os
 import re
 
+sys.path.insert(0, '/cluster/work/nexus/antoine/Projects/2022_12_integrate_Civicutils/git_files/civicutils/civicutils/')
 from utils import check_string_filter_arguments,check_cutoff_filter_arguments,check_is_bool,check_keys,check_keys_not,check_is_none
+sys.path.remove('/cluster/work/nexus/antoine/Projects/2022_12_integrate_Civicutils/git_files/civicutils/civicutils/')
 
 
 def filter_in(field, fieldName, inList, listName, matchType="exact"):

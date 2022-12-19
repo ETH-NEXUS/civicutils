@@ -73,21 +73,21 @@ def checkHeaderField(name,headerSplit,isRequired=True):
     return pos
 
 
-def processSnvHeader(headerSplit):
+def processSnvHeader(headerGeneName, headerVarDNAName, headerVarProtName, headerVarImpctName, headerVarExonName, headerSplit):
     """
     Retrieve the required column names expected for the header of an input SNV file. Assume column names are: Gene, Variant_dna, Variant_prot, Variant_impact and Variant_impact. Only the last two are not required.
     :param headerSplit:    A list of columns from splitting a tab-separated header.
     :return:               Tuple of column positions for the gene, cHGVS, pHGVS, impact and exon, in that order. Only the last two can be None.
     """
-    genePos = checkHeaderField("Gene",headerSplit,isRequired=True)
-    cPos = checkHeaderField("Variant_dna",headerSplit,isRequired=True)
-    pPos = checkHeaderField("Variant_prot",headerSplit,isRequired=True)
-    impactPos = checkHeaderField("Variant_impact",headerSplit,isRequired=False)
-    exonPos = checkHeaderField("Variant_exon",headerSplit,isRequired=False)
+    genePos = checkHeaderField(headerGeneName,headerSplit,isRequired=True)
+    cPos = checkHeaderField(headerVarDNAName,headerSplit,isRequired=True)
+    pPos = checkHeaderField(headerVarProtName,headerSplit,isRequired=True)
+    impactPos = checkHeaderField(headerVarImpctName,headerSplit,isRequired=False)
+    exonPos = checkHeaderField(headerVarExonName,headerSplit,isRequired=False)
     return (genePos,cPos,pPos,impactPos,exonPos)
 
 
-def readInSnvs(infile):
+def readInSnvs(headerGeneName, headerVarDNAName, headerVarProtName, headerVarImpctName, headerVarExonName, infile):
     """
     Read-in input file of SNV data and process it into structured dictionaries. Assumes header and that relevant info is contained in the following columns: Gene, Variant_dna, Variant_prot. Optional columns:  Variant_impact, Variant_exon.
     :param infile:    Path to the input SNV file to read in.
@@ -100,7 +100,7 @@ def readInSnvs(infile):
     inFile = open(infile,'r')
     header = inFile.readline().strip()
     headerSplit = header.strip().split('\t')
-    (genePos,cPos,pPos,impactPos,exonPos) = processSnvHeader(headerSplit)
+    (genePos,cPos,pPos,impactPos,exonPos) = processSnvHeader(headerGeneName, headerVarDNAName, headerVarProtName, headerVarImpctName, headerVarExonName, headerSplit)
     extraHeader = []
     if impactPos:
         extraHeader.append("Variant_impact")
@@ -149,18 +149,18 @@ def readInSnvs(infile):
     return (rawData,snvData,extraHeader)
 
 
-def processCnvHeader(headerSplit):
+def processCnvHeader(headerGeneName, headerCNVName, headerSplit):
     """
     Retrieve the required column names expected for the header of an input CNV file. Assume column names are: Gene, Variant_cnv (both are required). The type of CNV variant should be one of the following terms: 'GAIN', 'DUPLICATION', 'DUP', 'AMPLIFICATION' or 'AMP' (synonyms for AMPLIFICATION), and 'DELETION', 'DEL' or 'LOSS' (synonyms for DELETION).
     :param headerSplit:    A list of columns from splitting a tab-separated header.
     :return:               Tuple of column positions for the gene and CNV type.
     """
-    genePos = checkHeaderField("Gene",headerSplit,isRequired=True)
-    cnvPos = checkHeaderField("Variant_cnv",headerSplit,isRequired=True)
+    genePos = checkHeaderField(headerGeneName,headerSplit,isRequired=True)
+    cnvPos = checkHeaderField(headerCNVName,headerSplit,isRequired=True)
     return (genePos,cnvPos)
 
 
-def readInCnvs(infile):
+def readInCnvs(headerGeneName, headerCNVName, infile):
     """
     Read-in input file of CNV data and process it into structured dictionaries. Assumes header and that relevant info is contained in the following columns: Gene, Variant_cnv.
     :param infile:    Path to the input CNV file to read in.
@@ -173,7 +173,7 @@ def readInCnvs(infile):
     inFile = open(infile,'r')
     header = inFile.readline().strip()
     headerSplit = header.strip().split('\t')
-    (genePos,cnvPos) = processCnvHeader(headerSplit)
+    (genePos,cnvPos) = processExprHeader(headerGeneName, headerCNVName, headerSplit)
     extraHeader = []
     extraPos = []
     for pos,x in enumerate(headerSplit):
@@ -205,18 +205,18 @@ def readInCnvs(infile):
     return (rawData,cnvData,extraHeader)
 
 
-def processExprHeader(headerSplit):
+def processExprHeader(headerGeneName, headerlogFCName, headerSplit):
     """
     Retrieve the required column names expected for the header of an input Expression file. Assume column names are: Gene, logFC (both are required). The log fold-change value of a differentially expressed gene should be numeric and different from zero (to query CIViC, it will be translated into 'OVEREXPRESSION', if positive, and 'UNDEREXPRESSION', if negative).
     :param headerSplit:    A list of columns from splitting a tab-separated header.
     :return:               Tuple of column positions for the gene and log fold-change.
     """
-    genePos = checkHeaderField("Gene",headerSplit,isRequired=True)
-    logfcPos = checkHeaderField("logFC",headerSplit,isRequired=True)
+    genePos = checkHeaderField(headerGeneName,headerSplit,isRequired=True)
+    logfcPos = checkHeaderField(headerlogFCName,headerSplit,isRequired=True)
     return (genePos,logfcPos)
 
 
-def readInExpr(infile):
+def readInExpr(headerGeneName, headerlogFCName, infile):
     """
     Read-in input file of differentially expressed data and process it into structured dictionaries. Assumes header and that relevant info is contained in the following columns: Gene, logFC.
     :param infile:    Path to the input expression file to read in.
@@ -229,7 +229,7 @@ def readInExpr(infile):
     inFile = open(infile,'r')
     header = inFile.readline().strip()
     headerSplit = header.strip().split('\t')
-    (genePos,logfcPos) = processExprHeader(headerSplit)
+    (genePos,logfcPos) = processExprHeader(headerGeneName, headerlogFCName, headerSplit)
     extraHeader = []
     extraPos = []
     for pos,x in enumerate(headerSplit):

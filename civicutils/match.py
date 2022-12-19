@@ -2,7 +2,9 @@ import sys
 import os
 import re
 
+sys.path.insert(0, '/cluster/work/nexus/antoine/Projects/2022_12_integrate_Civicutils/git_files/civicutils/civicutils/')
 from utils import check_arguments,check_argument,translate_aa,check_is_dict,check_is_list,check_is_str,check_keys,check_keys_not,check_tier_selection,parse_input,check_empty_input,check_dict_entry,check_is_cHGVS,check_is_pHGVS,check_identifier_type,check_data_type,check_is_bool,uppercase_list,check_is_none,check_logFC
+sys.path.remove('/cluster/work/nexus/antoine/Projects/2022_12_integrate_Civicutils/git_files/civicutils/civicutils/')
 
 # Given a single CIVIC variant name, extract potential HGVS annotations by
 # parsing and modifying this string using knowledge on CIVIC naming conventions
