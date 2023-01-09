@@ -690,13 +690,13 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping, disease_info_
             # Use lowercase for "ct" classes to avoid mismatches due to case
             ct_type = drug_split[1].strip().lower()
 
-            # Keep track of all disease names, associated "ct" class, and available consensus drug support strings
+            # Keep track of all drug names, associated "ct" class, and available consensus drug support strings
             # ct -> drug -> [consensus_support_1,..,consensus_support_N]
             if ct_type not in interim_consensus_ct_mapping.keys():
                 interim_consensus_ct_mapping[ct_type] = {}
             if drug not in interim_consensus_ct_mapping[ct_type].keys():
                 interim_consensus_ct_mapping[ct_type][drug] = []
-            # Sanity check for duplicated consensus support strings for the same disease + "ct" class
+            # Sanity check for duplicated consensus support strings for the same drug + "ct" class
             if consensus_support in interim_consensus_ct_mapping[ct_type][drug]:
                 print("Warning! Skipping duplicated consensus support '%s' for drug '%s' and cancer-specificity classification '%s' encountered in line %s" %(consensus_support, drug, ct_type, line.strip()))
             interim_consensus_ct_mapping[ct_type][drug].append(consensus_support)
@@ -740,7 +740,7 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping, disease_info_
                     per_tier_consensus_ct_mapping[tier][tmp_ct][tmp_drug] = None
 
                 consensus_list = interim_consensus_ct_mapping[tmp_ct][tmp_drug]
-                # NOTE: expectation is that each combination of disease name + "ct" class can only have one single consensus support string associated
+                # NOTE: expectation is that each combination of drug name + "ct" class can only have one single consensus support string associated
                 if len(consensus_list) > 1:
                     print("Warning! Encountered multiple consensus support strings ('%s') for drug '%s' and cancer-specificity classification '%s' in line %s" %(consensus_list, tmp_drug, tmp_ct, line.strip()))
 
