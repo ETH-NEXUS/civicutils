@@ -315,6 +315,27 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping, disease_info_
     # tier -> ct -> drug -> None
     per_tier_prior_consensus_ct_mapping = {}      # per tier, keep track of the total number of unique drug names parsed per highest available "ct" class across the consensus drug support for the current sample
 
+    n_consensus_strings = 0.0                     # keep track of the total number of consensus strings reported across all variants for the current sample
+    n_consensus_strings_no_tier3 = 0.0            # keep track of the total number of consensus strings reported across all variants (excluding tier3 matches which can introduce biases)
+    n_total_drugs = 0.0                           # keep track of the total number of drug predictions (not unique) reported across all variants for the current sample
+    n_total_drugs_no_tier3 = 0.0                  # keep track of the total number of drug predictions (not unique) reported across all variants (excluding tier3 matches which can introduce biases)
+    n_support_strings = 0.0                       # keep track of the total number of "support" predictions reported across all variants for the current sample
+    n_resistance_strings = 0.0                    # keep track of the total number of "resistance" predictions reported across all variants for the current sample
+    n_conflict_strings = 0.0                      # keep track of the total number of "conflict" predictions reported across all variants for the current sample
+    n_unknown_strings = 0.0                       # keep track of the total number of "unknown" predictions reported across all variants for the current sample
+    n_support_strings_no_tier3 = 0.0              # keep track of the total number of "support" predictions reported across all variants (excluding tier3 matches which can introduce biases)
+    n_resistance_strings_no_tier3 = 0.0           # keep track of the total number of "resistance" predictions reported across all variants (excluding tier3 matches which can introduce biases)
+    n_conflict_strings_no_tier3 = 0.0             # keep track of the total number of "conflict" predictions reported across all variants (excluding tier3 matches which can introduce biases)
+    n_unknown_strings_no_tier3 = 0.0              # keep track of the total number of "unknown" predictions reported across all variants (excluding tier3 matches which can introduce biases)
+    sum_support_fractions = 0.0                   # keep track of the sum of "support" fractions reported across all variants for the current sample
+    sum_resistance_fractions = 0.0                # keep track of the sum of "resistance" fractions reported across all variants for the current sample
+    sum_conflict_fractions = 0.0                  # keep track of the sum of "conflict" fractions reported across all variants for the current sample
+    sum_unknown_fractions = 0.0                   # keep track of the sum of "unknown" fractions reported across all variants for the current sample
+    sum_support_fractions_no_tier3 = 0.0          # keep track of the sum of "support" fractions reported across all variants (excluding tier3 matches which can introduce biases)
+    sum_resistance_fractions_no_tier3 = 0.0       # keep track of the sum of "resistance" fractions reported across all variants (excluding tier3 matches which can introduce biases)
+    sum_conflict_fractions_no_tier3 = 0.0         # keep track of the sum of "conflict" fractions reported across all variants (excluding tier3 matches which can introduce biases)
+    sum_unknown_fractions_no_tier3 = 0.0          # keep track of the sum of "unknown" fractions reported across all variants (excluding tier3 matches which can introduce biases)
+
 
     # Each line in the input file corresponds to a single variant in the genome
     for line in infile:
@@ -676,6 +697,18 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping, disease_info_
         # ct -> drug -> [consensus_support_1,..,consensus_support_N]
         interim_consensus_ct_mapping = {}
 
+        # Keep track of the number of consensus strings predicted for the current variant line
+        interim_n_consensus_strings = 0.0
+
+        # Also keep track of the number of consensus strings reported per support type available in CIViCutils
+        interim_n_support_strings = 0.0
+        interim_n_resistance_strings = 0.0
+        interim_n_conflict_strings = 0.0
+        interim_n_unknown_strings = 0.0
+
+        # Keep track of all unique drug names predicted for the current variant line
+        interim_drug_list = []
+
         # Iterate individual string of consensus drug support
         # Assume one string per combination of drug name + "ct" class (note the same drug can be available for different "ct" classes)
         for drug_info in drug_infos_list:
@@ -686,7 +719,7 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping, disease_info_
                 raise ValueError("Encountered unexpected format of consensus drug support annotations in line %s" %(line.strip()))
             # Use uppercase for drug names and consensus support strings to avoid mismatches due to case
             drug = drug_split[0].strip().upper()
-            consensus_support = drug_split[2].strip()
+            consensus_support = drug_split[2].strip().upper()
             # Use lowercase for "ct" classes to avoid mismatches due to case
             ct_type = drug_split[1].strip().lower()
 
@@ -701,10 +734,72 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping, disease_info_
                 print("Warning! Skipping duplicated consensus support '%s' for drug '%s' and cancer-specificity classification '%s' encountered in line %s" %(consensus_support, drug, ct_type, line.strip()))
             interim_consensus_ct_mapping[ct_type][drug].append(consensus_support)
 
+            # Keep track of the number of consensus strings reported for the current variant line 
+            interim_n_consensus_strings += 1.0
+
+            # Also keep track of the number of consensus strings reported per support type available in CIViCutils
+            if consensus_support == "CIVIC_SUPPORT":
+                interim_n_support_strings += 1.0
+            elif consensus_support == "CIVIC_RESISTANCE":
+                interim_n_resistance_strings += 1.0
+            elif consensus_support == "CIVIC_CONFLICT":
+                interim_n_conflict_strings += 1.0
+            elif consensus_support == "CIVIC_UNKNOWN":
+                interim_n_unknown_strings += 1.0
+            else:
+                raise ValueError("Encountered unexpected consensus string '%s' while parsing consensus drug predictions in line %s" %(consensus_support, line.strip()))
+
+            # Keep track of all unique drug names predicted for the current variant line
+            if drug not in interim_drug_list:
+                interim_drug_list.append(drug)
+
 
         # Sanity check that at this point, all variant lines parsed should have at least one consensus drug prediction associated
         if not interim_consensus_ct_mapping:
             raise ValueError("Encountered unexpected case of consensus drug support annotations in line %s" %(line.strip()))
+
+        # Keep track of the total number of consensus strings reported across all variants for the current sample 
+        n_consensus_strings += interim_n_consensus_strings
+
+        # Keep track of the total number of consensus strings reported per support type across all variants for the current sample
+        n_support_strings += interim_n_support_strings
+        n_resistance_strings += interim_n_resistance_strings
+        n_conflict_strings += interim_n_conflict_strings
+        n_unknown_strings += interim_n_unknown_strings
+
+        # Compute the fraction of each support type across all consensus strings available for the current variant line
+        fraction_support = float(interim_n_support_strings / interim_n_consensus_strings)
+        fraction_resistance = float(interim_n_resistance_strings / interim_n_consensus_strings)
+        fraction_conflict = float(interim_n_conflict_strings / interim_n_consensus_strings)
+        fraction_unknown = float(interim_n_unknown_strings / interim_n_consensus_strings)
+
+        # Keep track of the sum of each type of fraction across all variants for the current sample
+        sum_support_fractions += fraction_support
+        sum_resistance_fractions += fraction_resistance
+        sum_conflict_fractions += fraction_conflict
+        sum_unknown_fractions += fraction_unknown
+
+        # Keep track of the number of unique drug names predicted for the current variant line
+        interim_n_drugs = float(len(interim_drug_list))
+
+        # Keep track of the total number of drug predictions reported across all variants for the current sample (not unique)
+        n_total_drugs += interim_n_drugs
+
+
+        ## Version of stats above excluding tier3 matches which can introduce biases
+        # Apply following block only to variants which are tier1, tier1b or tier2 (exclude tier3 and tier4 cannot have disease info available)
+        if tier != "tier_3":
+            n_consensus_strings_no_tier3 += interim_n_consensus_strings
+            n_support_strings_no_tier3 += interim_n_support_strings
+            n_resistance_strings_no_tier3 += interim_n_resistance_strings
+            n_conflict_strings_no_tier3 += interim_n_conflict_strings
+            n_unknown_strings_no_tier3 += interim_n_unknown_strings
+            sum_support_fractions_no_tier3 += fraction_support
+            sum_resistance_fractions_no_tier3 += fraction_resistance
+            sum_conflict_fractions_no_tier3 += fraction_conflict
+            sum_unknown_fractions_no_tier3 += fraction_unknown
+            n_total_drugs_no_tier3 += interim_n_drugs
+
 
         # Sort all "ct" classes available for the current sample by the priority order defined at the beginning of this function (i.e. 'sorted_cts')
         sorted_ct_list = sorted(interim_consensus_ct_mapping.keys(), key=lambda x: sorted_cts.index(x))
@@ -903,12 +998,66 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping, disease_info_
     (n_diseases_ct_no_tier3, n_diseases_gt_no_tier3, n_diseases_nct_no_tier3) = process_feature_per_ct(ct_mapping_no_tier3)
 
 
+    ## C) Stats on mean number of drug predictions per variant for the sample
 
-    ## a) Version of drug stats based on all consensus drug predictions found for the sample
+    mean_n_consensus_strings = 0.0
+    mean_n_total_drugs = 0.0
+    mean_n_support_strings = 0.0
+    mean_n_resistance_strings = 0.0
+    mean_n_conflict_strings = 0.0
+    mean_n_unknown_strings = 0.0
+    mean_fraction_support_strings = 0.0
+    mean_fraction_resistance_strings = 0.0
+    mean_fraction_conflict_strings = 0.0
+    mean_fraction_unknown_strings = 0.0
+
+    # Sanity checks for divisions by 0
+    if n_drug_avail:
+        mean_n_consensus_strings = float(float(n_consensus_strings) / float(n_drug_avail))
+        mean_n_total_drugs = float(float(n_total_drugs) / float(n_drug_avail))
+        mean_fraction_support_strings = float(float(sum_support_fractions) / float(n_drug_avail))
+        mean_fraction_resistance_strings = float(float(sum_resistance_fractions) / float(n_drug_avail))
+        mean_fraction_conflict_strings = float(float(sum_conflict_fractions) / float(n_drug_avail))
+        mean_fraction_unknown_strings = float(float(sum_unknown_fractions) / float(n_drug_avail))
+    if n_consensus_strings:
+        mean_n_support_strings = float(float(n_support_strings) / float(n_consensus_strings))
+        mean_n_resistance_strings = float(float(n_resistance_strings) / float(n_consensus_strings))
+        mean_n_conflict_strings = float(float(n_conflict_strings) / float(n_consensus_strings))
+        mean_n_unknown_strings = float(float(n_unknown_strings) / float(n_consensus_strings))
+
+
+    ## Version of stats above excluding tier3 matches which can introduce biases
+    mean_n_consensus_strings_no_tier3 = 0.0
+    mean_n_total_drugs_no_tier3 = 0.0
+    mean_n_support_strings_no_tier3 = 0.0
+    mean_n_resistance_strings_no_tier3 = 0.0
+    mean_n_conflict_strings_no_tier3 = 0.0
+    mean_n_unknown_strings_no_tier3 = 0.0
+    mean_fraction_support_strings_no_tier3 = 0.0
+    mean_fraction_resistance_strings_no_tier3 = 0.0
+    mean_fraction_conflict_strings_no_tier3 = 0.0
+    mean_fraction_unknown_strings_no_tier3 = 0.0
+
+    # Sanity checks for divisions by 0
+    if n_drug_avail_no_tier3:
+        mean_n_consensus_strings_no_tier3 = float(float(n_consensus_strings_no_tier3) / float(n_drug_avail_no_tier3))
+        mean_n_total_drugs_no_tier3 = float(float(n_total_drugs_no_tier3) / float(n_drug_avail_no_tier3))
+        mean_fraction_support_strings_no_tier3 = float(float(sum_support_fractions_no_tier3) / float(n_drug_avail_no_tier3))
+        mean_fraction_resistance_strings_no_tier3 = float(float(sum_resistance_fractions_no_tier3) / float(n_drug_avail_no_tier3))
+        mean_fraction_conflict_strings_no_tier3 = float(float(sum_conflict_fractions_no_tier3) / float(n_drug_avail_no_tier3))
+        mean_fraction_unknown_strings_no_tier3 = float(float(sum_unknown_fractions_no_tier3) / float(n_drug_avail_no_tier3))
+    if n_consensus_strings_no_tier3:
+        mean_n_support_strings_no_tier3 = float(float(n_support_strings_no_tier3) / float(n_consensus_strings_no_tier3))
+        mean_n_resistance_strings_no_tier3 = float(float(n_resistance_strings_no_tier3) / float(n_consensus_strings_no_tier3))
+        mean_n_conflict_strings_no_tier3 = float(float(n_conflict_strings_no_tier3) / float(n_consensus_strings_no_tier3))
+        mean_n_unknown_strings_no_tier3 = float(float(n_unknown_strings_no_tier3) / float(n_consensus_strings_no_tier3))
+
+
+    ## D) Version of drug stats based on all consensus drug predictions found for the sample
 
     # Get total number of unique drug names parsed across the current sample
     # drug -> ct -> consensus_support
-    n_drugs_all = len(consensus_drug_mapping.keys())
+    n_unique_drugs = len(consensus_drug_mapping.keys())
 
     # Compute mean number of "ct" classes available per drug parsed across the current sample
     interim_ct_sum = 0.0
@@ -918,26 +1067,26 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping, disease_info_
         interim_ct_sum += n_ct_classes_avail
     mean_ct_classes_avail = 0.0
     # Sanity check for divisions by 0
-    if n_drugs_all:
-        mean_ct_classes_avail = float(float(interim_ct_sum) / float(n_drugs_all))
+    if n_unique_drugs:
+        mean_ct_classes_avail = float(float(interim_ct_sum) / float(n_unique_drugs))
 
     # Per tier, get total number of unique drug names parsed for the sample
     # tier -> drug -> None
-    (n_drugs_all_tier1, n_drugs_all_tier1b, n_drugs_all_tier2, n_drugs_all_tier3) = process_feature_per_tier(per_tier_consensus_drug_mapping)
+    (n_unique_drugs_tier1, n_unique_drugs_tier1b, n_unique_drugs_tier2, n_unique_drugs_tier3) = process_feature_per_tier(per_tier_consensus_drug_mapping)
 
     # Per ct, get total number of unique drug names parsed for the sample
     # ct -> drug -> consensus_support
-    (n_drugs_all_ct, n_drugs_all_gt, n_drugs_all_nct) = process_feature_per_ct(consensus_ct_mapping)
+    (n_unique_drugs_ct, n_unique_drugs_gt, n_unique_drugs_nct) = process_feature_per_ct(consensus_ct_mapping)
 
 
     ## Version of stats above excluding tier3 matches which can introduce biases
 
     # Get total number of unique drug names parsed across the current sample excluding tier3 matches
     # drug -> ct -> consensus_support
-    n_drugs_all_no_tier3 = len(consensus_drug_mapping_no_tier3.keys())
+    n_unique_drugs_no_tier3 = len(consensus_drug_mapping_no_tier3.keys())
     # Per ct, get total number of unique drug names parsed for the sample excluding tier3 matches
     # ct -> drug -> consensus_support
-    (n_drugs_all_ct_no_tier3, n_drugs_all_gt_no_tier3, n_drugs_all_nct_no_tier3) = process_feature_per_ct(consensus_ct_mapping_no_tier3)
+    (n_unique_drugs_ct_no_tier3, n_unique_drugs_gt_no_tier3, n_unique_drugs_nct_no_tier3) = process_feature_per_ct(consensus_ct_mapping_no_tier3)
     # Compute mean number of "ct" classes available per drug parsed across the current sample, excluding tier3 matches which can introduce biases
     interim_ct_sum_no_tier3 = 0.0
     # Per drug, retrieve number of "ct" classes parsed for the current sample (important to use version of dict without prioritization of "ct" class performed, and already excluding info from tier3 matches!)
@@ -946,12 +1095,12 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping, disease_info_
         interim_ct_sum_no_tier3 += n_ct_classes_avail_no_tier3
     mean_ct_classes_avail_no_tier3 = 0.0
     # Sanity check for divisions by 0
-    if n_drugs_all_no_tier3:
-        mean_ct_classes_avail_no_tier3 = float(float(interim_ct_sum_no_tier3) / float(n_drugs_all_no_tier3))
+    if n_unique_drugs_no_tier3:
+        mean_ct_classes_avail_no_tier3 = float(float(interim_ct_sum_no_tier3) / float(n_unique_drugs_no_tier3))
 
 
 
-    ## b) Version of drug stats based only on the consensus drug predictions for the "ct" class with highest priority available per variant line
+    ## E) Version of drug stats based only on the consensus drug predictions for the "ct" class with highest priority available per variant line
 
     # Get total number of unique drug names parsed for the highest "ct" class available across the current sample
     # drug -> ct -> consensus_support
@@ -986,11 +1135,12 @@ def parse_input_file(sample_file, sample_name, civic_info_mapping, disease_info_
 
     ## Keep track of all computed info and stats per sample across the entire patient cohort being processed
 
-    # sample -> [#vars, #civic, #civic_no_tier3, #tier1, #tier1b, #tier1agg, #tier2, #tier3, #tier4, #predictive, #diagnostic, #prognostic, #predisposing, #predictive_no_tier3, #diagnostic_no_tier3, #prognostic_no_tier3, #predisposing_no_tier3, #drug_avail, #drug_avail_no_tier3, mean_matched_vars, mean_matched_vars_no_tier3, mean_matched_vars_tier1, mean_matched_vars_tier1b, mean_matched_vars_tier2, mean_matched_vars_tier3, mean_matched_diseases, mean_matched_diseases_no_tier3, mean_matched_diseases_tier1, mean_matched_diseases_tier1b, mean_matched_diseases_tier2, mean_matched_diseases_tier3, mean_matched_diseases_ct, mean_matched_diseases_gt, mean_matched_diseases_nct, mean_matched_diseases_ct_no_tier3, mean_matched_diseases_gt_no_tier3, mean_matched_diseases_nct_no_tier3, mean_matched_diseases_tier1_ct, mean_matched_diseases_tier1_gt, mean_matched_diseases_tier1_nct, mean_matched_diseases_tier1b_ct, mean_matched_diseases_tier1b_gt, mean_matched_diseases_tier1b_nct, mean_matched_diseases_tier2_ct, mean_matched_diseases_tier2_gt, mean_matched_diseases_tier2_nct, mean_matched_diseases_tier3_ct, mean_matched_diseases_tier3_gt, mean_matched_diseases_tier3_nct, #diseases, #diseases_no_tier3, #diseases_tier1, #diseases_tier1b, #diseases_tier2, #diseases_tier3, #diseases_ct, #diseases_gt, #diseases_nct, #diseases_ct_no_tier3, #diseases_gt_no_tier3, #diseases_nct_no_tier3, #diseases_tier1_ct, #diseases_tier1_gt, #diseases_tier1_nct, #diseases_tier1b_ct, #diseases_tier1b_gt, #diseases_tier1b_nct, #diseases_tier2_ct, #diseases_tier2_gt, #diseases_tier2_nct, #diseases_tier3_ct, #diseases_tier3_gt, #diseases_tier3_nct, #drugs, #drugs_no_tier3, mean_cts_per_drug, mean_cts_per_drug_no_tier3, #drugs_tier1, #drugs_tier1b, #drugs_tier2, #drugs_tier3, #drugs_ct, #drugs_gt, #drugs_nct, #drugs_ct_no_tier3, #drugs_gt_no_tier3, #drugs_nct_no_tier3, #drugs_prior, #drugs_prior_no_tier3, #drugs_tier1_prior, #drugs_tier1b_prior, #drugs_tier2_prior, #drugs_tier3_prior, #drugs_ct_prior, #drugs_gt_prior, #drugs_nct_prior, #drugs_ct_prior_no_tier3, #drugs_gt_prior_no_tier3, #drugs_nct_prior_no_tier3, #drugs_tier1_ct, #drugs_tier1_gt, #drugs_tier1_nct, #drugs_tier1b_ct, #drugs_tier1b_gt, #drugs_tier1b_nct, #drugs_tier2_ct, #drugs_tier2_gt, #drugs_tier2_nct, #drugs_tier3_ct, #drugs_tier3_gt, #drugs_tier3_nct, drugs_tier1_ct_prior, #drugs_tier1_gt_prior, #drugs_tier1_nct_prior,, #drugs_tier1b_ct_prior, #drugs_tier1b_gt_prior, #drugs_tier1b_nct_prior, #drugs_tier2_ct_prior, #drugs_tier2_gt_prior, #drugs_tier2_nct_prior, #drugs_tier3_ct_prior, #drugs_tier3_gt_prior, #drugs_tier3_nct_prior]
+    # sample -> [#vars, #civic, #civic_no_tier3, #tier1, #tier1b, #tier1agg, #tier2, #tier3, #tier4, #predictive, #diagnostic, #prognostic, #predisposing, #predictive_no_tier3, #diagnostic_no_tier3, #prognostic_no_tier3, #predisposing_no_tier3, #drug_avail, #drug_avail_no_tier3, mean_matched_vars, mean_matched_vars_no_tier3, mean_matched_vars_tier1, mean_matched_vars_tier1b, mean_matched_vars_tier2, mean_matched_vars_tier3, mean_matched_diseases, mean_matched_diseases_no_tier3, mean_matched_diseases_tier1, mean_matched_diseases_tier1b, mean_matched_diseases_tier2, mean_matched_diseases_tier3, mean_matched_diseases_ct, mean_matched_diseases_gt, mean_matched_diseases_nct, mean_matched_diseases_ct_no_tier3, mean_matched_diseases_gt_no_tier3, mean_matched_diseases_nct_no_tier3, mean_matched_diseases_tier1_ct, mean_matched_diseases_tier1_gt, mean_matched_diseases_tier1_nct, mean_matched_diseases_tier1b_ct, mean_matched_diseases_tier1b_gt, mean_matched_diseases_tier1b_nct, mean_matched_diseases_tier2_ct, mean_matched_diseases_tier2_gt, mean_matched_diseases_tier2_nct, mean_matched_diseases_tier3_ct, mean_matched_diseases_tier3_gt, mean_matched_diseases_tier3_nct, #diseases, #diseases_no_tier3, #diseases_tier1, #diseases_tier1b, #diseases_tier2, #diseases_tier3, #diseases_ct, #diseases_gt, #diseases_nct, #diseases_ct_no_tier3, #diseases_gt_no_tier3, #diseases_nct_no_tier3, #diseases_tier1_ct, #diseases_tier1_gt, #diseases_tier1_nct, #diseases_tier1b_ct, #diseases_tier1b_gt, #diseases_tier1b_nct, #diseases_tier2_ct, #diseases_tier2_gt, #diseases_tier2_nct, #diseases_tier3_ct, #diseases_tier3_gt, #diseases_tier3_nct, #drugs, #drugs_no_tier3, mean_cts_per_drug, mean_cts_per_drug_no_tier3, #drugs_tier1, #drugs_tier1b, #drugs_tier2, #drugs_tier3, #drugs_ct, #drugs_gt, #drugs_nct, #drugs_ct_no_tier3, #drugs_gt_no_tier3, #drugs_nct_no_tier3, #drugs_prior, #drugs_prior_no_tier3, #drugs_tier1_prior, #drugs_tier1b_prior, #drugs_tier2_prior, #drugs_tier3_prior, #drugs_ct_prior, #drugs_gt_prior, #drugs_nct_prior, #drugs_ct_prior_no_tier3, #drugs_gt_prior_no_tier3, #drugs_nct_prior_no_tier3, #drugs_tier1_ct, #drugs_tier1_gt, #drugs_tier1_nct, #drugs_tier1b_ct, #drugs_tier1b_gt, #drugs_tier1b_nct, #drugs_tier2_ct, #drugs_tier2_gt, #drugs_tier2_nct, #drugs_tier3_ct, #drugs_tier3_gt, #drugs_tier3_nct, drugs_tier1_ct_prior, #drugs_tier1_gt_prior, #drugs_tier1_nct_prior,, #drugs_tier1b_ct_prior, #drugs_tier1b_gt_prior, #drugs_tier1b_nct_prior, #drugs_tier2_ct_prior, #drugs_tier2_gt_prior, #drugs_tier2_nct_prior, #drugs_tier3_ct_prior, #drugs_tier3_gt_prior, #drugs_tier3_nct_prior, mean_n_consensus_strings, mean_n_total_drugs, mean_n_support, mean_n_resistance, mean_n_conflict, mean_n_unknown, mean_fraction_support, mean_fraction_resistance, mean_fraction_conflict, mean_fraction_unknown, mean_n_consensus_strings_no_tier3, mean_n_total_drugs_no_tier3, mean_n_support_no_tier3, mean_n_resistance_no_tier3, mean_n_conflict_no_tier3, mean_n_unknown_no_tier3, mean_fraction_support_no_tier3, mean_fraction_resistance_no_tier3, mean_fraction_conflict_no_tier3, mean_fraction_unknown_no_tier3]
     if sample_name in civic_info_mapping.keys():
         raise ValueError("Sample name '%s' was already parsed!")
 
-    civic_info_mapping[sample_name] = [all_variants, all_civic_variants, n_civic_variants_no_tier3, n_tier_1, n_tier_1b, n_tier_1_agg, n_tier_2, n_tier_3, n_tier_4, n_predictive, n_diagnostic, n_prognostic, n_predisposing, n_predictive_no_tier3, n_diagnostic_no_tier3, n_prognostic_no_tier3, n_predisposing_no_tier3, n_drug_avail, n_drug_avail_no_tier3, mean_matched_variants, mean_matched_variants_no_tier3, mean_matched_variants_tier1, mean_matched_variants_tier1b, mean_matched_variants_tier2, mean_matched_variants_tier3, mean_matched_diseases, mean_matched_diseases_no_tier3, mean_matched_diseases_tier1, mean_matched_diseases_tier1b, mean_matched_diseases_tier2, mean_matched_diseases_tier3, mean_matched_diseases_ct, mean_matched_diseases_gt, mean_matched_diseases_nct, mean_matched_diseases_ct_no_tier3, mean_matched_diseases_gt_no_tier3, mean_matched_diseases_nct_no_tier3, mean_matched_diseases_tier1_ct, mean_matched_diseases_tier1_gt, mean_matched_diseases_tier1_nct, mean_matched_diseases_tier1b_ct, mean_matched_diseases_tier1b_gt, mean_matched_diseases_tier1b_nct, mean_matched_diseases_tier2_ct, mean_matched_diseases_tier2_gt, mean_matched_diseases_tier2_nct, mean_matched_diseases_tier3_ct, mean_matched_diseases_tier3_gt, mean_matched_diseases_tier3_nct, n_diseases, n_diseases_no_tier3, n_diseases_tier1, n_diseases_tier1b, n_diseases_tier2, n_diseases_tier3, n_diseases_ct, n_diseases_gt, n_diseases_nct, n_diseases_ct_no_tier3, n_diseases_gt_no_tier3, n_diseases_nct_no_tier3, n_diseases_tier1_ct, n_diseases_tier1_gt, n_diseases_tier1_nct, n_diseases_tier1b_ct, n_diseases_tier1b_gt, n_diseases_tier1b_nct, n_diseases_tier2_ct, n_diseases_tier2_gt, n_diseases_tier2_nct, n_diseases_tier3_ct, n_diseases_tier3_gt, n_diseases_tier3_nct, n_drugs_all, n_drugs_all_no_tier3, mean_ct_classes_avail, mean_ct_classes_avail_no_tier3, n_drugs_all_tier1, n_drugs_all_tier1b, n_drugs_all_tier2, n_drugs_all_tier3, n_drugs_all_ct, n_drugs_all_gt, n_drugs_all_nct, n_drugs_all_ct_no_tier3, n_drugs_all_gt_no_tier3, n_drugs_all_nct_no_tier3, n_drugs_prior, n_drugs_prior_no_tier3, n_drugs_prior_tier1, n_drugs_prior_tier1b, n_drugs_prior_tier2, n_drugs_prior_tier3, n_drugs_prior_ct, n_drugs_prior_gt, n_drugs_prior_nct, n_drugs_prior_ct_no_tier3, n_drugs_prior_gt_no_tier3, n_drugs_prior_nct_no_tier3, n_drugs_tier1_ct, n_drugs_tier1_gt, n_drugs_tier1_nct, n_drugs_tier1b_ct, n_drugs_tier1b_gt, n_drugs_tier1b_nct, n_drugs_tier2_ct, n_drugs_tier2_gt, n_drugs_tier2_nct, n_drugs_tier3_ct, n_drugs_tier3_gt, n_drugs_tier3_nct, n_drugs_tier1_ct_prior, n_drugs_tier1_gt_prior, n_drugs_tier1_nct_prior, n_drugs_tier1b_ct_prior, n_drugs_tier1b_gt_prior, n_drugs_tier1b_nct_prior, n_drugs_tier2_ct_prior, n_drugs_tier2_gt_prior, n_drugs_tier2_nct_prior, n_drugs_tier3_ct_prior, n_drugs_tier3_gt_prior, n_drugs_tier3_nct_prior]
+    civic_info_mapping[sample_name] = [all_variants, all_civic_variants, n_civic_variants_no_tier3, n_tier_1, n_tier_1b, n_tier_1_agg, n_tier_2, n_tier_3, n_tier_4, n_predictive, n_diagnostic, n_prognostic, n_predisposing, n_predictive_no_tier3, n_diagnostic_no_tier3, n_prognostic_no_tier3, n_predisposing_no_tier3, n_drug_avail, n_drug_avail_no_tier3, mean_matched_variants, mean_matched_variants_no_tier3, mean_matched_variants_tier1, mean_matched_variants_tier1b, mean_matched_variants_tier2, mean_matched_variants_tier3, mean_matched_diseases, mean_matched_diseases_no_tier3, mean_matched_diseases_tier1, mean_matched_diseases_tier1b, mean_matched_diseases_tier2, mean_matched_diseases_tier3, mean_matched_diseases_ct, mean_matched_diseases_gt, mean_matched_diseases_nct, mean_matched_diseases_ct_no_tier3, mean_matched_diseases_gt_no_tier3, mean_matched_diseases_nct_no_tier3, mean_matched_diseases_tier1_ct, mean_matched_diseases_tier1_gt, mean_matched_diseases_tier1_nct, mean_matched_diseases_tier1b_ct, mean_matched_diseases_tier1b_gt, mean_matched_diseases_tier1b_nct, mean_matched_diseases_tier2_ct, mean_matched_diseases_tier2_gt, mean_matched_diseases_tier2_nct, mean_matched_diseases_tier3_ct, mean_matched_diseases_tier3_gt, mean_matched_diseases_tier3_nct, n_diseases, n_diseases_no_tier3, n_diseases_tier1, n_diseases_tier1b, n_diseases_tier2, n_diseases_tier3, n_diseases_ct, n_diseases_gt, n_diseases_nct, n_diseases_ct_no_tier3, n_diseases_gt_no_tier3, n_diseases_nct_no_tier3, n_diseases_tier1_ct, n_diseases_tier1_gt, n_diseases_tier1_nct, n_diseases_tier1b_ct, n_diseases_tier1b_gt, n_diseases_tier1b_nct, n_diseases_tier2_ct, n_diseases_tier2_gt, n_diseases_tier2_nct, n_diseases_tier3_ct, n_diseases_tier3_gt, n_diseases_tier3_nct, n_unique_drugs, n_unique_drugs_no_tier3, mean_ct_classes_avail, mean_ct_classes_avail_no_tier3, n_unique_drugs_tier1, n_unique_drugs_tier1b, n_unique_drugs_tier2, n_unique_drugs_tier3, n_unique_drugs_ct, n_unique_drugs_gt, n_unique_drugs_nct, n_unique_drugs_ct_no_tier3, n_unique_drugs_gt_no_tier3, n_unique_drugs_nct_no_tier3, n_drugs_prior, n_drugs_prior_no_tier3, n_drugs_prior_tier1, n_drugs_prior_tier1b, n_drugs_prior_tier2, n_drugs_prior_tier3, n_drugs_prior_ct, n_drugs_prior_gt, n_drugs_prior_nct, n_drugs_prior_ct_no_tier3, n_drugs_prior_gt_no_tier3, n_drugs_prior_nct_no_tier3, n_drugs_tier1_ct, n_drugs_tier1_gt, n_drugs_tier1_nct, n_drugs_tier1b_ct, n_drugs_tier1b_gt, n_drugs_tier1b_nct, n_drugs_tier2_ct, n_drugs_tier2_gt, n_drugs_tier2_nct, n_drugs_tier3_ct, n_drugs_tier3_gt, n_drugs_tier3_nct, n_drugs_tier1_ct_prior, n_drugs_tier1_gt_prior, n_drugs_tier1_nct_prior, n_drugs_tier1b_ct_prior, n_drugs_tier1b_gt_prior, n_drugs_tier1b_nct_prior, n_drugs_tier2_ct_prior, n_drugs_tier2_gt_prior, n_drugs_tier2_nct_prior, n_drugs_tier3_ct_prior, n_drugs_tier3_gt_prior, n_drugs_tier3_nct_prior, mean_n_consensus_strings, mean_n_total_drugs, mean_n_support_strings, mean_n_resistance_strings, mean_n_conflict_strings, mean_n_unknown_strings, mean_fraction_support_strings, mean_fraction_resistance_strings, mean_fraction_conflict_strings, mean_fraction_unknown_strings, mean_n_consensus_strings_no_tier3, mean_n_total_drugs_no_tier3, mean_n_support_strings_no_tier3, mean_n_resistance_strings_no_tier3, mean_n_conflict_strings_no_tier3, mean_n_unknown_strings_no_tier3, mean_fraction_support_strings_no_tier3, mean_fraction_resistance_strings_no_tier3, mean_fraction_conflict_strings_no_tier3, mean_fraction_unknown_strings_no_tier3]
+
     return (civic_info_mapping, disease_info_mapping, disease_info_no_tier3_mapping, ct_info_mapping, ct_info_no_tier3_mapping)
 
 
@@ -1003,8 +1153,8 @@ def write_results_to_output(sample_order, input_mapping, outfile):
             raise ValueError("Provided sample name '%s' was not parsed!")
         # Retrieve and sanity check available CIViCutils info for the current sample
         civic_infos = input_mapping[sample]
-        if len(civic_infos) != 123:
-            raise ValueError("Expected 123 stat values from processing CIViC annotations for sample '%s'!" %(sample))
+        if len(civic_infos) != 143:
+            raise ValueError("Expected 143 stat values from processing CIViC annotations for sample '%s'!" %(sample))
         # Reported numeric values must be converted into strings before writing to output
         civic_infos_strings = [str(round(x, 2)) for x in civic_infos]
         # Write each sample in a separate line
@@ -1075,7 +1225,7 @@ outfile_snv = open(args.outfile_tag + ".snvs.tsv",'w') # Results from processing
 outfile_cnv = open(args.outfile_tag + ".cnvs.tsv",'w') # Results from processing CNV annotations from CIViCutils
 
 # Header is identical for both output tables
-output_header = "sample_name\tall_variants\tall_civic_variants\tall_civic_variants_no_tier3\tn_tier_1\tn_tier_1b\tn_tier_1_agg\tn_tier_2\tn_tier_3\tn_tier_4\tn_predictive_vars\tn_diagnostic_vars\tn_prognostic_vars\tn_predisposing_vars\tn_predictive_vars_no_tier3\tn_diagnostic_vars_no_tier3\tn_prognostic_vars_no_tier3\tn_predisposing_vars_no_tier3\tn_vars_drug_avail\tn_vars_drug_avail_no_tier3\tmean_matched_vars\tmean_matched_vars_no_tier3\tmean_matched_vars_tier1\tmean_matched_vars_tier1b\tmean_matched_vars_tier2\tmean_matched_vars_tier3\tmean_matched_diseases\tmean_matched_diseases_no_tier3\tmean_matched_diseases_tier1\tmean_matched_diseases_tier1b\tmean_matched_diseases_tier2\tmean_matched_diseases_tier3\tmean_matched_diseases_ct\tmean_matched_diseases_gt\tmean_matched_diseases_nct\tmean_matched_diseases_ct_no_tier3\tmean_matched_diseases_gt_no_tier3\tmean_matched_diseases_nct_no_tier3\tmean_matched_diseases_tier1_ct\tmean_matched_diseases_tier1_gt\tmean_matched_diseases_tier1_nct\tmean_matched_diseases_tier1b_ct\tmean_matched_diseases_tier1b_gt\tmean_matched_diseases_tier1b_nct\tmean_matched_diseases_tier2_ct\tmean_matched_diseases_tier2_gt\tmean_matched_diseases_tier2_nct\tmean_matched_diseases_tier3_ct\tmean_matched_diseases_tier3_gt\tmean_matched_diseases_tier3_nct\tn_diseases\tn_diseases_no_tier3\tn_diseases_tier1\tn_diseases_tier1b\tn_diseases_tier2\tn_diseases_tier3\tn_diseases_ct\tn_diseases_gt\tn_diseases_nct\tn_diseases_ct_no_tier3\tn_diseases_gt_no_tier3\tn_diseases_nct_no_tier3\tn_diseases_tier1_ct\tn_diseases_tier1_gt\tn_diseases_tier1_nct\tn_diseases_tier1b_ct\tn_diseases_tier1b_gt\tn_diseases_tier1b_nct\tn_diseases_tier2_ct\tn_diseases_tier2_gt\tn_diseases_tier2_nct\tn_diseases_tier3_ct\tn_diseases_tier3_gt\tn_diseases_tier3_nct\tn_drugs_all\tn_drugs_all_no_tier3\tmean_ct_classes_avail\tmean_ct_classes_avail_no_tier3\tn_drugs_all_tier1\tn_drugs_all_tier1b\tn_drugs_all_tier2\tn_drugs_all_tier3\tn_drugs_all_ct\tn_drugs_all_gt\tn_drugs_all_nct\tn_drugs_all_ct_no_tier3\tn_drugs_all_gt_no_tier3\tn_drugs_all_nct_no_tier3\tn_drugs_prior\tn_drugs_prior_no_tier3\tn_drugs_prior_tier1\tn_drugs_prior_tier1b\tn_drugs_prior_tier2\tn_drugs_prior_tier3\tn_drugs_prior_ct\tn_drugs_prior_gt\tn_drugs_prior_nct\tn_drugs_prior_ct_no_tier3\tn_drugs_prior_gt_no_tier3\tn_drugs_prior_nct_no_tier3\tn_drugs_tier1_ct\tn_drugs_tier1_gt\tn_drugs_tier1_nct\tn_drugs_tier1b_ct\tn_drugs_tier1b_gt\tn_drugs_tier1b_nct\tn_drugs_tier2_ct\tn_drugs_tier2_gt\tn_drugs_tier2_nct\tn_drugs_tier3_ct\tn_drugs_tier3_gt\tn_drugs_tier3_nct\tn_drugs_tier1_ct_prior\tn_drugs_tier1_gt_prior\tn_drugs_tier1_nct_prior\tn_drugs_tier1b_ct_prior\tn_drugs_tier1b_gt_prior\tn_drugs_tier1b_nct_prior\tn_drugs_tier2_ct_prior\tn_drugs_tier2_gt_prior\tn_drugs_tier2_nct_prior\tn_drugs_tier3_ct_prior\tn_drugs_tier3_gt_prior\tn_drugs_tier3_nct_prior"
+output_header = "sample_name\tall_variants\tall_civic_variants\tall_civic_variants_no_tier3\tn_tier_1\tn_tier_1b\tn_tier_1_agg\tn_tier_2\tn_tier_3\tn_tier_4\tn_predictive_vars\tn_diagnostic_vars\tn_prognostic_vars\tn_predisposing_vars\tn_predictive_vars_no_tier3\tn_diagnostic_vars_no_tier3\tn_prognostic_vars_no_tier3\tn_predisposing_vars_no_tier3\tn_vars_drug_avail\tn_vars_drug_avail_no_tier3\tmean_matched_vars\tmean_matched_vars_no_tier3\tmean_matched_vars_tier1\tmean_matched_vars_tier1b\tmean_matched_vars_tier2\tmean_matched_vars_tier3\tmean_matched_diseases\tmean_matched_diseases_no_tier3\tmean_matched_diseases_tier1\tmean_matched_diseases_tier1b\tmean_matched_diseases_tier2\tmean_matched_diseases_tier3\tmean_matched_diseases_ct\tmean_matched_diseases_gt\tmean_matched_diseases_nct\tmean_matched_diseases_ct_no_tier3\tmean_matched_diseases_gt_no_tier3\tmean_matched_diseases_nct_no_tier3\tmean_matched_diseases_tier1_ct\tmean_matched_diseases_tier1_gt\tmean_matched_diseases_tier1_nct\tmean_matched_diseases_tier1b_ct\tmean_matched_diseases_tier1b_gt\tmean_matched_diseases_tier1b_nct\tmean_matched_diseases_tier2_ct\tmean_matched_diseases_tier2_gt\tmean_matched_diseases_tier2_nct\tmean_matched_diseases_tier3_ct\tmean_matched_diseases_tier3_gt\tmean_matched_diseases_tier3_nct\tn_diseases\tn_diseases_no_tier3\tn_diseases_tier1\tn_diseases_tier1b\tn_diseases_tier2\tn_diseases_tier3\tn_diseases_ct\tn_diseases_gt\tn_diseases_nct\tn_diseases_ct_no_tier3\tn_diseases_gt_no_tier3\tn_diseases_nct_no_tier3\tn_diseases_tier1_ct\tn_diseases_tier1_gt\tn_diseases_tier1_nct\tn_diseases_tier1b_ct\tn_diseases_tier1b_gt\tn_diseases_tier1b_nct\tn_diseases_tier2_ct\tn_diseases_tier2_gt\tn_diseases_tier2_nct\tn_diseases_tier3_ct\tn_diseases_tier3_gt\tn_diseases_tier3_nct\tn_unique_drugs\tn_unique_drugs_no_tier3\tmean_ct_classes_avail\tmean_ct_classes_avail_no_tier3\tn_unique_drugs_tier1\tn_unique_drugs_tier1b\tn_unique_drugs_tier2\tn_unique_drugs_tier3\tn_unique_drugs_ct\tn_unique_drugs_gt\tn_unique_drugs_nct\tn_unique_drugs_ct_no_tier3\tn_unique_drugs_gt_no_tier3\tn_unique_drugs_nct_no_tier3\tn_drugs_prior\tn_drugs_prior_no_tier3\tn_drugs_prior_tier1\tn_drugs_prior_tier1b\tn_drugs_prior_tier2\tn_drugs_prior_tier3\tn_drugs_prior_ct\tn_drugs_prior_gt\tn_drugs_prior_nct\tn_drugs_prior_ct_no_tier3\tn_drugs_prior_gt_no_tier3\tn_drugs_prior_nct_no_tier3\tn_drugs_tier1_ct\tn_drugs_tier1_gt\tn_drugs_tier1_nct\tn_drugs_tier1b_ct\tn_drugs_tier1b_gt\tn_drugs_tier1b_nct\tn_drugs_tier2_ct\tn_drugs_tier2_gt\tn_drugs_tier2_nct\tn_drugs_tier3_ct\tn_drugs_tier3_gt\tn_drugs_tier3_nct\tn_drugs_tier1_ct_prior\tn_drugs_tier1_gt_prior\tn_drugs_tier1_nct_prior\tn_drugs_tier1b_ct_prior\tn_drugs_tier1b_gt_prior\tn_drugs_tier1b_nct_prior\tn_drugs_tier2_ct_prior\tn_drugs_tier2_gt_prior\tn_drugs_tier2_nct_prior\tn_drugs_tier3_ct_prior\tn_drugs_tier3_gt_prior\tn_drugs_tier3_nct_prior\tmean_n_consensus\tmean_n_total_drugs\tmean_n_support\tmean_n_resistance\tmean_n_conflict\tmean_n_unknown\tmean_fraction_support\tmean_fraction_resistance\tmean_fraction_conflict\tmean_fraction_unknown\tmean_n_consensus_no_tier3\tmean_n_total_drugs_no_tier3\tmean_n_support_no_tier3\tmean_n_resistance_no_tier3\tmean_n_conflict_no_tier3\tmean_n_unknown_no_tier3\tmean_fraction_support_no_tier3\tmean_fraction_resistance_no_tier3\tmean_fraction_conflict_no_tier3\tmean_fraction_unknown_no_tier3"
 
 outfile_snv.write(output_header + "\n")
 outfile_cnv.write(output_header + "\n")
