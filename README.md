@@ -2,7 +2,7 @@
 
 ## General overview
 
-[CIViCutils](https://github.com/ETH-NEXUS/civicutils) is a Python package for rapid retrieval, annotation, prioritization and downstream processing of information from the expert-curated [CIViC knowledgebase](https://civicdb.org/home) (Clinical Interpretations of Variants in Cancer). CIViCutils can be integrated into novel and existing clinical workflows to provide variant-level disease-specific information about treatment response, pathogenesis, diagnosis, and prognosis of genomic aberrations (SNVs, InDels and CNVs), as well as differentially expressed genes. It streamlines interpreting large numbers of input alterations with querying and analyzing CIViC information, and enables the harmonization of input across different nomenclatures. Key features of CIViCutils include an automated matching framework for linking clinical evidence to input variants, as well as evaluating the accuracy of the resulting hits, and in-silico prediction of drug-target interactions tailored to individual patients and cancer subtypes of interest.
+[CIViCutils](https://github.com/ETH-NEXUS/civicutils) is a Python package for rapid retrieval, annotation, prioritization and downstream processing of information from the expert-curated [CIViC knowledgebase](https://civicdb.org/home) (Clinical Interpretations of Variants in Cancer). CIViCutils can be integrated into novel and existing clinical workflows to provide variant-level disease-specific information about treatment response, pathogenesis, diagnosis, and prognosis of genomic aberrations (SNVs, InDels and CNVs), as well as differentially expressed genes. It streamlines interpreting large numbers of input alterations with querying and analyzing CIViC information, and enables the harmonization of input across different nomenclatures. Key features of CIViCutils include an automated matching framework for linking clinical evidence to input variants, as well as evaluating the accuracy of the resulting hits, and in-silico prediction of drug-target interactions tailored to individual patients and cancer subtypes of interest. For more details, see the CIViCutils publication.
 
 ![README_diagram](images/civicutils-workflow.png)
 
@@ -69,7 +69,7 @@ from query import query_civic
 varMap = query_civic(genes, identifier_type="entrez_symbol")
 ```
 
-Structure of the variant map (i.e. dictionary `varMap`):
+Structure of the variant map resulting from querying CIViC (i.e. dictionary `varMap`):
 ```
 <varMap>
 └── <gene_id>
@@ -113,21 +113,21 @@ Structure of `varMap` after being annotated for disease specificity (i.e. `ct`):
 
 Three different types of input data can be provided to function `match_in_civic()`: `SNV`, `CNV` and `EXPR` (see above for more information). `SNV` (genomic single-nucleotide and insertion-deletion variants), `CNV` (genomic copy number alterations), and `EXPR` (differentially expressed genes).
 
-In order to match variants, the package attempts to infer the names of the corresponding CIViC variant records by using: the provided input HGVS strings (only possible for SNV), HGVS expressions available in CIViC (if any exist, and only available for SNV) and most importantly, using a set of rules to translate how variants are normally named when introduced into the database (e.g. for variant `p.Val600Glu`, the corresponding record name would be `V600E`). For matching input data of types `CNV` and `EXPR`, the most common variant record names that exist for these in CIViCdb are considered.
+In order to match variants, the package attempts to infer the names of the corresponding CIViC variant records by using: the provided input HGVS strings (only possible for SNV), HGVS expressions available in CIViC (if any exist, and only available for SNV) and most importantly, using a set of rules to translate how variants are normally named when introduced into the database (e.g. for variant `p.Val600Glu`, the corresponding record name would be `V600E`). For matching input data of types `CNV` and `EXPR`, the most common variant record names that exist for these in CIViC are considered.
 
 The user can choose to provide a custom `varMap` to perform the match, e.g. if further filtering of the retrieved CIViC evidences needs to be applied. We highly recommend this, specially to select only evidences tagged as `ACCEPTED` and avoid matching of submitted evidence that has not yet been expert-reviewed. In the case of genomic variants, it is also recommended to filter for the desired variant type (e.g. `SOMATIC`, `GERMLINE`, etc.).
 If `varMap` is not provided in the arguments of `match_in_civic()`, then per default the function will retrieve the information for the input genes from the cache file, without applying any filtering.
 ```
 from match import match_in_civic
 
-# Function will automatically query the db for the available genes
+# Function will automatically query the database for the available genes
 (matchMap,matchedIds,varMap) = match_in_civic(inData, dataType="SNV", identifier_type="entrez_symbol", select_tier="highest", varMap=None)
 
 # Provide a custom set of CIViC evidences to match against
 (matchMap,matchedIds,varMap) = match_in_civic(inData, dataType="SNV", identifier_type="entrez_symbol", select_tier="highest", varMap=varMap)
 ```
 
-Structure of the match map (i.e. dictionary `matchMap`):
+Structure of the match map resulting from the variant matching framework (i.e. dictionary `matchMap`):
 
 ```
 <matchMap>
@@ -138,14 +138,14 @@ Structure of the match map (i.e. dictionary `matchMap`):
 ```
 
 The returned `matchMap` will contain the same genes and variants from `inData`, with additional entries per gene+variant combination for all the available tier categories listing the matches found (if any). The possible tiers are:
-* `tier_1`: perfect match of the variant in CIViCdb, e.g. `p.Val600Glu` matched to `V600E`.
-* `tier_1b`: a synonym (more general) match of the variant in CIViCdb, e.g. records like `MUTATION`, `FRAMESHIFT VARIANT` or `EXON 1 VARIANT`.
-* `tier_2`: positional matches of the variant in CIViCdb, e.g. `V600M` and `V600K` returned when `V600E` was provided. Note there is a special case of so-called "general" variants, e.g. `V600`, which are prioritized over any other positional hits which may have also been found by CIViCutils.
-* `tier_3`: gene was found in CIViCdb but no variant could be matched. All CIViC variant records available for the gene that are found to match the given data type will be returned (if any). If a `tier_3` was indicated but no matched variants appear listed, then that means that there were no records found to match the provided data type for the given gene (but that there are records available in CIViCdb for other data types).
-* `tier_4`: gene was not found in CIViCdb. No hits were returned by the query.
+* `tier_1`: perfect match between input and CIViC variant(s), e.g. `p.Val600Glu` matched to `V600E`.
+* `tier_1b`: a non-perfect match between input and CIViC variant(s), e.g. records like `MUTATION`, `FRAMESHIFT VARIANT` or `EXON 1 VARIANT`.
+* `tier_2`: positional match between input and CIViC variant(s), e.g. `V600M` and `V600K` returned when `V600E` was provided. Note there is a special case of so-called "general" variants, e.g. `V600`, which are prioritized over any other positional hits which may have also been found by CIViCutils.
+* `tier_3`: gene was found in CIViC but no associated variant record could be matched. In this case, all CIViC variant records available for the gene and found to match the given data type are returned by the function (if any). If a `tier_3` was indicated but no matched variants are listed, then this is a consequence of no CIViC records being found for the provided data type and given gene (but indicates the existance of other CIViC records available for a different data type).
+* `tier_4`: gene was not found in CIViC. No hits are returned by the query.
 
 
-Structure of the returned `matchMap` after being annotated for consensus drug support:
+Structure of the returned `matchMap` after being annotated for consensus drug response predictions:
 ```
 └── <matchMap>
     └── <gene_id>
@@ -154,7 +154,7 @@ Structure of the returned `matchMap` after being annotated for consensus drug su
                 ├── 'matched'
                 │   └── <var_id>
                 └── 'drug_support'
-                    └── <support>
+                    └── <response_prediction>
 ```
 
 
@@ -162,7 +162,7 @@ Structure of the returned `matchMap` after being annotated for consensus drug su
 
 #### Filtering CIViC information
 
-CIViCutils enables filtering of CIViC data based on several features. A comprehensive overview of features is provided below. Note supplied filtering parameters are evaluated in the order in which they are listed in the function definition, and not in the order specified during the function call. The logic for combining multiple filters is always 'AND'; when the desired filtering logic in not possible in one single call, then the function needs to be applied to the data subsequently several times.
+CIViCutils enables filtering of CIViC data based on several features. A comprehensive overview of features is provided below. Note supplied filtering parameters are evaluated in the order in which they are listed in the function definition, and not in the order specified during the function call. The logic for combining multiple filters is always `AND`; when the desired filtering logic in not possible in one single call, then the function needs to be applied to the data subsequently several times.
 
 Complete list of filters available:
 * Select or exclude specific gene identifiers (Entrez symbols, Entrez IDs or CIViC IDs).
@@ -202,7 +202,7 @@ This function cannot be applied if the provided `matchMap` was already processed
 
 Variant-specific evidence data retrieved from CIViC can be further annotated for cancer specificity of the disease using function `annotate_ct()`. This is only possible if the provided `varMap` is not already annotated with disease specificity.
 
-Afterwards, it is possible to filter or prioritize the annotated CIViC evidences by cancer specificity using `filter_ct()`: argument `select_ct` can be either a string (only "highest" makes sense, as "all" would not perform any filtering) or a list of categories to select for e.g. ['ct','gt'] to remove any evidences classified as non cancer specific. Option "highest" would select only the evidences from the highest available category per evidence type. Filtering is only possible if the provided `varMap` has been previously annotated with this information via `annotate_ct()`.
+Afterwards, it is possible to filter or prioritize the annotated CIViC evidences by cancer specificity using `filter_ct()`: argument `select_ct` can be either a string (only "highest" makes sense, as "all" would not perform any filtering) or a list of categories to select for e.g. [`ct`,`gt`] to remove any evidences classified as non cancer specific. Option "highest" would select only the evidences from the highest available category per evidence type. Filtering is only possible if the provided `varMap` has been previously annotated with this information via `annotate_ct()`.
 ```
 from match import annotate_ct,filter_ct
 
@@ -235,7 +235,7 @@ TODO
 
 ### Annotation of consensus drug response predictions
 
-Function `process_drug_support()` will decide on a consensus drug support for each available tier match and every associated disease specificity category. Note this function can only be applied if the provided `varMap` has been previously annotated with cancer type specificity information. After the annotation of consensus predictions, the returned `matchMap` will contain additional entries per tier: 'matches', containing the variant hits found in CIViC (if any), and 'drug_support', listing one string for each consensus drug response annotated using format `DISEASE:CT:SUPPORT`.
+Function `process_drug_support()` will decide on a consensus drug support for each available tier match and every associated disease specificity category. Note this function can only be applied if the provided `varMap` has been previously annotated with cancer type specificity information. After the annotation of consensus predictions, the returned `matchMap` will contain additional entries per tier: `matches`, containing the variant hits found in CIViC (if any), and `drug_support`, listing one string for each consensus drug response annotated using format `DISEASE:CT:SUPPORT`.
 
 Conversion of CIViC evidences (terms used for evidence direction and clinical significance) into a specific drug support string can be done through a custom dictionary `drug_support` within the config file `data.yml`.
 
