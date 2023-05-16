@@ -3,7 +3,7 @@
 '''
 Use CIViCutils to query and process CIViC variant information
 Requires newer format of variant annotations, i.e.: GENE:variant|variant;GENE:variant;...
-Version queries offline cache provided in civicpy module (updating cache is managed by Vipin)
+Version queries offline cache provided in civicpy module
 
 Lourdes Rosano, Feb 2022
 '''
