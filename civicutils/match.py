@@ -2,574 +2,632 @@ import sys
 import os
 import re
 
-from utils import check_arguments,check_argument,translate_aa,check_is_dict,check_is_list,check_is_str,check_keys,check_keys_not,check_tier_selection,parse_input,check_empty_input,check_dict_entry,check_is_cHGVS,check_is_pHGVS,check_identifier_type,check_data_type,check_is_bool,uppercase_list,check_is_none,check_logFC
+from utils import check_arguments, check_argument, translate_aa, check_is_dict, check_is_list, check_is_str, check_keys, check_keys_not, check_tier_selection, parse_input, check_empty_input, check_dict_entry, check_is_chgvs, check_is_phgvs, check_identifier_type, check_data_type, check_is_bool, uppercase_list, check_is_none, check_logfc
 
-# Given a single CIVIC variant name, extract potential HGVS annotations by
-# parsing and modifying this string using knowledge on CIVIC naming conventions
-# Function only applicable to SNV data
-def civicName_to_hgvs(varName):
+
+def civic_name_to_hgvs(var_name):
+    """
+    Given a single CIViC variant name, extract potential HGVS annotations by parsing and modifying the name while using prior knowledge about CIViC naming conventions.
+    Function only applicable to SNV data.
+    :param var_name:	Name of CIViC variant record.
+    :return:		List of corresponding potential HGVS expressions generated based on the provided variant name.
+    """
     # Sanity check of provided arguments
-    check_argument(varName,"varName")
-    check_is_str(varName,"varName")
+    check_argument(var_name, "var_name")
+    check_is_str(var_name, "var_name")
     # NOTE: uppercase is critical for the match!
-    varName = varName.upper()
+    var_name = var_name.upper()
 
-    # TODO: variant names like T193C (refer to DNA) would be translated to proteins
-    hgvsStrings = []
-    # 1) HGVS 1-letter protein code, including stop codons and general variants (eg. V600E, *600E, V600* or V600)
-    # TODO: multiple cases, what to do? pos = re.findall
-    if re.match(r'([A-Z*])(\d+)([A-Z*]?)($|\s\()', varName):
-        pos = re.match(r'([A-Z*])(\d+)([A-Z*]?)($|\s\()', varName).groups()
+    hgvs_strings = []
+    # 1) HGVS 1-letter protein code, including stop codons and general variants (e.g. V600E, *600E, V600* or V600)
+    # NOTE: variant names like T193C (refer to DNA) would be translated to proteins
+    if re.match(r'([A-Z*])(\d+)([A-Z*]?)($|\s\()', var_name):
+        pos = re.match(r'([A-Z*])(\d+)([A-Z*]?)($|\s\()', var_name).groups()
         aa1 = pos[0]
         npos = pos[1]
         aa2 = pos[2]
 
         ## Generate the HGVS string by translating 1-letter aa codes into 3-letter
 
-        # Special case of protein extensions where '*' is represented by 'Ter' in input table
-        if aa1 == '*':
-            aa1New = 'TER'
+        # Special case of protein extensions where "*" is represented by "Ter" in input table
+        if aa1 == "*":
+            aa1_new = "TER"
         else:
             # Translate 1-letter aa code to 3-letter code
-            aa1New = translate_aa(aa1)
-        # Check for general variants (second aa will be '')
+            aa1_new = translate_aa(aa1)
+        # Check for general variants (second aa will be "")
         if aa2:
             # Special cases like p.Ter600Ter happen in input table, so in theory,
-            # *600* should also be possible (however does not seem to happen in CIVIC)
-            if (aa1New == 'TER') and (aa2=='*'):
-                aa2New = 'TER'
+            # *600* should also be possible (however does not seem to happen in CIViC)
+            if (aa1_new == "TER") and (aa2=="*"):
+                aa2_new = "TER"
             else:
                 # Translate 1-letter aa code to 3-letter code
-                # In cases where aa2='*', it will remain as '*' (using Ter is a special case when aa1=Ter)
-                aa2New = translate_aa(aa2)
+                # In cases where aa2="*", it will remain as "*" (using Ter is a special case when aa1=Ter)
+                aa2_new = translate_aa(aa2)
         else:
-            aa2New = ''
+            aa2_new = ""
         # Sanity check that translated strings correspond to valid aa codes
-        if (aa1New is not None) and (aa2New is not None):
+        if (aa1_new is not None) and (aa2_new is not None):
             # Construct new protein annotation
-            newAnnotation = 'P.' + aa1New + npos + aa2New
-            hgvsStrings.append(newAnnotation)
+            new_annotation = "P." + aa1_new + npos + aa2_new
+            hgvs_strings.append(new_annotation)
 
-    # 2) Extract embedded c. annotation if available ie. '(c.XXX)'
-    # Use re.search to allow for matches not in the string start
-    if re.search(r'\((C\..+?)\)', varName):
-        # TODO: at least two multiple cases, what to do?
-        # 'A50A (c.150C>G); Splicing alteration (c.463-1G>T)'
-        # r = re.findall(r'\((c\..+?)\)', varName)
-        annot = re.search(r'\((C\..+?)\)', varName).groups()[0]
-        hgvsStrings.append(annot)
+    # 2) Extract embedded c. annotation if available i.e. "(c.XXX)"
+    # Use re.search to allow for matches beyond the start of the string
+    if re.search(r'\((C\..+?)\)', var_name):
+        # r = re.findall(r'\((c\..+?)\)', var_name)
+        annot = re.search(r'\((C\..+?)\)', var_name).groups()[0]
+        hgvs_strings.append(annot)
 
-    # 3) Frameshifts (eg. T157FS or T157MFS)
-    if re.match(r'([A-Z])(\d+)([A-Z]?)FS', varName):
-        pos = re.match(r'([A-Z])(\d+)([A-Z]?)FS', varName).groups()
+    # 3) Frameshifts (e.g. T157FS or T157MFS)
+    if re.match(r'([A-Z])(\d+)([A-Z]?)FS', var_name):
+        pos = re.match(r'([A-Z])(\d+)([A-Z]?)FS', var_name).groups()
         aa = pos[0]
         npos = pos[1]
         # Translate aa in 1st position and if ok, write frameshift in short form
-        aaNew = translate_aa(aa)
-        if aaNew is not None:
-            annot = 'P.' + aaNew + npos + 'FS'
-            hgvsStrings.append(annot)
+        aa_new = translate_aa(aa)
+        if aa_new is not None:
+            annot = "P." + aa_new + npos + "FS"
+            hgvs_strings.append(annot)
 
-        # TODO: extend cases?
-
-    return hgvsStrings
+    return hgvs_strings
 
 
-# Given a single CIVIC hgvs expression, parse and modify it to ensure
-# it complies with the HGVS format followed by the input table
-# Function only applicable to SNV data
-# TODO: Currently, only modification of p. annotations are supported
 def civic_hgvs_to_input(civic_hgvs):
+    """
+    Given a single CIViC HGVS expression, parse and modify it to ensure it complies with the HGVS guidelines expected in the input table.
+    Function only applicable to SNV data. NOTE: currently, only modifications of p. HGVS expressions are supported.
+    :param civic_hgvs:	One single HGVS expression retrieved from CIViC.
+    :return:		Modified HGVS expression complying with user's expectations.
+    """
     # Sanity check of provided arguments
-    check_argument(civic_hgvs,"hgvs")
-    check_is_str(civic_hgvs,"hgvs")
+    check_argument(civic_hgvs, "civic_hgvs")
+    check_is_str(civic_hgvs, "civic_hgvs")
     # NOTE: uppercase is critical for the match!
     civic_hgvs = civic_hgvs.upper()
 
     ## The following "special hgvs" cases should be mutually exclusive
-    ## ie. a single HGVS expression should match only 1 of the cases
-    newAnnot = None
+    ## i.e. a single HGVS expression should match only 1 of the cases
+    new_annot = None
 
     ## Frameshift
-    # Input table seems to use short form for frameshift annotations (ie. p.Glu55fs) while CIVIC does not
+    # Input table seems to use short form for frameshift annotations (i.e. p.Glu55fs) while CIViC does not
     if re.match(r'(P\.[A-Z]+[0-9]+)[A-Z]+FS.*', civic_hgvs):
-        newAnnot = re.sub(r'(P\.[A-Z]+[0-9]+)[A-Z]+FS.*', r'\1FS', civic_hgvs)
+        new_annot = re.sub(r'(P\.[A-Z]+[0-9]+)[A-Z]+FS.*', r'\1FS', civic_hgvs)
         # Only return new HGVS expression if something changed
-        if newAnnot != civic_hgvs:
-            return newAnnot
+        if new_annot != civic_hgvs:
+            return new_annot
 
-    ## Nonsense mutations (gain of stop codon)
-    # In general, CIViC seems to use 'Ter' for stop codons, only 1 exception so far (p.F76Lfs*56)
-    # Input table uses '*' for stop codons; exception in protein extensions (eg. p.Ter370Tyrext*?)
-    # '*' is also used for nucleotide numbering in c.,n., but not relevant here (only p.)
+    ## Nonsense mutations (i.e. gain of stop codon)
+    # In general, CIViC seems to use "Ter" for stop codons, only 1 exception so far (p.F76Lfs*56)
+    # Input table uses "*" for stop codons; exception in protein extensions (e.g. p.Ter370Tyrext*?)
+    # "*" is also used for nucleotide numbering in c.,n., but not relevant here (only p.)
     if re.match(r'(P\.[A-Z]+[0-9]+)TER', civic_hgvs):
-        newAnnot = re.sub(r'(P\.[A-Z]+[0-9]+)TER', r'\1*', civic_hgvs)
+        new_annot = re.sub(r'(P\.[A-Z]+[0-9]+)TER', r'\1*', civic_hgvs)
         # Only return new HGVS expression if something changed
-        if newAnnot != civic_hgvs:
-            return newAnnot
+        if new_annot != civic_hgvs:
+            return new_annot
 
     ## Loss of stop codon
-    # In CIVIC, a stop codon loss is expressed as p.Ter214Cys
-    # In HGVS, this is enconded as an extension (eg. p.Ter370Tyrext*?)
+    # In CIViC, a stop codon loss is expressed as p.Ter214Cys
+    # In HGVS, this is enconded as an extension (e.g. p.Ter370Tyrext*?)
     # In this case, we need to change annotation from input table (generate_civic_matchStrings)
 
-    ## Silent mutations (no aa change)
-    # CIVIC uses a '=' in the 2nd position to represent no change (eg. p.Pro61=)
-    # In the input table, the 2nd aa is specified (eg. p.Pro61Pro)
+    ## Silent mutations (i.e. no aa change)
+    # CIViC uses a "=" in the 2nd position to represent no change (e.g. p.Pro61=)
+    # In the input table, the 2nd aa is specified (e.g. p.Pro61Pro)
     if re.match(r'P\.([A-Z]+)([0-9]+)=', civic_hgvs):
-        newAnnot = re.sub(r'P\.([A-Z]+)([0-9]+)=', r'P.\1\2\1', civic_hgvs)
+        new_annot = re.sub(r'P\.([A-Z]+)([0-9]+)=', r'P.\1\2\1', civic_hgvs)
         # Only return new HGVS expression if something changed
-        if newAnnot != civic_hgvs:
-            return newAnnot
+        if new_annot != civic_hgvs:
+            return new_annot
 
-    return newAnnot
+    return new_annot
 
 
-# Given a single HGVS p. annotation (of the form p.Pro61Cys...), extract the start of the string (ie. p.Pro61)
-# Function only applicable to SNV data
-def extract_p_start(pAnnotation):
+def extract_p_start(p_hgvs):
+    """
+    Given a single HGVS p. annotation (of the form p.Pro61Cys...), extract the start of the string composed of the original/affected aminoacid and corresponding position (i.e. p.Pro61).
+    Function only applicable to SNV data.
+    :param p_hgvs:	One single p.HGVS expression (complete and using 3-letter aminoacid codes). 
+    :return:		Modified p.HGVS expression containing only the first aminoacid and the affected position.
+    """
     # Sanity check of provided arguments
-    check_argument(pAnnotation,"pHGVS")
-    check_is_str(pAnnotation,"pHGVS")
+    check_argument(p_hgvs, "p_hgvs")
+    check_is_str(p_hgvs, "p_hgvs")
     # NOTE: uppercase is critical for the match!
-    pAnnotation = pAnnotation.upper()
+    p_hgvs = p_hgvs.upper()
 
-    startAnnot = None
-    if re.match(r'(P\.[A-Z]+[0-9]+)', pAnnotation):
-        startAnnot = re.match(r'(P\.[A-Z]+[0-9]+)', pAnnotation).groups()[0]
+    start_annot = None
+    if re.match(r'(P\.[A-Z]+[0-9]+)', p_hgvs):
+        start_annot = re.match(r'(P\.[A-Z]+[0-9]+)', p_hgvs).groups()[0]
 
-    return startAnnot
+    return start_annot
 
 
-# Check whether a variant name in CIVIC refers to a group of variants (eg. V600)
-# Function only applicable to SNV data
-def check_general_variant(varName):
+def check_general_variant(var_name):
+    """
+    Check whether a variant name retrieved from CIViC corresponds to a collection of multiple variants (e.g. V600).
+    Function only applicable to SNV data.
+    :param var_name:	Name of the CIViC variant record.
+    :return:		Boolean indicating if the variant name points to a general collection of variants.
+    """
     # Sanity check of provided arguments
-    check_argument(varName,"varName")
-    check_is_str(varName,"varName")
+    check_argument(var_name, "var_name")
+    check_is_str(var_name, "var_name")
     # NOTE: uppercase is critical for the match!
-    varName = varName.upper()
+    var_name = var_name.upper()
 
-    isGeneral = False
-    if re.match(r'[A-Z]\d+($|\s\()', varName):
-        isGeneral = True
-    return isGeneral
+    is_general = False
+    if re.match(r'[A-Z]\d+($|\s\()', var_name):
+        is_general = True
+
+    return is_general
 
 
-# Given a single CIVIC variant name, return whether it corresponds to a CNV variant record related to exons
-# For this, attemp to match the variant name to special CNV exon cases present in CIVIC (eg. EXON 1-2 DELETION, EXON 5 DELETION, 3' EXON DELETION...)
-def cnv_is_exon_string(varName):
+def cnv_is_exon_string(var_name):
+    """
+    Given a single CIViC variant name, return whether it corresponds to a CNV variant record related to exons.
+    For this, check whether the variant name matches special CNV exon cases known to be contained in CIViC (e.g. EXON 1-2 DELETION, EXON 5 DELETION, 3' EXON DELETION...).
+    :param var_name:	Name of the CIViC variant record.
+    :return:		Boolean indicating if the variant corresponds to a CNV related to exons.
+    """
     # NOTE: uppercase is critical for the match!
-    exonStrings = ['^EXON [0-9-]+ DELETION$', '^[35\']+ EXON DELETION$', '^EXON [0-9-]+ SKIPPING MUTATION$']
+    exon_strings = ["^EXON [0-9-]+ DELETION$", "^[35\']+ EXON DELETION$", "^EXON [0-9-]+ SKIPPING MUTATION$"]
 
     # Sanity check of provided arguments
-    check_argument(varName,"varName")
-    check_is_str(varName,"varName")
-    varName = varName.upper()
+    check_argument(var_name, "var_name")
+    check_is_str(var_name, "var_name")
+    var_name = var_name.upper()
 
-    isExon = False
-    for exonString in exonStrings:
-        if re.search(exonString, varName):
-            isExon = True
+    is_exon = False
+    for exon_string in exon_strings:
+        if re.search(exon_string, var_name):
+            is_exon = True
 
-    return isExon
+    return is_exon
 
 
-# Given a single CIVIC record name, return whether it corresponds to a EXPRESSION record related to exons, and the type of expression change
-# For this, attemp to match the variant name to special EXPRESSION exon cases present in CIVIC (eg. EXON 1-2 EXPRESSION, EXON 5 OVEREXPRESSION...)
-def expr_is_exon_string(varName):
-    # exonStrings = ['^EXON [0-9-]+ EXPRESSION$', '^EXON [0-9-]+ OVEREXPRESSION$', '^EXON [0-9-]+ UNDEREXPRESSION$']
-
+def expr_is_exon_string(var_name):
+    """
+    Given a single CIViC record name, return whether it corresponds to an expression record related to exons, and the type of expression change.
+    For this, check whether the variant name matches special EXPRESSION exon cases known to be contained in CIViC (e.g. EXON 1-2 EXPRESSION, EXON 5 OVEREXPRESSION...).
+    :param var_name:	Name of the CIViC variant record.
+    :return:		Tuple of two booleans; first indicates if the record corresponds to differential expression, and second indicates if CIViC record relates to exons.
+    """
     # Sanity check of provided arguments
-    check_argument(varName,"varName")
-    check_is_str(varName,"varName")
-    varName = varName.upper()
+    check_argument(var_name, "var_name")
+    check_is_str(var_name, "var_name")
+    var_name = var_name.upper()
 
-    exprType = ''
-    isExon = False
+    expr_type = ""
+    is_exon = False
 
     # NOTE: uppercase is critical for the match!
-    if re.search('^EXON [0-9-]+ EXPRESSION$', varName):
-        isExon = True
-        exprType = 'EXPRESSION'
-    elif re.search('^EXON [0-9-]+ OVEREXPRESSION$', varName):
-        isExon = True
-        exprType = 'OVEREXPRESSION'
-    elif re.search('^EXON [0-9-]+ UNDEREXPRESSION$', varName):
-        isExon = True
-        exprType = 'UNDEREXPRESSION'
-    # isExon = False
-    # for exonString in exonStrings:
-    #     if re.search(exonString, varName):
-    #         isExon = True
+    if re.search("^EXON [0-9-]+ EXPRESSION$", var_name):
+        is_exon = True
+        expr_type = "EXPRESSION"
+    elif re.search("^EXON [0-9-]+ OVEREXPRESSION$", var_name):
+        is_exon = True
+        expr_type = "OVEREXPRESSION"
+    elif re.search("^EXON [0-9-]+ UNDEREXPRESSION$", var_name):
+        is_exon = True
+        expr_type = "UNDEREXPRESSION"
 
-    return (isExon,exprType)
+    return (is_exon, expr_type)
 
 
-# Given all CIVIC variant records associated to a given gene, return all those variants that should correspond to SNV records
-# For this, remove the most common CNV and EXPRESSION ids existing in CIVIC from the complete set of the gene's variants
-def civic_return_all_snvs(geneData):
+def civic_return_all_snvs(gene_data):
+    """
+    Given all CIViC variant records associated to a given gene, return the set of variants detected to correspond to SNV records.
+    For this, remove the most common CNV and EXPRESSION ids existing in CIViC from the complete set of the gene's variants.
+    :param gene_data:	Nested dictionary corresponding to a subset of 'var_map' for one single CIViC gene. See README for more details about the structure of 'var_map'.
+    :return:		List of variant CIViC ids corresponding to SNV records.
+    """
     # Sanity check of provided arguments
-    check_argument(geneData,"geneData")
-    check_is_dict(geneData,"geneData")
+    check_argument(gene_data, "gene_data")
+    check_is_dict(gene_data, "gene_data")
 
     # Get all variant names classified as CNV or EXPRESSION (if any)
     # These functions will also attempt matching of variant name to common CNV and EXPRESSION names related to exons
-    cnvIds = civic_return_all_cnvs(geneData)
-    exprIds = civic_return_all_expr(geneData)
+    cnv_ids = civic_return_all_cnvs(gene_data)
+    expr_ids = civic_return_all_expr(gene_data)
     # All variant names not matching a CNV or EXPRESSION will be returned
     matches = []
-    for varId in list(geneData.keys()):
+    for var_id in list(gene_data.keys()):
         # Skip variant ids found to match a CNV or EXPRESSION record
-        if (varId in cnvIds) or (varId in exprIds):
+        if (var_id in cnv_ids) or (var_id in expr_ids):
             continue
-        if varId not in matches:
-            matches.append(varId)
+        if var_id not in matches:
+            matches.append(var_id)
+
     return matches
 
 
-# Given all CIVIC variant records associated to a given gene, return all those variant ids that correspond to CNV records
-# For this, attemp to match the corresponding gene's variant names to the most common CNV names existing in CIVIC
-# Additionally, consider other special CNV cases present in CIVIC (eg. EXON 1-2 DELETION, EXON 5 DELETION, 3' EXON DELETION...)
-def civic_return_all_cnvs(geneData):
-    # Common CNV record names in CIVIC
+def civic_return_all_cnvs(gene_data):
+    """
+    Given all CIViC variant records associated to a given gene, return all those variant ids that correspond to CNV records.
+    For this, check whether the corresponding gene's variant names match the most common CNV names known to be contained in CIViC.
+    Additionally, consider other special CNV cases present in CIViC (e.g. EXON 1-2 DELETION, EXON 5 DELETION, 3' EXON DELETION...).
+    :param gene_data:	Nested dictionary corresponding to a subset of 'var_map' for one single CIViC gene. See README for more details about the structure of 'var_map'.
+    :return:		List of variant CIViC ids corresponding to CNV records.
+    """
+    # Common CNV record names in CIViC
     # NOTE: uppercase is critical for the match!
-    cnvNames = ['AMPLIFICATION','DELETION','LOSS','COPY NUMBER VARIATION']
+    cnv_names = ["AMPLIFICATION", "DELETION", "LOSS", "COPY NUMBER VARIATION"]
 
     # Sanity check of provided arguments
-    check_argument(geneData,"geneData")
-    check_is_dict(geneData,"geneData")
+    check_argument(gene_data, "gene_data")
+    check_is_dict(gene_data, "gene_data")
 
     # All matched variant ids will be returned
     matches = []
-    for varId in list(geneData.keys()):
+    for var_id in list(gene_data.keys()):
         # Retrieve the name assigned to the current variant id
-        check_dict_entry(geneData[varId],"geneData","name","name")
+        check_dict_entry(gene_data[var_id], "gene_data", "name", "name")
         # NOTE: uppercase is critical for the match!
-        varName = geneData[varId]["name"].upper()
+        var_name = gene_data[var_id]["name"].upper()
         # Also attempt matching of variant name to common CNV names related to exons
-        isExon = cnv_is_exon_string(varName)
-        if (varName in cnvNames) or isExon:
-#             ## Special case for 'LOSS': only considered synonym of 'DELETION' when a certain variant type is present
-#             if varName == 'LOSS' and ('TRANSCRIPT_ABLATION' not in geneData[varName]['types']):
+        is_exon = cnv_is_exon_string(var_name)
+        if (var_name in cnv_names) or is_exon:
+#             ## Special case for "LOSS": only considered synonym of "DELETION" when a certain variant type is present
+#             if var_name == "LOSS" and ("TRANSCRIPT_ABLATION" not in gene_data[var_name]["types"]):
 #                 continue
-            if varId not in matches:
-                matches.append(varId)
+            if var_id not in matches:
+                matches.append(var_id)
+
     return matches
 
 
-# Given all CIVIC variant records associated to a given gene, return all those variant ids that correspond to EXPRESSION records
-# For this, attemp to match the corresponding gene's variant names to the most common EXPRESSION names existing in CIVIC
-# Additionally, consider other special EXPRESSION cases present in CIVIC (eg. EXON 1-2 OVEREXPRESSION, EXON 5 UNDEREXPRESSION, ...)
-def civic_return_all_expr(geneData):
-    # Common EXPRESSION record names in CIVIC
+def civic_return_all_expr(gene_data):
+    """
+    Given all CIViC variant records associated to a given gene, return all those variant ids that correspond to EXPRESSION records.
+    For this, check whether the corresponding gene's variant names match the most common EXPRESSION names known to be contained in CIViC.
+    Additionally, consider other special EXPRESSION cases present in CIViC (e.g. EXON 1-2 OVEREXPRESSION, EXON 5 UNDEREXPRESSION, ...).
+    :param gene_data:	Nested dictionary corresponding to a subset of 'var_map' for one single CIViC gene. See README for more details about the structure of 'var_map'.
+    :return:		List of variant CIViC ids corresponding to Expression records.
+    """
+    # Common EXPRESSION record names in CIViC
     # NOTE: uppercase is critical for the match!
-    exprNames = ['OVEREXPRESSION','UNDEREXPRESSION','EXPRESSION']
+    expr_names = ["OVEREXPRESSION", "UNDEREXPRESSION", "EXPRESSION"]
 
     # Sanity check of provided arguments
-    check_argument(geneData,"geneData")
-    check_is_dict(geneData,"geneData")
+    check_argument(gene_data, "gene_data")
+    check_is_dict(gene_data, "gene_data")
 
     # All matched variant ids will be returned
     matches = []
-    for varId in list(geneData.keys()):
+    for var_id in list(gene_data.keys()):
         # Retrieve the name assigned to the current variant id
-        check_dict_entry(geneData[varId],"geneData","name","name")
+        check_dict_entry(gene_data[var_id], "gene_data", "name", "name")
         # NOTE: uppercase is critical for the match!
-        varName = geneData[varId]["name"].upper()
+        var_name = gene_data[var_id]["name"].upper()
         # Also attempt matching of variant name to common EXPRESSION names related to exons
-        (isExon,exprType) = expr_is_exon_string(varName)
-        if (varName in exprNames) or isExon:
-            if varId not in matches:
-                matches.append(varId)
+        (is_exon, expr_type) = expr_is_exon_string(var_name)
+        if (var_name in expr_names) or is_exon:
+            if var_id not in matches:
+                matches.append(var_id)
+
     return matches
 
 
-# Given a CIVIC variant name and its corresponding hgvs expressions (if available),
-# generate a list of potential strings that will be used to match the variant to our input
-# For CNVs, variant matching is not based on HGVS, since input data is different
-def civic_matchStrings(varName, hgvsExpressions, dataType):
+def civic_match_strings(var_name, hgvs_expressions, data_type):
+    """
+    Given a CIViC variant name and its corresponding HGVS expressions (if available), generate a list of potential strings that will be used to match the CIViC record to an input variant.
+    Function applicable to all data types (SNV, CNV and EXPR); matching framework is different depending on the given data type.
+    For data types 'CNVs' and 'EXPR', matching is not based at all on HGVS expressions, and exclusively the CIViC variant name is returned.
+    :param var_name:		Name of CIViC variant record.
+    :param hgvs_expressions:	List of HGVS expressions retrieved from CIViC and corresponding to the provided CIViC variant record. Expectation is that this argument will only be non-empty for SNVs.
+    :param data_type:		['SNV', 'CNV', 'EXPR']
+                        	SNV:   Variant corresponds to genomic single nucleotide mutations and insertions/deletions.
+                        	CNV:   Variant corresponds to genomic copy number alterations.
+                        	EXPR:  Variant corresponds to differential gene expression data.
+				Type of data being queried.
+    :return:			List of strings used to match the CIViC variant record to the input variants.
+    """
     # Sanity check of provided argument
-    check_data_type(dataType)
-    check_argument(varName,"varName")
-    check_is_str(varName,"varName")
+    check_data_type(data_type)
+    check_argument(var_name, "var_name")
+    check_is_str(var_name, "var_name")
     # NOTE: uppercase is critical for the match!
-    varName = varName.upper()
-    hgvsExpressions = uppercase_list(hgvsExpressions,"hgvsExpressions")
+    var_name = var_name.upper()
+    hgvs_expressions = uppercase_list(hgvs_expressions, "hgvs_expressions")
 
-    matchStrings = []
-    # For dataTypes "CNV" and "EXPR", only the last step 5) is executed, since variant matching is not done at the HGVS level and is only on the variant record name
-    if dataType == 'SNV':
-        # 1) First, remove reference from annotation (ie. 'transcriptID:')
+    match_strings = []
+    # For data types "CNV" and "EXPR", only the last step 5) is executed, since variant matching is not done at the HGVS level but only at the level of the record name
+    if data_type == "SNV":
+        # 1) First, remove reference from annotation (i.e. "transcript_id:")
         # This step will be skipped for CNVs
-        for x in hgvsExpressions:
+        for x in hgvs_expressions:
             # CIViC HGVS expressions are of the form reference + single annotation
-            # eg. [NM_007313.2:c.1001C>T, NP_005148.2:p.Thr315Ile]
-            new = x.split(':')[-1].upper()
-            if new not in matchStrings:
-                matchStrings.append(new)
+            # e.g. [NM_007313.2:c.1001C>T, NP_005148.2:p.Thr315Ile]
+            new = x.split(":")[-1].upper()
+            if new not in match_strings:
+                match_strings.append(new)
                 # 2) Second, generate modified HGVS strings that comply with input table format
-                newAnnot = civic_hgvs_to_input(new)
+                new_annot = civic_hgvs_to_input(new)
                 # Resulting annotation will be None unless something was modified (special cases only)
-                if (newAnnot is not None) and (newAnnot not in matchStrings):
-                    matchStrings.append(newAnnot)
-        # 3) Third, generate a list of potential HGVS strings based on the actual CIVIC variant name
-        potentialHGVS = civicName_to_hgvs(varName)
-        for x in potentialHGVS:
-            # Sometimes, duplicated HGVS annotations will get generated (eg. V600E already has p.Val600Glu)
-            if x not in matchStrings:
-                matchStrings.append(x)
+                if (new_annot is not None) and (new_annot not in match_strings):
+                    match_strings.append(new_annot)
+        # 3) Third, generate a list of potential HGVS strings based on the actual CIViC variant name
+        potential_hgvs = civic_name_to_hgvs(var_name)
+        for x in potential_hgvs:
+            # Sometimes, duplicated HGVS annotations will get generated (e.g. V600E already has p.Val600Glu)
+            if x not in match_strings:
+                match_strings.append(x)
         # 4) Last, add potential positional matches for already existing strings (will only affect p. annotations)
-        for x in matchStrings:
+        for x in match_strings:
             start = extract_p_start(x)
-            # Only p. annotations will return a positional string (eg. p.Val600Glu -> p.Val600)
-            if (start is not None) and (start not in matchStrings): 
-                matchStrings.append(start)
-    # 5) Also, add CIVIC variant name to allow for matching using input 'descriptional' strings (eg. EXON 15 MUTATION)
-    # For dataTypes "CNV" and "EXPR", this string is the only relevant one for matching to CIVIC variants
-    matchStrings.append(varName)
+            # Only p. annotations will return a positional string (e.g. p.Val600Glu -> p.Val600)
+            if (start is not None) and (start not in match_strings): 
+                match_strings.append(start)
+    # 5) Also, add CIViC variant name to allow for matching using input "descriptional" strings (e.g. EXON 15 MUTATION)
+    # For data types "CNV" and "EXPR", this string is the only relevant one for matching to CIViC variants
+    match_strings.append(var_name)
 
-    return matchStrings
+    return match_strings
 
 
-
-# Given a set of one or more genomic alterations (SNV or CNV), generate a list of potential strings that will be used to match the variant in CIVIC eg. EXON 15 MUTATION, AMPLIFICATION
-# Function only appplicable to data types "SNV","CNV" (strings generated are different in each case)
-# Arguments impactAnnots and exonAnnots are optional for "SNV" argument. When provided, variant impacts will be used to generate additional potential record names. If exon annotations are provided, then impacts must also be provided, and there must be a 1-1 correspondance with this list (to determine if variant is intronic or exonic, from the impact)
-def input_matchStrings(varAnnotations, dataType, impactAnnots=[], exonAnnots=[]):
+def input_match_strings(var_annotations, data_type, impact_annots=[], exon_annots=[]):
+    """
+    Given a set of one or more genomic alterations (SNV or CNV), generate a list of potential strings that will be used to match the variant in CIViC e.g. EXON 15 MUTATION, AMPLIFICATION.
+    Function only appplicable to data types 'SNV' and 'CNV' (the strings generated are different in each case).
+    :param var_annotations:	List of genomic alterations (either SNV/InDels or CNVs, depending on the given data type). In the case of type 'SNV', the list can contain HGVS expressions.
+    :param data_type:		['SNV', 'CNV', 'EXPR']
+                        	SNV:   Variants correspond to genomic single nucleotide mutations and insertions/deletions.
+                        	CNV:   Variants correspond to genomic copy number alterations.
+                        	EXPR:  Variants correspond to differential gene expression data.
+				Type of data being queried.
+    :param impact_annots:	Optional (only supported for data_type='SNV'). When provided, variant impacts will be used to generate additional potential record names to match CIViC evidence. See README for more details about these annotations.
+    :param exon_annots:		Optional (only supported for data_type='SNV'). When provided, exon information will be used to generate additional potential record names to match CIViC evidence. Note that if exon annotations are provided, then variant impacts must also be provided, and there must be a 1-1 correspondance in the order between the listed variant impacts and the provided exon/intron annotations (as impacts are used to determine if variant is intronic or exonic). See README for more details about these annotations.
+    :return:			List of strings that can be used to match input variants to CIViC variant records.
+    """
     # Sanity check of provided arguments
-    check_data_type(dataType)
-    check_argument(varAnnotations,"varAnnotations")
+    check_data_type(data_type)
+    check_argument(var_annotations, "var_annotations")
     # NOTE: uppercase is critical for the match!
-    varAnnotations = uppercase_list(varAnnotations,"varAnnotations")
-    impactAnnots = uppercase_list(impactAnnots,"impactAnnots")
-    exonAnnots = uppercase_list(exonAnnots,"exonAnnots")
+    var_annotations = uppercase_list(var_annotations, "var_annotations")
+    impact_annots = uppercase_list(impact_annots, "impact_annots")
+    exon_annots = uppercase_list(exon_annots, "exon_annots")
 
-    matchStrings = []
+    match_strings = []
     # Used for SNV: Keep track of whether a string corresponds to an exact (True) or positional match (False)
-    isExact = []
-    # Used for SNV: isTrueExact can be used together with isExact to distinguish between a true exact match
-    # (isExact=True, isTrueExact=True) corresponding to input HGVS strings, or a more general match
-    # (isExact=True, isTrueExact=False) corresponding to descriptive terms eg. EXON 1 MUTATION with lower preference
-    isTrueExact = []
+    is_exact = []
+    # Used for SNV: is_true_exact can be used together with is_exact to distinguish between a true exact match
+    # (is_exact=True, is_true_exact=True) corresponding to input HGVS strings, or a more general match
+    # (is_exact=True, is_true_exact=False) corresponding to descriptive terms e.g. EXON 1 MUTATION with lower preference
+    is_true_exact = []
 
     ## a) Given a set of HGVS expressions, impacts and exon information for a single variant, generate a list of
-    ## potential strings that will be used to match the variant in CIVIC eg. EXON 15 MUTATION, TRUNCATING FRAMESHIFT
-    if dataType == 'SNV':
+    ## potential strings that will be used to match the variant in CIViC e.g. EXON 15 MUTATION, TRUNCATING FRAMESHIFT
+    if data_type == "SNV":
         # 1) First, add all (unique) HGVS annotations gathered from input table
-        # If matched, they will correspond to exact matches (True in isExact)
-        for varAnnot in varAnnotations:
-            if varAnnot not in matchStrings:
-                matchStrings.append(varAnnot)
-                isExact.append(True)
-                isTrueExact.append(True)
-                # Special case for protein extensions (eg. p.Ter130Tyrext*?) in input table
-                # Subset string to match CIVIC's format (p.Ter130Tyr)
-                if re.match(r'(P\.TER[0-9]+[A-Z]+)EXT', varAnnot):
-                    newVarAnnot = re.match(r'(P\.TER[0-9]+[A-Z]+)EXT', varAnnot).groups()[0]
-                    if newVarAnnot not in matchStrings:
-                        matchStrings.append(newVarAnnot)
-                        isExact.append(True)
-                        isTrueExact.append(True)
+        # If matched, they will correspond to exact matches (True in is_exact)
+        for var_annot in var_annotations:
+            if var_annot not in match_strings:
+                match_strings.append(var_annot)
+                is_exact.append(True)
+                is_true_exact.append(True)
+                # Special case for protein extensions (e.g. p.Ter130Tyrext*?) in input table
+                # Subset string to match CIViC's format (p.Ter130Tyr)
+                if re.match(r'(P\.TER[0-9]+[A-Z]+)EXT', var_annot):
+                    new_var_annot = re.match(r'(P\.TER[0-9]+[A-Z]+)EXT', var_annot).groups()[0]
+                    if new_var_annot not in match_strings:
+                        match_strings.append(new_var_annot)
+                        is_exact.append(True)
+                        is_true_exact.append(True)
         # 2) Second, add potential positional matches for already existing strings (will only affect p. annotations)
-        # If matched, they will correspond to positional matches (False in isExact)
-        for x in matchStrings:
+        # If matched, they will correspond to positional matches (False in is_exact)
+        for x in match_strings:
             start = extract_p_start(x)
-            # Only p. annotations will return a positional string (eg. p.Val600Glu -> p.Val600)
-            if (start is not None) and (start not in matchStrings):
-                matchStrings.append(start)
-                isExact.append(False)
-                isTrueExact.append(False)
+            # Only p. annotations will return a positional string (e.g. p.Val600Glu -> p.Val600)
+            if (start is not None) and (start not in match_strings):
+                match_strings.append(start)
+                is_exact.append(False)
+                is_true_exact.append(False)
 
-        # 3) Last, add potential variant synonyms for matching to CIVIC's record names (eg. EXON 15 MUTATION)
-        # If matched, they will correspond to exact matches (isExact=True) but not to true exact matches (isTrueExact=False)
+        # 3) Last, add potential variant synonyms for matching to CIViC's record names (e.g. EXON 15 MUTATION)
+        # If matched, they will correspond to exact matches (is_exact=True) but not to true exact matches (is_true_exact=False)
         ## Sanity check that both lists (impact and exon annotations) are the same length
-        newTags = []
-        ## Always include 'MUTATION' as a potential variant tag
-        newTags.append('MUTATION')
+        new_tags = []
+        ## Always include "MUTATION" as a potential variant tag
+        new_tags.append("MUTATION")
 
         # Iterate impact information to generate and include additional variant tags
-        for impact in impactAnnots:
+        for impact in impact_annots:
             # Introduce sanity check on variant impact being available, as this field is optional
             if not impact:
                 continue
             ## Generate potential additional variant tags based on the variant impact
-            ## (can be contained in impact eg. 'frameshift_variant&stop_gained')
-            if re.search('3_PRIME_UTR_VARIANT',impact):
-                newTags.append("3' UTR MUTATION")
+            ## (can be contained in impact e.g. "frameshift_variant&stop_gained")
+            if re.search("3_PRIME_UTR_VARIANT",impact):
+                new_tags.append("3' UTR MUTATION")
 
-            if re.search('5_PRIME_UTR_VARIANT',impact):
-                newTags.append("5' UTR MUTATION")
+            if re.search("5_PRIME_UTR_VARIANT",impact):
+                new_tags.append("5' UTR MUTATION")
 
-            if re.search('STOP_GAINED',impact):
-                newTags.append('TRUNCATING MUTATION')
+            if re.search("STOP_GAINED",impact):
+                new_tags.append("TRUNCATING MUTATION")
 
-            if re.search('FRAMESHIFT_VARIANT',impact):
-                newTags.append('FRAMESHIFT MUTATION')
+            if re.search("FRAMESHIFT_VARIANT",impact):
+                new_tags.append("FRAMESHIFT MUTATION")
 
         # Iterate exon information to generate and include additional variant tags
-        for i,exon in enumerate(exonAnnots):
+        for i,exon in enumerate(exon_annots):
             # Introduce sanity check on variant exon being available, as this field is optional
-            # Happens with impacts like eg. downstream_gene_variant, upstream_gene_variant, intergenic_region
+            # Happens with impacts like e.g. downstream_gene_variant, upstream_gene_variant, intergenic_region
             if not exon:
                 continue
             # When provided, exon info must be matched with impact information, to indicate if variant is exonic or intronic
             # Sanity check that both lists (impact and exon annotations) are the same length
-            if len(impactAnnots) != len(exonAnnots):
-                raise ValueError("Provided 'impactAnnots' and 'exonAnnots' are not of identical length. Please provide one variant impact annotation for each available exon annotation.")
+            if len(impact_annots) != len(exon_annots):
+                raise ValueError("Provided 'impact_annots' and 'exon_annots' are not of identical length. Please provide one variant impact annotation for each available exon annotation.")
             ## Based on rank (exon/intron) information, generate an additional tag
-            rank = exon.split('/')[0]
-            # After checking some examples, it seems that intron information is associated to variant impacts 'intron_variant'
-            # and 'sequence_feature' (can be contained in impact eg. 'splice_donor_variant&intron_variant')
-            # NOTE: any variant impact other than the above two will generate a tag 'EXON XX MUTATION',
-            # even 'synonymous' mutations
-            if re.search('INTRON_VARIANT',impactAnnots[i]) or re.search('SEQUENCE_FEATURE',impactAnnots[i]):
-                newTags.append('INTRON ' + rank + ' MUTATION')
+            rank = exon.split("/")[0]
+            # After checking some examples, it seems that intron information is associated to variant impacts "intron_variant"
+            # and "sequence_feature" (can be contained in impact e.g. "splice_donor_variant&intron_variant")
+            # NOTE: any variant impact other than the above two will generate a tag "EXON XX MUTATION",
+            # even "synonymous" mutations
+            if re.search("INTRON_VARIANT", impact_annots[i]) or re.search("SEQUENCE_FEATURE", impact_annots[i]):
+                new_tags.append("INTRON " + rank + " MUTATION")
             else:
-                newTags.append('EXON ' + rank + ' MUTATION')
-                ## As of 13/02/2019, only one case of variant name 'EXON XX FRAMESHIFT' (gene CALR)
-                if re.search('FRAMESHIFT_VARIANT',impactAnnots[i]):
-                    newTags.append('EXON ' + rank + ' FRAMESHIFT')
+                new_tags.append("EXON " + rank + " MUTATION")
+                ## As of 13/02/2019, only one case of variant name "EXON XX FRAMESHIFT" (gene CALR)
+                if re.search("FRAMESHIFT_VARIANT",impact_annots[i]):
+                    new_tags.append("EXON " + rank + " FRAMESHIFT")
 
         ## Add unique tags and assign corresponding information about type of match
-        for tag in newTags:
-            if tag not in matchStrings:
-                matchStrings.append(tag)
-                isExact.append(True)
-                isTrueExact.append(False)
+        for tag in new_tags:
+            if tag not in match_strings:
+                match_strings.append(tag)
+                is_exact.append(True)
+                is_true_exact.append(False)
 
-    # varAnnotations can contain one or multiple elements which correspond to CNV categories
-    if dataType == 'CNV':
-        newTags = []
-        # Iterate individual input annotations and attempt to match in CIVIC using known CNV record names used in the database
-        for varAnnot in varAnnotations:
-            # CIVIC seems to consider that GAIN and AMP are the same CNV
-            if (varAnnot == 'AMPLIFICATION') or (varAnnot == 'AMP') or (varAnnot == 'GAIN') or (varAnnot == 'DUPLICATION') or (varAnnot == 'DUP'):
-                newTags.append('AMPLIFICATION')
-            # CIVIC seems to consider that DELETION and LOSS are the same CNV
-            # Both CNV categories 'DELETION' and 'LOSS' occur in CIVIC
-            elif (varAnnot == 'DELETION') or (varAnnot == 'DEL') or (varAnnot == 'LOSS'):
-                newTags.append('DELETION')
-                newTags.append('LOSS')
-            newTags.append('COPY NUMBER VARIATION')
-        for tag in newTags:
-            if tag not in matchStrings:
-                matchStrings.append(tag)
-                isExact.append(True)
-                isTrueExact.append(True)
+    # var_annotations can contain one or multiple elements which correspond to CNV categories
+    if data_type == "CNV":
+        new_tags = []
+        # Iterate individual input annotations and attempt to match in CIViC using known CNV record names used in the database
+        for var_annot in var_annotations:
+            # CIViC seems to consider that GAIN and AMP are the same CNV
+            if (var_annot == "AMPLIFICATION") or (var_annot == "AMP") or (var_annot == "GAIN") or (var_annot == "DUPLICATION") or (var_annot == "DUP"):
+                new_tags.append("AMPLIFICATION")
+            # CIViC seems to consider that DELETION and LOSS are the same CNV
+            # Both CNV categories "DELETION" and "LOSS" occur in CIViC
+            elif (var_annot == "DELETION") or (var_annot == "DEL") or (var_annot == "LOSS"):
+                new_tags.append("DELETION")
+                new_tags.append("LOSS")
+            new_tags.append("COPY NUMBER VARIATION")
+        for tag in new_tags:
+            if tag not in match_strings:
+                match_strings.append(tag)
+                is_exact.append(True)
+                is_true_exact.append(True)
 
-    return (matchStrings,isExact,isTrueExact)
+    return (match_strings, is_exact, is_true_exact)
 
 
-# 
-# Possible tag combinations are either OVEREXPRESSION,EXPRESSION (when logFC>0) or UNDEREXPRESSION,EXPRESSION (when logFC<0)
-def getExpressionStrings(gene,logfc):
+def get_expression_strings(gene, logfc):
+    """
+    Given a differentially expressed gene and its corresponding logFC value, generate a list of potential strings that will be used to match the alteration in CIViC.
+    Possible tag combinations are either OVEREXPRESSION and EXPRESSION (when logFC>0), or UNDEREXPRESSION and EXPRESSION (when logFC<0).
+    :param gene:	One single gene ID (Entrez symbol, Entrez ID or CIViC ID) that was found to be differentially expressed.
+    :param logfc:	Corresponding log fold-change value for the gene, resulting from the differential expression analysis.
+    :return:		List of strings used to match input differentially expressed genes and CIViC records.
+    """
     # Sanity check of provided arguments
-    check_arguments([gene,logfc],["gene","logfc"])
-    check_is_str(gene,"gene")
+    check_arguments([gene, logfc], ["gene", "logfc"])
+    check_is_str(gene, "gene")
     # NOTE: uppercase is critical for the match!
     gene = gene.upper()
     # Sanity checks about non-empty number and sign
-    logfc = check_logFC(logfc,gene)
+    logfc = check_logfc(logfc, gene)
 
-    # Expression tags will be used to match expression records in CIVIC
+    # Expression tags will be used to match expression records in CIViC
     # expr_change = ""
-    matchStrings = []
-    # Generate expression tags to be able to match record in CIVIC
-    # As of 29/09/2019, only relevant records in CIVIC are: 'OVEREXPRESSION', 'EXPRESSION', 'UNDEREXPRESSION' (ignore remaining)
+    match_strings = []
+    # Generate expression tags to be able to match record in CIViC
+    # As of 29/09/2019, only relevant records in CIViC are: "OVEREXPRESSION", "EXPRESSION", "UNDEREXPRESSION" (ignore remaining)
     if logfc > 0:
-        matchStrings.append('OVEREXPRESSION')
-        # expr_change = 'OVEREXPRESSION'
+        match_strings.append("OVEREXPRESSION")
+        # expr_change = "OVEREXPRESSION"
     elif logfc < 0:
-        matchStrings.append('UNDEREXPRESSION')
-        # expr_change = 'UNDEREXPRESSION'
+        match_strings.append("UNDEREXPRESSION")
+        # expr_change = "UNDEREXPRESSION"
     else:
-        raise ValueError("Invalid logFC = '%s' for gene '%s'. Only differentially expressed genes are valid." %(logfc,gene))
+        raise ValueError("Invalid logFC = '%s' for gene '%s'. Only differentially expressed genes are valid." %(logfc, gene))
 
-    # EXPRESSION (directionless) tag will also be taken into account for matching to CIVIC records
-    matchStrings.append('EXPRESSION')
+    # EXPRESSION (directionless) tag will also be taken into account for matching to CIViC records
+    match_strings.append("EXPRESSION")
 
-    # Special case for gene 'CDKN2A': synonym 'p16' is used in CIVIC records (eg. 'p16 EXPRESSION')
+    # Special case for gene "CDKN2A": synonym "p16" is used in CIViC records (e.g. "p16 EXPRESSION")
     # Include these cases as well to be able to match them
     new_tags = []
-    if gene == 'CDKN2A':
-        for this_tag in matchStrings:
-            new_tag = 'P16 ' + this_tag
-            if new_tag not in matchStrings:
-                matchStrings.append(new_tag)
+    if gene == "CDKN2A":
+        for this_tag in match_strings:
+            new_tag = "P16 " + this_tag
+            if new_tag not in match_strings:
+                match_strings.append(new_tag)
 
-    return matchStrings
+    return match_strings
 
 
 # FIXME
-# Attempt match to a CIViC record using all available variant annotations for the given gene
-# A tier and match will always be retrieved (either exact, positional or all gene variants when no match)
-# FIXME
-# Given a list of variant annotations for a gene in the input table (HGVS but also synonym descriptive terms eg. EXON 15 MUTATION and positional
-# strings eg. p.Val600), and all CIVIC variant records for said gene, attempt mapping of any input annotations to one or more CIVIC records.
-# Return tier of the match (exact, positional, no match) and corresponding CIVIC variant records that were matched
+# I AM HERE
 
-# Do exhaustive search as there could be >1 perfect match in cases of redundancy (eg. E55FS and E55RFSTER11
-# both translate to p.Glu55fs) and there can be >1 positional matches (for SNV case, 'general' variants
-# eg. V600 have preference over the rest). Also, for SNVs in case of having two types of exact matches (truly exact
-# eg. V600E and descriptive term eg. EXON 15 MUTATION), give preference to the former as descriptive terms should only
-# be used when no true exact match was found.
+def match_variants_in_civic(gene, variants, var_map, data_type, impacts=[], exons=[]):
+    """
+    Match input variants from a given gene (either SNVs/InDels or CNVs) to provided variant-level CIViC records.
+    An exhaustive search of potential matches is performed by the algorithm, as there could be multiple hits matches in cases of redundancy (e.g. E55FS and E55RFSTER11 from CIViC both translate to p.Glu55fs), as well as multiple positional matches (note that for SNVs, so-called 'general' variants are prioritized over other potential positional hits, e.g. V600). Also, in case of having perfect and non-perfect matches available for SNVs (e.g. V600E and EXON 15 MUTATION), the former are prioritized over the second.
 
-# For CNV, inputStrings will be limited (usually only 1 or 2), and all will always correspond to exact matches (no positional)
-def match_variants_in_civic(gene, variants, varMap, dataType, impacts=[], exons=[]):
+given a list of variant annotations for the gene (), and all CIViC variant records for said gene, attempt mapping of any input annotations to one or more CIViC records.
+
+    :param gene:	One single gene identifier (Entrez symbol, Entrez ID or CIViC ID).
+    :param variants:	List of associated variant annotations to be matched to CIViC data (HGVS, synonym descriptive terms e.g. EXON 15 MUTATION and positional strings e.g. p.Val600).
+    :param var_map:	Nested dictionary of genes (must use same type of identifier as 'gene') and variants retrieved from CIViC. See README for more details about the specific structure.
+    :param data_type:	['SNV', 'CNV', 'EXPR']
+                        SNV:   Variants correspond to genomic single nucleotide mutations and insertions/deletions.
+                        CNV:   Variants correspond to genomic copy number alterations.
+                        EXPR:  Variants correspond to differential gene expression data.
+			Type of data being queried.
+    :param impacts:	Optional (only supported for data_type='SNV').
+    :param exons:	Optional (only supported for data_type='SNV'). 
+    :return:		Nested dictionary with fixed structure containing all tier categories and corresponding list of CIViC variant matches found in each case (if any). See README for more details about the returned dictionary (i.e. 'match_map').
+    """
+    # Returns dictionary with the following structure
     match = {"tier_1":[], "tier_1b":[], "tier_2":[], "tier_3":[], "tier_4":False}
 
     # Sanity check of provided arguments
-    check_data_type(dataType)
-    check_arguments([gene,variants],["gene","variants"])
-    check_is_str(gene,"gene")
-    check_is_list(variants,"variants")
-    check_is_dict(varMap,"varMap")
-    check_is_list(impacts,"impacts")
-    check_is_list(exons,"exons")
+    check_data_type(data_type)
+    check_arguments([gene, variants], ["gene", "variants"])
+    check_is_str(gene, "gene")
+    check_is_list(variants, "variants")
+    check_is_dict(var_map, "var_map")
+    check_is_list(impacts, "impacts")
+    check_is_list(exons, "exons")
     # NOTE: uppercase is critical for the match!
     gene = gene.upper()
-    variants = uppercase_list(variants,"variants")
-    impacts = uppercase_list(impacts,"impacts")
-    exons = uppercase_list(exons,"exons")
+    variants = uppercase_list(variants, "variants")
+    impacts = uppercase_list(impacts, "impacts")
+    exons = uppercase_list(exons, "exons")
 
-    # Function for generating additional synonym strings for input annotations (eg. EXON 15 MUTATION)
-    # isExact is a list of equal length to inputStrings, indicating whether a given string corresponds
+    # Function for generating additional synonym strings for input annotations (e.g. EXON 15 MUTATION)
+    # is_exact is a list of equal length to input_strings, indicating whether a given string corresponds
     # to an exact (True) or positional (False) match
-    # allVariants must refer to the same variant, eg. "c." and "p." annotations of the same variant
+    # allVariants must refer to the same variant, e.g. "c." and "p." annotations of the same variant
     # allImpacts and allExons can be empty. When exons is provided, then impacts must be provided as well and elements must have a 1-1 correspondance with the impacts.
-    (inputStrings,isExact,isTrueExact) = input_matchStrings(variants, dataType, impacts, exons)
+    (input_strings, is_exact, is_true_exact) = input_match_strings(variants, data_type, impacts, exons)
 
-    ## If gene is in CIVIC, possible tier levels are 1,2,3
-    if gene in varMap.keys():
-        for var_id in varMap[gene].keys():
-            check_dict_entry(varMap[gene][var_id],"varMap","name","name")
-            variant_name = varMap[gene][var_id]["name"]
-            check_dict_entry(varMap[gene][var_id],"varMap","hgvs","hgvs")
-            hgvs_expressions = varMap[gene][var_id]["hgvs"]
+    ## If gene is in CIViC, possible tier levels are 1,2,3
+    if gene in var_map.keys():
+        for var_id in var_map[gene].keys():
+            check_dict_entry(var_map[gene][var_id], "var_map", "name", "name")
+            variant_name = var_map[gene][var_id]["name"]
+            check_dict_entry(var_map[gene][var_id], "var_map", "hgvs", "hgvs")
+            hgvs_expressions = var_map[gene][var_id]["hgvs"]
 
-            # Generate list of strings that will be used to match input variants to CIVIC database
+            # Generate list of strings that will be used to match input variants to CIViC database
             # Returned list always has at least length=1 (in this case, containing only variant name)
-            # For dataType=CNV, variant matching is not based on HGVS, so matchStrings will only contain the variant name
-            civicStrings = civic_matchStrings(variant_name, hgvs_expressions, dataType)
+            # For data_type=CNV, variant matching is not based on HGVS, so match_strings will only contain the variant name
+            civic_strings = civic_match_strings(variant_name, hgvs_expressions, data_type)
 
-            # Iterate input annotations strings and attempt match to any CIVIC variant string
+            # Iterate input annotations strings and attempt match to any CIViC variant string
             # The position of each input string corresponds to the type of match (true exact, synonym exact or positional)
-            for indx,inputAnnot in enumerate(inputStrings):
-                if inputAnnot in civicStrings:
+            for indx,inputAnnot in enumerate(input_strings):
+                if inputAnnot in civic_strings:
                     # Determine type of match using its position and store accordingly
-                    # For CNV, all matches will be exact and true exact matches (either variant is in CIVIC or not)
-                    if isExact[indx]:
+                    # For CNV, all matches will be exact and true exact matches (either variant is in CIViC or not)
+                    if is_exact[indx]:
                         # For SNV: give preference to truly exact matches over descriptive synonym terms
-                        # eg. report V600E over EXON 15 MUTATION
-                        if isTrueExact[indx]:
-                            # For SNV: True exact match (eg. V600E)
-                            # For CNV: all exact matches will also be true exact matches (either CNV is in CIVIC or not)
-                            # There could be 0,1,>1 exact matches (eg. DELETION + LOSS + COPY NUMBER for cnvs)
+                        # e.g. report V600E over EXON 15 MUTATION
+                        if is_true_exact[indx]:
+                            # For SNV: True exact match (e.g. V600E)
+                            # For CNV: all exact matches will also be true exact matches (either CNV is in CIViC or not)
+                            # There could be 0,1,>1 exact matches (e.g. DELETION + LOSS + COPY NUMBER for cnvs)
                             if var_id not in match["tier_1"]:
                                 match["tier_1"].append(var_id)
                         else:
-                            # For SNV: descriptive term match (eg. EXON 15 MUTATION, FRAMESHIFT MUTATION)
+                            # For SNV: descriptive term match (e.g. EXON 15 MUTATION, FRAMESHIFT MUTATION)
                             # There could be 0,1,>1 synonym matches
                             if var_id not in match["tier_1b"]:
                                 match["tier_1b"].append(var_id)
@@ -578,54 +636,53 @@ def match_variants_in_civic(gene, variants, varMap, dataType, impacts=[], exons=
                         # There could be 0,1,>1 positional matches
                         if var_id not in match["tier_2"]:
                             match["tier_2"].append(var_id)
-                # For CNV: When there is no exact match for a 'DELETION', also consider special CIVIC CNV records related to exons (these will be positional matches)
+                # For CNV: When there is no exact match for a "DELETION", also consider special CIViC CNV records related to exons (these will be positional matches)
                 else:
-                    # TODO CNV: Generalize for DELETION and AMPLIFICATION as well
-                    if (dataType == 'CNV') and (inputAnnot == 'DELETION'):
-                        # In CNV case, civicStrings corresponds to the CIVIC variant name (single string)
-                        for tempString in civicStrings:
-                            # Look for special cases like eg. 'EXON 5 DELETION', 'EXON 1-2 DELETION' or '3' EXON DELETION'
-                            isExon = cnv_is_exon_string(tempString)
-                            if isExon:
+                    if (data_type == "CNV") and (inputAnnot == "DELETION"):
+                        # In CNV case, civic_strings corresponds to the CIViC variant name (single string)
+                        for temp_string in civic_strings:
+                            # Look for special cases like e.g. "EXON 5 DELETION", "EXON 1-2 DELETION" or "3' EXON DELETION"
+                            is_exon = cnv_is_exon_string(temp_string)
+                            if is_exon:
                                 # These special cases are accounted for as positional matches (tier 2)
                                 # There could be 0,1,>1 positional matches
                                 if var_id not in match["tier_2"]:
                                     match["tier_2"].append(var_id)
 
-        # Once all CIVIC variants have been iterated, determine final tier and corresponding matched variants
+        # Once all CIViC variants have been iterated, determine final tier and corresponding matched variants
 
-        # For CNV: either exact or positional matches will occurr due to the implementation design. Positional matches will correspond to EXON records (eg. EXON 1-2 DELETION, 3' EXON DELETION..)
-        # For SNV: if there are positional matches, check for preferential positional matches, ie. general variants (like V600)
-        if match["tier_2"] and (dataType == 'SNV'):
-            for tmpId in match["tier_2"]:
+        # For CNV: either exact or positional matches will occurr due to the implementation design. Positional matches will correspond to EXON records (e.g. EXON 1-2 DELETION, 3' EXON DELETION..)
+        # For SNV: if there are positional matches, check for preferential positional matches, i.e. general variants (like V600)
+        if match["tier_2"] and (data_type == "SNV"):
+            for tmp_id in match["tier_2"]:
                 # Variant was already matched, so it was already checked for entry "Name" existing
-                tmpName = varMap[gene][tmpId]["name"]
-                isGeneral = check_general_variant(tmpName)
-                if isGeneral:
+                tmp_name = var_map[gene][tmp_id]["name"]
+                is_general = check_general_variant(tmp_name)
+                if is_general:
                     # Stop as soon as a general variant is found and report only this
-                    match["tier_2"] = [tmpId]
+                    match["tier_2"] = [tmp_id]
                     break
 
         # If no match was found, then tier case is 3, and return all relevant variants
         if not (match["tier_1"] or match["tier_1b"] or match["tier_2"]):
-            # For SNV: when input variant could not be matched in CIVIC (tier3), return all CIVIC variants associated to the given gene but that do not correspond to a CNV or EXPRESSION related variant
-            if dataType == 'SNV':
-                match["tier_3"] = civic_return_all_snvs(varMap[gene])
-                # NOTE: Sanity check for situation where gene does not contain any variant records for the requested data type (eg. all are CNVs)
+            # For SNV: when input variant could not be matched in CIViC (tier3), return all CIViC variants associated to the given gene but that do not correspond to a CNV or EXPRESSION related variant
+            if data_type == "SNV":
+                match["tier_3"] = civic_return_all_snvs(var_map[gene])
+                # NOTE: Sanity check for situation where gene does not contain any variant records for the requested data type (e.g. all are CNVs)
                 # Use dummy variant name to keep track of these situations
                 if not match["tier_3"]:
                     match["tier_3"] = ["NON_SNV_MATCH_ONLY"]
 
-            # For CNV: when input cnv could not be matched in CIVIC (tier3), return all CIVIC cnvs associated the given gene (if any)
-            # ie. not all CIVIC records are returned but only those that are matched to a 'CNV' tags
-            if dataType == 'CNV':
-                match["tier_3"] = civic_return_all_cnvs(varMap[gene])
-                # NOTE: Sanity check for situation where gene does not contain any variant records for the requested data type (eg. all are SNVs)
+            # For CNV: when input cnv could not be matched in CIViC (tier3), return all CIViC cnvs associated the given gene (if any)
+            # i.e. not all CIViC records are returned but only those that are matched to a "CNV" tags
+            if data_type == "CNV":
+                match["tier_3"] = civic_return_all_cnvs(var_map[gene])
+                # NOTE: Sanity check for situation where gene does not contain any variant records for the requested data type (e.g. all are SNVs)
                 # Use dummy variant name to keep track of these situations
                 if not match["tier_3"]:
                     match["tier_3"] = ["NON_CNV_MATCH_ONLY"]
 
-    # If gene is not in CIVIC, tier level is 4 and match will be empty
+    # If gene is not in CIViC, tier level is 4 and match will be empty
     else:
         # Sanity check that no other match should have been found
         if (match["tier_1"] or match["tier_1b"] or match["tier_2"] or match["tier_3"]):
@@ -637,59 +694,59 @@ def match_variants_in_civic(gene, variants, varMap, dataType, impacts=[], exons=
 
 
 # For EXPRESSION data
-# TODO: tier2 case is not defined for this kind of data (either tier1 when gene is matched, tier3 or tier4)
-def match_expression_in_civic(gene, expression_strings, varMap):
+def match_expression_in_civic(gene, expression_strings, var_map):
+    # NOTE: tier1b and tier2 are not supported for this kind of data
     match = {"tier_1":[], "tier_1b":[], "tier_2":[], "tier_3":[], "tier_4":False}
 
     # Sanity check of provided arguments
     check_arguments([gene,expression_strings],["gene","expression_strings"])
     check_is_str(gene,"gene")
     check_is_list(expression_strings,"expression_strings")
-    check_is_dict(varMap,"varMap")
+    check_is_dict(var_map,"var_map")
     # NOTE: uppercase is critical for the match!
     gene = gene.upper()
     expression_strings = uppercase_list(expression_strings,"expression_strings")
 
-    # If gene is in CIVIC, only possible tier level is 1
-    if gene in varMap.keys():
-        for var_id in varMap[gene].keys():
+    # If gene is in CIViC, only possible tier level is 1
+    if gene in var_map.keys():
+        for var_id in var_map[gene].keys():
             # Only variant name is relevant in this case
             # Disregard HGVS strings for expression variants
-            check_dict_entry(varMap[gene][var_id],"varMap","name","name")
-            variant_name = varMap[gene][var_id]["name"]
+            check_dict_entry(var_map[gene][var_id],"var_map","name","name")
+            variant_name = var_map[gene][var_id]["name"]
 
-            # For dataType=EXPR (in truth, dataType!=SNV), variant matching is not based on HGVS, so matchStrings will only contain the variant name and the list of HGVS is empty
-            civicStrings = civic_matchStrings(variant_name, hgvsExpressions=[], dataType="EXPR")
+            # For data_type=EXPR (in truth, data_type!=SNV), variant matching is not based on HGVS, so match_strings will only contain the variant name and the list of HGVS is empty
+            civic_strings = civic_match_strings(variant_name, hgvs_expressions=[], data_type="EXPR")
 
-            # Iterate available expression tags for the given gene and attempt match to a CIVIC record for that gene
-            # Opposite to the SNV and CNV case, here there is no tier hierarchy, ie. gene expression is either matched in CIVIC or not
+            # Iterate available expression tags for the given gene and attempt match to a CIViC record for that gene
+            # Opposite to the SNV and CNV case, here there is no tier hierarchy, i.e. gene expression is either matched in CIViC or not
             for expr_tag in expression_strings:
-                if expr_tag in civicStrings:
-                    # There could be 0,1,>1 exact matches (eg. OVEREXPRESSION, EXPRESSION)
+                if expr_tag in civic_strings:
+                    # There could be 0,1,>1 exact matches (e.g. OVEREXPRESSION, EXPRESSION)
                     if var_id not in match["tier_1"]:
                         match["tier_1"].append(var_id)
 
             # Special case for EXPRESSION records related to EXONS: manually add them as matches when necessary
-            # Specific expression change must be identical in order to consider them as matched: eg. 'OVEREXPRESSION' and 'EXON 18 OVEREXPRESSION'
-            for this_string in civicStrings:
-                (isExon,exprType) = expr_is_exon_string(this_string)
-                if isExon and exprType:
-                    # FIXME: Records of the type 'P16 EXPRESSION' would be missed
-                    if exprType in expression_strings:
+            # Specific expression change must be identical in order to consider them as matched: e.g. "OVEREXPRESSION" and "EXON 18 OVEREXPRESSION"
+            for this_string in civic_strings:
+                (is_exon, expr_type) = expr_is_exon_string(this_string)
+                if is_exon and expr_type:
+                    # FIXME: Records of the type "P16 EXPRESSION" would be missed
+                    if expr_type in expression_strings:
                         if var_id not in match["tier_1"]:
                             match["tier_1"].append(var_id)
 
-        # If no exact match was found, then tier case is 3, and return all relevant EXPRESSION records for the current gene (if any are found in CIVIC)
+        # If no exact match was found, then tier case is 3, and return all relevant EXPRESSION records for the current gene (if any are found in CIViC)
         # If there are no matching records for tier3, then this category will also be empty in the returned dictionary
         if not (match["tier_1"] or match["tier_1b"] or match["tier_2"]):
-            # Not all CIVIC records are returned but only those that are matched to a 'EXPRESSION' tag
-            match["tier_3"] = civic_return_all_expr(varMap[gene])
-            # NOTE: Sanity check for situation where gene does not contain any variant records for the requested data type (eg. all are SNVs)
+            # Not all CIViC records are returned but only those that are matched to a "EXPRESSION" tag
+            match["tier_3"] = civic_return_all_expr(var_map[gene])
+            # NOTE: Sanity check for situation where gene does not contain any variant records for the requested data type (e.g. all are SNVs)
             # Use dummy variant name to keep track of these situations
             if not match["tier_3"]:
                 match["tier_3"] = ["NON_EXPR_MATCH_ONLY"]
 
-    # If gene is not in CIVIC, tier level is 4 and match will be empty
+    # If gene is not in CIViC, tier level is 4 and match will be empty
     else:
         # Sanity check that no other match should have been found
         if (match["tier_1"] or match["tier_1b"] or match["tier_2"] or match["tier_3"]):
@@ -700,12 +757,12 @@ def match_expression_in_civic(gene, expression_strings, varMap):
     return match
 
 
-def add_match(matchMap,gene,variant,match):
+def add_match(match_map,gene,variant,match):
     sorted_tiers = ["tier_1","tier_1b","tier_2","tier_3","tier_4"]
 
     # Sanity check of provided arguments
-    check_arguments([matchMap,gene,variant,match],["matchMap","gene","variant","match"])
-    check_is_dict(matchMap,"matchMap")
+    check_arguments([match_map,gene,variant,match],["match_map","gene","variant","match"])
+    check_is_dict(match_map,"match_map")
     check_is_str(gene,"gene")
     check_is_str(variant,"variant")
     check_is_dict(match,"match")
@@ -719,76 +776,92 @@ def add_match(matchMap,gene,variant,match):
         else:
             check_is_bool(match[this_tier],this_tier)
     # Sanity check that gene and variant are keys of the dict
-    check_dict_entry(matchMap,"matchMap",gene,"gene")
-    check_dict_entry(matchMap[gene],"matchMap",variant,"variant")
+    check_dict_entry(match_map,"match_map",gene,"gene")
+    check_dict_entry(match_map[gene],"match_map",variant,"variant")
     # Overwritte any existing matches already assigned to the current variant
-    matchMap[gene][variant] = {}
+    match_map[gene][variant] = {}
 
     # Keep track of all the variant ids matched across tiers for the current gene + variant
-    matchedIds = []
-    # Add match results to the current gene + variant in matchMap
+    matched_ids = []
+    # Add match results to the current gene + variant in match_map
     for x in match.keys():
         if x == "tier_4":
-            matchMap[gene][variant][x] = match[x]
+            match_map[gene][variant][x] = match[x]
         else:
-            matchMap[gene][variant][x] = []
-            for varId in match[x]:
-                matchMap[gene][variant][x].append(varId)
-                # It is possible that the same CIVIC variant id has been matched for several tiers
-                if varId not in matchedIds:
-                    matchedIds.append(varId)
+            match_map[gene][variant][x] = []
+            for var_id in match[x]:
+                match_map[gene][variant][x].append(var_id)
+                # It is possible that the same CIViC variant id has been matched for several tiers
+                if var_id not in matched_ids:
+                    matched_ids.append(var_id)
 
-    return (matchMap,matchedIds)
+    return (match_map, matched_ids)
 
 
-# FIXME
-# TODO: User can provide their own varMap (eg. when filters need to be applied) -> add NOTE or warning about anything not being provided will be interpreted as not available in CIVIC
-def match_in_civic(varData, dataType, identifier_type, select_tier="all", varMap=None):
+def match_in_civic(var_data, data_type, identifier_type, select_tier="all", var_map=None):
+    """
+    Match input molecular alterations to variant-level CIViC information.
+    :param var_data:		
+    :param data_type:		['SNV', 'CNV', 'EXPR']
+                        	SNV:   Variants correspond to genomic single nucleotide mutations and insertions/deletions.
+                        	CNV:   Variants correspond to genomic copy number alterations.
+                        	EXPR:  Variants correspond to differential gene expression data.
+				Type of data being queried.
+    :param identifier_type:	['entrez_symbol', 'entrez_id', 'civic_id']
+                        	entrez_symbol:   Entrez gene symbol.
+                        	entrez_id: 	 Entrez gene identifier.
+                        	civic_id: 	 CIViC internal identifier.
+                        	Type of gene identifier used in your query. Defaults to 'entrez_symbol'.
+    :param select_tier:		
+    :param var_map:		NOTE: when supplying custom var_map (e.g. when filters need to be applied to CIViC data), anything that is not provided will be interpreted as not available in CIViC.
+    :return:			Nested dictionary with fixed structure containing all tier categories and corresponding list of CIViC variant matches found in each case (if any).
+    """
+    # Hierarchy of tier classes (descending priority)
     sorted_tiers = ["tier_1","tier_1b","tier_2","tier_3","tier_4"]
 
     # Sanity check of provided arguments
-    check_argument(varData,"varData")
-    check_is_dict(varData,"varData")
-    check_data_type(dataType)
+    check_argument(var_data,"var_data")
+    check_is_dict(var_data,"var_data")
+    check_data_type(data_type)
     check_identifier_type(identifier_type)
     # Process and sanity check provided select_tier (expected format, valid values, etc.)
     select_tier = check_tier_selection(select_tier,sorted_tiers)
 
-    matchMap = {}
-    matchedIds = []     # keep track of all matched variant ids across genes and tiers
+    match_map = {}
+    matched_ids = []     # keep track of all matched variant ids across genes and tiers
 
-    # Check if an existing varMap was provided or if CIVIC needs to be queried
-    if (varMap is None) or (not varMap):
+    # Check if an existing var_map was provided or if CIViC needs to be queried
+    if (var_map is None) or (not var_map):
         from query import query_civic
         # gene -> variant -> null
-        all_genes = list(varData.keys())
-        varMap = query_civic(all_genes, identifier_type)
-    # TODO: Check correct structure of varMap?
+        all_genes = list(var_data.keys())
+        var_map = query_civic(all_genes, identifier_type)
+    # TODO: Check correct structure of var_map?
     else:
-        check_is_dict(varMap,"varMap")
+        check_is_dict(var_map,"var_map")
 
     # gene -> variant -> null
     # where variant -> var="dna|prot|impact|exon|lineNumber"
-    for gene in varData.keys():
+    for gene in var_data.keys():
         gene = check_empty_input(gene, "Gene", isRequired=True)
-        if gene not in matchMap.keys():
-            matchMap[gene] = {}
-        for variant in varData[gene].keys():
+        if gene not in match_map.keys():
+            match_map[gene] = {}
+        for variant in var_data[gene].keys():
             variant = check_empty_input(variant, "Variant", isRequired=True)
             # Overwrite duplicated variant ids (should never happen)
-            matchMap[gene][variant] = {}
+            match_map[gene][variant] = {}
             variants = []
             impactArr = []
             exonArr = []
 
             varArr = variant.split("|")
-            if dataType == "SNV":
+            if data_type == "SNV":
                 # Sanity check for expected SNV format (at least 4 fields should exist, even if empty)
                 if (len(varArr) < 4):
                     raise ValueError("Must provide at least 4 fields to describe a SNV variant (even if some can be empty): 'dna|prot|impact|exon|..|'")
                 # Format: var="dna|prot|[impact]|[exon]|..|"
-                # NOTE: all fields can contain >1 terms separated with ',' (no spaces). Fields 'dna' and 'prot' are required and 'impacts' and 'exons' are optional
-                # NOTE: there might be additional fields after, eg. 'lineNumber' when data has been parsed from a file
+                # NOTE: all fields can contain >1 terms separated with "," (no spaces). Fields "dna" and "prot" are required and "impacts" and "exons" are optional
+                # NOTE: there might be additional fields after, e.g. "lineNumber" when data has been parsed from a file
                 cVars = varArr[0]
                 pVars = varArr[1]
                 impacts = varArr[2]
@@ -796,16 +869,16 @@ def match_in_civic(varData, dataType, identifier_type, select_tier="all", varMap
 
                 # Sanity check for required and optional fields
 
-                # Field 'Variant_dna' must exist and cannot contain empty values
+                # Field "Variant_dna" must exist and cannot contain empty values
                 cVarArr = parse_input(cVars, "Variant_dna", isRequired=False)
-                # Field 'Variant_prot' must exist but can contain empty values
+                # Field "Variant_prot" must exist but can contain empty values
                 pVarArr = parse_input(pVars, "Variant_prot", isRequired=False)
                 for cVar in cVarArr:
                     # Sanity check that c. variant is not empty (as this field is not always required)
                     if not cVar:
                         continue
                     # Sanity check that variant starts with "c."
-                    check_is_cHGVS(cVar)
+                    check_is_chgvs(cVar)
                     if cVar not in variants:
                         variants.append(cVar)
                 for pVar in pVarArr:
@@ -813,65 +886,71 @@ def match_in_civic(varData, dataType, identifier_type, select_tier="all", varMap
                     if not pVar:
                         continue
                     # Sanity check that variant starts with "p."
-                    check_is_pHGVS(pVar)
+                    check_is_phgvs(pVar)
                     if pVar not in variants:
                         variants.append(pVar)
-                # Field 'Variant_impact' is optional and can contain empty values
+                # Field "Variant_impact" is optional and can contain empty values
                 impactArr = parse_input(impacts, "Variant_impact", isRequired=False)
-                # Field 'Variant_exon' is optional and can contain empty values
+                # Field "Variant_exon" is optional and can contain empty values
                 exonArr = parse_input(exons, "Variant_exon", isRequired=False)
 
                 # Since c. and p. annotations can be optionally provided for each variant, sanity check that at least 1 annotation was provided (of either type)
                 if not variants:
                     raise ValueError("At least one non-empty variant annotation (either 'c.' or 'p.') must be provided per variant!")
 
-            if dataType == "CNV":
+            if data_type == "CNV":
                 # Format: var="cnv|.."
-                # NOTE: CNV field can contain >1 terms separated with ',' (no spaces)
-                # NOTE: there might be additional fields after, eg. 'lineNumber' when data has been parsed from a file
+                # NOTE: CNV field can contain >1 terms separated with "," (no spaces)
+                # NOTE: there might be additional fields after, e.g. "lineNumber" when data has been parsed from a file
                 cnvVars = varArr[0]
                 variants = parse_input(cnvVars, "Variant_cnv", isRequired=True)
 
-            if dataType == "EXPR":
+            if data_type == "EXPR":
                 # Format: expr="logFC|.."
                 # NOTE: logFC field should be a single number (sign will determine if gene is overexpressed or underexpressed)
-                # NOTE: there might be additional fields after, eg. 'lineNumber' when data has been parsed from a file
-                logFC = varArr[0]
-                variants = getExpressionStrings(gene,logFC)
+                # NOTE: there might be additional fields after, e.g. "lineNumber" when data has been parsed from a file
+                logfc = varArr[0]
+                variants = get_expression_strings(gene, logfc)
 
 # TODO: check that data type is valid and one of the 3 options
             # tier -> [matched_vars]
-            if (dataType == "SNV") or (dataType == "CNV"):
-                match = match_variants_in_civic(gene, variants, varMap, dataType, impacts=impactArr, exons=exonArr)
+            if (data_type == "SNV") or (data_type == "CNV"):
+                match = match_variants_in_civic(gene, variants, var_map, data_type, impacts=impactArr, exons=exonArr)
 
-                # Avoid executing unnecessary filter when select_tier='all' (as resulting dict will be identical)
+                # Avoid executing unnecessary filter when select_tier="all" (as resulting dict will be identical)
                 if select_tier != "all":
                     match = filter_match(match, select_tier)
 
-            # In the case of EXPRESSION data, only tier1 is possible (either CIVIC record was matched or not)
-            if (dataType == "EXPR"):
-                match = match_expression_in_civic(gene, variants, varMap)
+            # In the case of EXPRESSION data, only tier1 is possible (either CIViC record was matched or not)
+            if (data_type == "EXPR"):
+                match = match_expression_in_civic(gene, variants, var_map)
 
             # Add the match to the current entry for gene + variant
             # gene -> variant -> {tier1,tier1b..} -> [matched_vars]
-            (matchMap,allIds) = add_match(matchMap,gene,variant,match)
+            (match_map,allIds) = add_match(match_map,gene,variant,match)
 
             # Keep track of all the variant ids matched across genes and tiers
-            for varId in allIds:
-                if varId not in matchedIds:
-                    matchedIds.append(varId)
+            for var_id in allIds:
+                if var_id not in matched_ids:
+                    matched_ids.append(var_id)
 
-    # At this point, all input gene + variants in varData have been matched to CIVIC
-    # Filter varMap used to match CIVIC info based on the matched variant ids (to avoid returning unnecessary records)
+    # At this point, all input gene + variants in var_data have been matched to CIViC
+    # Filter var_map used to match CIViC info based on the matched variant ids (to avoid returning unnecessary records)
     from filtering import filter_civic
-    varMap = filter_civic(varMap, var_id_in=matchedIds, output_empty=False)
+    var_map = filter_civic(var_map, var_id_in=matched_ids, output_empty=False)
 
-    # Return matchMap, list of all matched variant ids, and associated variant records retrieved from CIVIC (or provided by user), already filtered for the matched variants
-    return (matchMap,matchedIds,varMap)
+    # Return match_map, list of all matched variant ids, and associated variant records retrieved from CIViC (or provided by user), already filtered for the matched variants
+    return (match_map, matched_ids, var_map)
 
 
 # TODO: make match of tier case-insensitive?
 def filter_match(match, select_tier):
+    """
+
+    :param match:	
+    :param select_tier:	
+    :return:		
+    """
     sorted_tiers = ["tier_1","tier_1b","tier_2","tier_3","tier_4"]
 
     # Sanity check of provided arguments
@@ -922,283 +1001,323 @@ def filter_match(match, select_tier):
     for tier in sorted_tiers:
         if tier in keepTiers:
             if tier != "tier_4":
-                for varId in match[tier]:
-                    new[tier].append(varId)
+                for var_id in match[tier]:
+                    new[tier].append(var_id)
 
     # Always check if current match corresponds to tier_4 after filtering
-    # eg. if only tier_1 is selected and current match did not have any
+    # e.g. if only tier_1 is selected and current match did not have any
     if not (new["tier_1"] or new["tier_1b"] or new["tier_2"] or new["tier_3"]):
         new["tier_4"] = True
 
     return new
 
 
-def filter_matches(matchMap, select_tier):
+def filter_matches(match_map, select_tier):
+    """
+
+    :param match_map:	
+    :param select_tier:	
+    :return:		
+    """
     sorted_tiers = ["tier_1","tier_1b","tier_2","tier_3","tier_4"]
 
     # Check provided argument
-    check_argument(matchMap,"matchMap")
-    check_is_dict(matchMap,"matchMap")
+    check_argument(match_map,"match_map")
+    check_is_dict(match_map,"match_map")
 
-    cleanMap = {}
-    matchedIds = []
+    clean_map = {}
+    matched_ids = []
 
     # gene -> variant -> {tier1,tier1b..} -> [matched_vars]
     # where variant -> var="dna|prot|impact|exon|lineNumber"
-    for gene in matchMap.keys():
-        if gene not in cleanMap.keys():
-            cleanMap[gene] = {}
-        for variant in matchMap[gene].keys():
-            cleanMap[gene][variant] = {}
-            new = filter_match(matchMap[gene][variant], select_tier)
+    for gene in match_map.keys():
+        if gene not in clean_map.keys():
+            clean_map[gene] = {}
+        for variant in match_map[gene].keys():
+            clean_map[gene][variant] = {}
+            new = filter_match(match_map[gene][variant], select_tier)
             # Add the filtered match to the current entry for gene + variant
-            (cleanMap,allIds) = add_match(cleanMap,gene,variant,new)
+            (clean_map,allIds) = add_match(clean_map,gene,variant,new)
             # Keep track of all the variant ids matched across genes and tiers
-            for varId in allIds:
-                if varId not in matchedIds:
-                    matchedIds.append(varId)
+            for var_id in allIds:
+                if var_id not in matched_ids:
+                    matched_ids.append(var_id)
 
-    return (cleanMap,matchedIds)
+    return (clean_map, matched_ids)
 
 
-# Given a list of disease names, first filter out those matching the black-listed terms (if any), and from the remaining set, return either:
-#   - Subset of diseases matching white-listed terms - partial match (eg. 'Melanoma')
-#   - If previous is not available, subset of matching high-level diseases - exact match (eg. 'Cancer', 'Solid tumor')
-#   - If previous is not available, return all available diseases (ie. so, original set except those matched to the black list, if any)
-def classify_diseases(diseaseArr, disease_name_not_in, disease_name_in, alt_disease_names):
+
+def classify_diseases(disease_list, disease_name_not_in, disease_name_in, alt_disease_names):
+    """
+    Given a list of disease names, first filter out those matching the non-allowed terms (if any), and from the remaining set, return either:
+       - Subset of diseases matching white-listed terms - partial match (e.g. 'Melanoma')
+       - If previous is not available, subset of matching high-level diseases - exact match (e.g. 'Cancer', 'Solid tumor')
+       - If previous is not available, return all available diseases (i.e. so, original set except those matched to the non-allowed list, if any)
+    :param disease_list:	
+    :param disease_name_not_in:	
+    :param disease_name_in:	
+    :param alt_disease_names:	
+    :return:		
+    """
     # Sanity check and uppercase terms in all the provided lists
-    diseaseArr = uppercase_list(diseaseArr,"diseaseArr")
-    disease_name_not_in = uppercase_list(disease_name_not_in,"disease_name_not_in")
-    disease_name_in = uppercase_list(disease_name_in,"disease_name_in")
-    alt_disease_names = uppercase_list(alt_disease_names,"alt_disease_names")
+    disease_list = uppercase_list(disease_list, "disease_list")
+    disease_name_not_in = uppercase_list(disease_name_not_in, "disease_name_not_in")
+    disease_name_in = uppercase_list(disease_name_in, "disease_name_in")
+    alt_disease_names = uppercase_list(alt_disease_names, "alt_disease_names")
 
-    ## Keep track of diseases that did not pass the black-list filter
-    blackMatched = []
-    ## Keep track of diseases that passed the black-list filter
-    cleanSet = []
-    ## Final list of matched diseases (associated to one of 3 categories depending on match type: 'ct', 'gt' or 'nct')
+    ## Keep track of diseases that did not pass the non-allowed filter
+    non_allowed_matched = []
+    ## Keep track of diseases that passed the non-allowed filter
+    clean_set = []
+    ## Final list of matched diseases (associated to one of 3 categories depending on match type: "ct", "gt" or "nct")
     matched = []
-    ## Keep track of which type of disease specificy was matched in the end ('ct', 'gt' or 'nct')
-    ctArr = []
-    gtArr = []
-    nctArr = []
+    ## Keep track of which type of disease specificy was matched in the end ("ct", "gt" or "nct")
+    ct_list = []
+    gt_list = []
+    nct_list = []
 
-    ## 1) First, remove diseases that partially match black-listed terms (if any are provided)
-    # NOTE: PARTIAL matches to the black list are allowed! eg:
-    #   - including 'small' will remove 'non-small cell lung cancer' and 'lung small cell carcinoma'
-    #   - including 'non-small' will remove 'non-small cell lung cancer' but not 'lung small cell carcinoma'
+    ## 1) First, remove diseases that partially match non-allowed terms (if any are provided)
+    # NOTE: PARTIAL matches to the non-allowed terms are permited! eg:
+    #   - including "small" will remove "non-small cell lung cancer" and "lung small cell carcinoma"
+    #   - including "non-small" will remove "non-small cell lung cancer" but not "lung small cell carcinoma"
     if disease_name_not_in:
-        # Iterate available diseases and keep track of those that partially match to black list (there can be several)
-        for disease in diseaseArr:
+        # Iterate available diseases and keep track of those that partially match to non-allowed terms (there can be several)
+        for disease in disease_list:
             # To find partial matches, it is necessary to iterate through both lists (input and civic)
-            for blackListed in disease_name_not_in:
-                # Search for partial match of INPUT disease in CIVIC disease e.g. 'Melanoma' (input list) in 'Skin Melanoma' (CIVIC) and not opposite
-                if blackListed in disease:
-                    if disease not in blackMatched:
-                        blackMatched.append(disease)
-        # Iterate available diseases once again to retrieve those that passed the black list filter
-        for disease in diseaseArr:
+            for non_allowed in disease_name_not_in:
+                # Search for partial match of INPUT disease in CIViC disease e.g. "Melanoma" (input list) in "Skin Melanoma" (CIViC) and not opposite
+                if non_allowed in disease:
+                    if disease not in non_allowed_matched:
+                        non_allowed_matched.append(disease)
+        # Iterate available diseases once again to retrieve those that passed the non-allowed filter
+        for disease in disease_list:
             # Retrieve valid diseases only
-            if disease in blackMatched:
+            if disease in non_allowed_matched:
                 continue
-            if disease not in cleanSet:
-                cleanSet.append(disease)
+            if disease not in clean_set:
+                clean_set.append(disease)
 
-    ## If no black list was provided, then all available diseases constitute the clean set
+    ## If no terms were provided by the user in the non-allowed list, then all available diseases constitute the clean set
     else:
-        cleanSet = diseaseArr
+        clean_set = disease_list
 
-    ## 2) Now, iterate the list of "allowed" diseases (ie. passing the black list filter) and attempt to match to white-listed terms
+    ## 2) Now, iterate the list of "allowed" diseases (i.e. passing the non-allowed filter) and attempt to match to white-listed terms
     # NOTE: again, PARTIAL matches to the white list are allowed! eg:
-    #   - including 'melanoma' will match 'melanoma', 'skin melanoma' and 'uveal melanoma', but not 'skin cancer' (hypothetical)
-    #   - including 'uveal melanoma' will only match 'uveal melanoma'
-    for cleanType in cleanSet:
+    #   - including "melanoma" will match "melanoma", "skin melanoma" and "uveal melanoma", but not "skin cancer" (hypothetical)
+    #   - including "uveal melanoma" will only match "uveal melanoma"
+    for clean_type in clean_set:
         # To find partial matches, it is necessary to iterate through both lists (input and civic)
-        for whiteListed in disease_name_in:
-            # Search for partial match of INPUT disease in CIVIC disease e.g. 'Melanoma' (input list) in 'Skin Melanoma' (CIVIC) and not opposite
-            if whiteListed in cleanType:
+        for allowed in disease_name_in:
+            # Search for partial match of INPUT disease in CIViC disease e.g. "Melanoma" (input list) in "Skin Melanoma" (CIViC) and not opposite
+            if allowed in clean_type:
                 # Keep track of diseases that passed the white list filter
-                if cleanType not in matched:
-                    matched.append(cleanType)
-                    if cleanType not in ctArr:
-                        ctArr.append(cleanType)
+                if clean_type not in matched:
+                    matched.append(clean_type)
+                    if clean_type not in ct_list:
+                        ct_list.append(clean_type)
 
     ## 3) For those not already matched as ct, attempt a second-best match strategy to higher-level diseases
-    ## In CIVIC, some 'general' diseases are included as disease, eg. 'cancer' or 'solid tumor'. Hence, must be exact matches since they are DB-specific
+    ## In CIViC, some "general" diseases are included as disease, e.g. "cancer" or "solid tumor". Hence, must be exact matches since they are DB-specific
     # NOTE: here, only PERFECT matches are allowed!
-    #   - including 'cancer' will only match 'cancer' and not 'lung cancer'
-    for cleanType in cleanSet:
-        if cleanType in alt_disease_names:
-            if cleanType not in matched:
-                matched.append(cleanType)
-                if cleanType not in gtArr:
-                    gtArr.append(cleanType)
+    #   - including "cancer" will only match "cancer" and not "lung cancer"
+    for clean_type in clean_set:
+        if clean_type in alt_disease_names:
+            if clean_type not in matched:
+                matched.append(clean_type)
+                if clean_type not in gt_list:
+                    gt_list.append(clean_type)
 
-    ## 4) For those not already matched as either ct or gt, return all 'allowed' (ie. not black-listed) diseases available in CIVIC
-    ## These will be considered as non-specific diseases (ie. off label)
-    for cleanType in cleanSet:
-        if cleanType not in matched:
-            matched.append(cleanType)
-            if cleanType not in nctArr:
-                nctArr.append(cleanType)
+    ## 4) For those not already matched as either ct or gt, return all allowed (i.e. not in the non-allowed list) diseases available in CIViC
+    ## These will be considered as non-specific diseases (i.e. off label)
+    for clean_type in clean_set:
+        if clean_type not in matched:
+            matched.append(clean_type)
+            if clean_type not in nct_list:
+                nct_list.append(clean_type)
 
-    ## Return diseases that did not match any blacklisted terms, classified and split into: ct, gt, nct
-    return (ctArr,gtArr,nctArr)
+    ## Return diseases that did not match any non-allowed terms, classified and split into: ct, gt, nct
+    return (ct_list, gt_list, nct_list)
 
 
-def add_ct(diseases,ct,gene,variant,evidence_type,newMap,varMap,isAnnot=False):
+def add_ct(diseases, ct, gene, variant, evidence_type, new_map, var_map, is_annot=False):
+    """
+
+    :param diseases:	
+    :param ct:	
+    :param gene:	
+    :param variant:	
+    :param evidence_type:	
+    :param new_map:	
+    :param var_map:	
+    :param is_annot:	
+    :return:		
+    """
     sorted_cts = ["ct","gt","nct"]
 
     # Sanity check for the expected object types and also expected keys contained in both dicts
-    check_is_dict(newMap,"newMap")
-    check_is_dict(varMap,"varMap")
-    check_is_none(isAnnot,"isAnnot")
+    check_is_dict(new_map, "new_map")
+    check_is_dict(var_map, "var_map")
+    check_is_none(is_annot, "is_annot")
     if ct not in sorted_cts:
         raise ValueError("Provided ct '%s' is not valid! Please provide one of: %s" %(ct,sorted_cts))
-    check_is_bool(isAnnot,"isAnnot")
-    check_dict_entry(newMap,"newMap",gene,"gene")
-    check_dict_entry(newMap[gene],"newMap",variant,"variant")
-    check_dict_entry(newMap[gene][variant],"newMap","evidence_items","key")
-    check_dict_entry(newMap[gene][variant]["evidence_items"],"newMap",evidence_type,"evidence type")
-    check_dict_entry(varMap,"varMap",gene,"gene")
-    check_dict_entry(varMap[gene],"varMap",variant,"variant")
-    check_dict_entry(varMap[gene][variant],"varMap","evidence_items","key")
-    check_dict_entry(varMap[gene][variant]["evidence_items"],"varMap",evidence_type,"evidence type")
+    check_is_bool(is_annot, "is_annot")
+    check_dict_entry(new_map, "new_map", gene, "gene")
+    check_dict_entry(new_map[gene], "new_map", variant, "variant")
+    check_dict_entry(new_map[gene][variant], "new_map", "evidence_items", "key")
+    check_dict_entry(new_map[gene][variant]["evidence_items"], "new_map", evidence_type, "evidence type")
+    check_dict_entry(var_map, "var_map", gene, "gene")
+    check_dict_entry(var_map[gene], "var_map", variant, "variant")
+    check_dict_entry(var_map[gene][variant], "var_map", "evidence_items", "key")
+    check_dict_entry(var_map[gene][variant]["evidence_items"], "var_map", evidence_type, "evidence type")
 
-    # Check whether provided varMap is annotated with disease specificity info (ct/gt/nct) or not
-    if isAnnot:
-        check_keys(list(varMap[gene][variant]["evidence_items"][evidence_type].keys()),"varMap",sorted_cts,matches_all=True)
-        # If a non-empty list of diseases was provided, check they exist in varMap
+    # Check whether provided var_map is annotated with disease specificity info (ct/gt/nct) or not
+    if is_annot:
+        check_keys(list(var_map[gene][variant]["evidence_items"][evidence_type].keys()), "var_map", sorted_cts, matches_all=True)
+        # If a non-empty list of diseases was provided, check they exist in var_map
         if diseases:
-            diseases = uppercase_list(diseases,"diseases")
-            check_keys(list(varMap[gene][variant]["evidence_items"][evidence_type][ct].keys()),"varMap",diseases,matches_all=False)
+            diseases = uppercase_list(diseases, "diseases")
+            check_keys(list(var_map[gene][variant]["evidence_items"][evidence_type][ct].keys()), "var_map", diseases, matches_all=False)
     else:
-        check_keys_not(list(varMap[gene][variant]["evidence_items"][evidence_type].keys()),"varMap",sorted_cts)
-        # If a non-empty list of diseases was provided, check they exist in varMap
+        check_keys_not(list(var_map[gene][variant]["evidence_items"][evidence_type].keys()), "var_map", sorted_cts)
+        # If a non-empty list of diseases was provided, check they exist in var_map
         if diseases:
-            diseases = uppercase_list(diseases,"diseases")
-            check_keys(list(varMap[gene][variant]["evidence_items"][evidence_type].keys()),"varMap",diseases,matches_all=False)
+            diseases = uppercase_list(diseases, "diseases")
+            check_keys(list(var_map[gene][variant]["evidence_items"][evidence_type].keys()), "var_map", diseases, matches_all=False)
 
-    # Do not check if newMap already contains ct annotations (overwritten in this case)
-    newMap[gene][variant]["evidence_items"][evidence_type][ct] = {}
+    # Do not check if new_map already contains ct annotations (overwritten in this case)
+    new_map[gene][variant]["evidence_items"][evidence_type][ct] = {}
 
-    # Iterate available diseases and append all available info to newMap (overwritte if necessary)
+    # Iterate available diseases and append all available info to new_map (overwritte if necessary)
     for disease in diseases:
-        newMap[gene][variant]["evidence_items"][evidence_type][ct][disease] = {}
-        if isAnnot:
-            for drug in varMap[gene][variant]["evidence_items"][evidence_type][ct][disease].keys():
-                newMap[gene][variant]["evidence_items"][evidence_type][ct][disease][drug] = {}
-                for evidence in varMap[gene][variant]["evidence_items"][evidence_type][ct][disease][drug].keys():
-                    newMap[gene][variant]["evidence_items"][evidence_type][ct][disease][drug][evidence] = {}
-                    for evidence_level in varMap[gene][variant]["evidence_items"][evidence_type][ct][disease][drug][evidence].keys():
-                        newMap[gene][variant]["evidence_items"][evidence_type][ct][disease][drug][evidence][evidence_level] = []
-                        for thisString in varMap[gene][variant]["evidence_items"][evidence_type][ct][disease][drug][evidence][evidence_level]:
-                            newMap[gene][variant]["evidence_items"][evidence_type][ct][disease][drug][evidence][evidence_level].append(thisString)
+        new_map[gene][variant]["evidence_items"][evidence_type][ct][disease] = {}
+        if is_annot:
+            for drug in var_map[gene][variant]["evidence_items"][evidence_type][ct][disease].keys():
+                new_map[gene][variant]["evidence_items"][evidence_type][ct][disease][drug] = {}
+                for evidence in var_map[gene][variant]["evidence_items"][evidence_type][ct][disease][drug].keys():
+                    new_map[gene][variant]["evidence_items"][evidence_type][ct][disease][drug][evidence] = {}
+                    for evidence_level in var_map[gene][variant]["evidence_items"][evidence_type][ct][disease][drug][evidence].keys():
+                        new_map[gene][variant]["evidence_items"][evidence_type][ct][disease][drug][evidence][evidence_level] = []
+                        for this_evidence_string in var_map[gene][variant]["evidence_items"][evidence_type][ct][disease][drug][evidence][evidence_level]:
+                            new_map[gene][variant]["evidence_items"][evidence_type][ct][disease][drug][evidence][evidence_level].append(this_evidence_string)
         else:
-            for drug in varMap[gene][variant]["evidence_items"][evidence_type][disease].keys():
-                newMap[gene][variant]["evidence_items"][evidence_type][ct][disease][drug] = {}
-                for evidence in varMap[gene][variant]["evidence_items"][evidence_type][disease][drug].keys():
-                    newMap[gene][variant]["evidence_items"][evidence_type][ct][disease][drug][evidence] = {}
-                    for evidence_level in varMap[gene][variant]["evidence_items"][evidence_type][disease][drug][evidence].keys():
-                        newMap[gene][variant]["evidence_items"][evidence_type][ct][disease][drug][evidence][evidence_level] = []
-                        for thisString in varMap[gene][variant]["evidence_items"][evidence_type][disease][drug][evidence][evidence_level]:
-                            newMap[gene][variant]["evidence_items"][evidence_type][ct][disease][drug][evidence][evidence_level].append(thisString)
+            for drug in var_map[gene][variant]["evidence_items"][evidence_type][disease].keys():
+                new_map[gene][variant]["evidence_items"][evidence_type][ct][disease][drug] = {}
+                for evidence in var_map[gene][variant]["evidence_items"][evidence_type][disease][drug].keys():
+                    new_map[gene][variant]["evidence_items"][evidence_type][ct][disease][drug][evidence] = {}
+                    for evidence_level in var_map[gene][variant]["evidence_items"][evidence_type][disease][drug][evidence].keys():
+                        new_map[gene][variant]["evidence_items"][evidence_type][ct][disease][drug][evidence][evidence_level] = []
+                        for this_evidence_string in var_map[gene][variant]["evidence_items"][evidence_type][disease][drug][evidence][evidence_level]:
+                            new_map[gene][variant]["evidence_items"][evidence_type][ct][disease][drug][evidence][evidence_level].append(this_evidence_string)
 
-    return newMap
+    return new_map
 
 
-def annotate_ct(varMap, disease_name_not_in, disease_name_in, alt_disease_names):
+def annotate_ct(var_map, disease_name_not_in, disease_name_in, alt_disease_names):
+    """
+
+    :param var_map:	
+    :param disease_name_not_in:	
+    :param disease_name_in:	
+    :param alt_disease_names:	
+    :return:		
+    """
     sorted_cts = ["ct","gt","nct"]
-    varmap_entries = ['name','civic_score','hgvs','types','n_evidence_items','evidence_items']
-    newMap = {}
+    varmap_entries = ["name","civic_score","hgvs","types","n_evidence_items","evidence_items"]
+    new_map = {}
 
-    # Iterate the complete varMap dict and reorganize it to classify diseases
-    for gene in varMap.keys():
-        if gene not in newMap.keys():
-            newMap[gene] = {}
-        for variant in varMap[gene].keys():
+    # Iterate the complete var_map dict and reorganize it to classify diseases
+    for gene in var_map.keys():
+        if gene not in new_map.keys():
+            new_map[gene] = {}
+        for variant in var_map[gene].keys():
             # Overwrite duplicated variant ids (should never happen)
-            newMap[gene][variant] = {}
+            new_map[gene][variant] = {}
             # Sanity check that some expected fields can be found in the dictionary
-            check_keys(list(varMap[gene][variant].keys()),"varMap",varmap_entries,matches_all=True)
-            newMap[gene][variant]['name'] = varMap[gene][variant]['name']
-            newMap[gene][variant]['civic_score'] = varMap[gene][variant]['civic_score']
-            newMap[gene][variant]['hgvs'] = [a for a in varMap[gene][variant]['hgvs']]
-            newMap[gene][variant]['types'] = [b for b in varMap[gene][variant]['types']]
-            newMap[gene][variant]['n_evidence_items'] = varMap[gene][variant]['n_evidence_items']
-            newMap[gene][variant]['evidence_items'] = {}
-            for evidence_type in varMap[gene][variant]['evidence_items'].keys():
-                newMap[gene][variant]['evidence_items'][evidence_type] = {}
+            check_keys(list(var_map[gene][variant].keys()),"var_map",varmap_entries,matches_all=True)
+            new_map[gene][variant]["name"] = var_map[gene][variant]["name"]
+            new_map[gene][variant]["civic_score"] = var_map[gene][variant]["civic_score"]
+            new_map[gene][variant]["hgvs"] = [a for a in var_map[gene][variant]["hgvs"]]
+            new_map[gene][variant]["types"] = [b for b in var_map[gene][variant]["types"]]
+            new_map[gene][variant]["n_evidence_items"] = var_map[gene][variant]["n_evidence_items"]
+            new_map[gene][variant]["evidence_items"] = {}
+            for evidence_type in var_map[gene][variant]["evidence_items"].keys():
+                new_map[gene][variant]["evidence_items"][evidence_type] = {}
                 # Retrieve all disease names associated witht he current evidence type, and classify them into ct, gt, nct
-                allDiseases = list(varMap[gene][variant]['evidence_items'][evidence_type].keys())
-                # Check that provided varMap is not annotated with disease specificity info (ct/gt/nct)
-                # check_keys_not(allDiseases,"varMap",sorted_cts)
+                allDiseases = list(var_map[gene][variant]["evidence_items"][evidence_type].keys())
+                # Check that provided var_map is not annotated with disease specificity info (ct/gt/nct)
+                # check_keys_not(allDiseases,"var_map",sorted_cts)
                 # Classify diseases by provided specificity criteria (ct/gt/nct)
                 (ctDis,gtDis,nctDis) = classify_diseases(allDiseases, disease_name_not_in, disease_name_in, alt_disease_names)
                 # Add new layer of classification within the evidence types: specificity of the disease (ct, gt, nct)
                 for ct in sorted_cts:
 # TODO what happens when list of diseases to add is empty?
                     if ct == "ct":
-                        newMap = add_ct(ctDis,ct,gene,variant,evidence_type,newMap,varMap,isAnnot=False)
+                        new_map = add_ct(ctDis,ct,gene,variant,evidence_type,new_map,var_map,is_annot=False)
                     if ct == "gt":
-                        newMap = add_ct(gtDis,ct,gene,variant,evidence_type,newMap,varMap,isAnnot=False)
+                        new_map = add_ct(gtDis,ct,gene,variant,evidence_type,new_map,var_map,is_annot=False)
                     if ct == "nct":
-                        newMap = add_ct(nctDis,ct,gene,variant,evidence_type,newMap,varMap,isAnnot=False)
+                        new_map = add_ct(nctDis,ct,gene,variant,evidence_type,new_map,var_map,is_annot=False)
 
-    return newMap
+    return new_map
 
 
-def filter_ct(varMap, select_ct):
+def filter_ct(var_map, select_ct):
+    """
+
+    :param var_map:	
+    :param select_ct:	
+    :return:		
+    """
     sorted_cts = ["ct","gt","nct"]
-    varmap_entries = ['name','civic_score','hgvs','types','n_evidence_items','evidence_items']
+    varmap_entries = ["name","civic_score","hgvs","types","n_evidence_items","evidence_items"]
 
     # Sanity check for the expected object types
-    check_is_dict(varMap,"varMap")
+    check_is_dict(var_map,"var_map")
     # Process and sanity check provided select_ct (expected format, valid values, etc.)
     select_ct = check_tier_selection(select_ct,sorted_cts)
 
-    newMap = {}
+    new_map = {}
 
     # When select_ct="all", filter is off (keep data for all 3 cts)
     # Do not copy dict again, simply return input dict untouched
     if isinstance(select_ct, str) and (select_ct == "all"):
-        # Sanity check that provided varMap has expected format and is annotated for ct
-        for gene in varMap.keys():
-            for variant in varMap[gene].keys():
-                check_keys(list(varMap[gene][variant].keys()),"varMap",varmap_entries,matches_all=True)
-                for evidence_type in varMap[gene][variant]['evidence_items'].keys():
-                    check_keys(list(varMap[gene][variant]['evidence_items'][evidence_type].keys()),"varMap",sorted_cts,matches_all=True)
-        return varMap
+        # Sanity check that provided var_map has expected format and is annotated for ct
+        for gene in var_map.keys():
+            for variant in var_map[gene].keys():
+                check_keys(list(var_map[gene][variant].keys()),"var_map",varmap_entries,matches_all=True)
+                for evidence_type in var_map[gene][variant]["evidence_items"].keys():
+                    check_keys(list(var_map[gene][variant]["evidence_items"][evidence_type].keys()),"var_map",sorted_cts,matches_all=True)
+        return var_map
 
-    # Otherwise, some filtering needs to be done, so iterate varMap
-    # Iterate the complete varMap dict and reorganize it to classify diseases
-    for gene in varMap.keys():
-        if gene not in newMap.keys():
-            newMap[gene] = {}
-        for variant in varMap[gene].keys():
+    # Otherwise, some filtering needs to be done, so iterate var_map
+    # Iterate the complete var_map dict and reorganize it to classify diseases
+    for gene in var_map.keys():
+        if gene not in new_map.keys():
+            new_map[gene] = {}
+        for variant in var_map[gene].keys():
             # Overwrite duplicated variant ids (should never happen)
-            newMap[gene][variant] = {}
+            new_map[gene][variant] = {}
             # Sanity check that some expected fields can be found in the dictionary
-            check_keys(list(varMap[gene][variant].keys()),"varMap",varmap_entries,matches_all=True)
-            newMap[gene][variant]['name'] = varMap[gene][variant]['name']
-            newMap[gene][variant]['civic_score'] = varMap[gene][variant]['civic_score']
-            newMap[gene][variant]['hgvs'] = [a for a in varMap[gene][variant]['hgvs']]
-            newMap[gene][variant]['types'] = [b for b in varMap[gene][variant]['types']]
-            newMap[gene][variant]['n_evidence_items'] = varMap[gene][variant]['n_evidence_items']
-            newMap[gene][variant]['evidence_items'] = {}
-            for evidence_type in varMap[gene][variant]['evidence_items'].keys():
-                newMap[gene][variant]['evidence_items'][evidence_type] = {}
-                # Sanity check that input dict is annotated with disease specificity info (ie. has the expected format)
-                check_keys(list(varMap[gene][variant]['evidence_items'][evidence_type].keys()),"varMap",sorted_cts,matches_all=True)
+            check_keys(list(var_map[gene][variant].keys()),"var_map",varmap_entries,matches_all=True)
+            new_map[gene][variant]["name"] = var_map[gene][variant]["name"]
+            new_map[gene][variant]["civic_score"] = var_map[gene][variant]["civic_score"]
+            new_map[gene][variant]["hgvs"] = [a for a in var_map[gene][variant]["hgvs"]]
+            new_map[gene][variant]["types"] = [b for b in var_map[gene][variant]["types"]]
+            new_map[gene][variant]["n_evidence_items"] = var_map[gene][variant]["n_evidence_items"]
+            new_map[gene][variant]["evidence_items"] = {}
+            for evidence_type in var_map[gene][variant]["evidence_items"].keys():
+                new_map[gene][variant]["evidence_items"][evidence_type] = {}
+                # Sanity check that input dict is annotated with disease specificity info (i.e. has the expected format)
+                check_keys(list(var_map[gene][variant]["evidence_items"][evidence_type].keys()),"var_map",sorted_cts,matches_all=True)
                 skip = False
                 for ct in sorted_cts:
-                    newMap[gene][variant]['evidence_items'][evidence_type][ct] = {}
-                    ctArr = list(varMap[gene][variant]['evidence_items'][evidence_type][ct].keys())
+                    new_map[gene][variant]["evidence_items"][evidence_type][ct] = {}
+                    ct_list = list(var_map[gene][variant]["evidence_items"][evidence_type][ct].keys())
                     # When select_ct="highest", then keep data only for the highest specificity available ct>gt>nct
                     if isinstance(select_ct, str) and (select_ct == "highest"):
                         # Check if data is available for the currently iterated ct
-                        if ctArr and (not skip):
-                            newMap = add_ct(ctArr,ct,gene,variant,evidence_type,newMap,varMap,isAnnot=True)
+                        if ct_list and (not skip):
+                            new_map = add_ct(ct_list,ct,gene,variant,evidence_type,new_map,var_map,is_annot=True)
                             # Prematurely exit the loop after this successful iteration (to keep only the highest ct)
                             skip = True
 
@@ -1207,84 +1326,90 @@ def filter_ct(varMap, select_ct):
                         # Check if the currently iterated ct should be kept or skipped
                         # Iterate all cts and add all those that are select (no premature exit of loop)
                         if (ct in select_ct):
-                            newMap = add_ct(ctArr,ct,gene,variant,evidence_type,newMap,varMap,isAnnot=True)
+                            new_map = add_ct(ct_list, ct, gene, variant, evidence_type, new_map, var_map, is_annot=True)
 
-    return newMap
+    return new_map
 
 
 # TODO
-# For 'predictive' evidence (writeDrug=True), keep dictionary of drug support for the current variant match (one support per tier)
-# Format: drug -> ct -> [support1,support2,..,support1] (keep track of all occurrences)
-def process_drug_support(matchMap, varMap, supportDict):
+def process_drug_support(match_map, var_map, supportDict):
+    """
+    For 'predictive' evidence (writeDrug=True), keep dictionary of drug support for the current variant match (one support per tier).
+    :param match_map:	
+    :param var_map:	
+    :param supportDict:	
+    :return:		
+    """
     sorted_tiers = ["tier_1","tier_1b","tier_2","tier_3","tier_4"]
     sorted_cts = ["ct","gt","nct"]
-    evidenceType = "PREDICTIVE"
+    evidence_type = "PREDICTIVE"
     special_cases = ["NON_SNV_MATCH_ONLY","NON_CNV_MATCH_ONLY","NON_EXPR_MATCH_ONLY"]
 
     # Check provided argument
-    check_arguments([matchMap,supportDict],["matchMap","supportDict"])
-    check_is_dict(matchMap,"matchMap")
-    check_is_dict(varMap,"varMap")
+    check_arguments([match_map,supportDict],["match_map","supportDict"])
+    check_is_dict(match_map,"match_map")
+    check_is_dict(var_map,"var_map")
     check_is_dict(supportDict,"supportDict")
 
-    newMap = {}
+    # Format: drug -> ct -> [support1,support2,..,support1] (keep track of all occurrences)
+    new_map = {}
 
     # gene -> variant -> {tier1,tier1b..} -> [matched_vars]
     # where variant -> var="dna|prot|impact|exon|lineNumber"
-    for gene in matchMap.keys():
-        if gene not in newMap.keys():
-            newMap[gene] = {}
-        for variant in matchMap[gene].keys():
-            newMap[gene][variant] = {}
-            # Sanity check that provided matchMap has expected format (ie. is annotated with drug support)
-            check_keys(list(matchMap[gene][variant].keys()),"matchMap",sorted_tiers,matches_all=True)
-            for tier in matchMap[gene][variant].keys():
-                newMap[gene][variant][tier] = {}
-                # Sanity check that provided matchMap has expected format
+    for gene in match_map.keys():
+        if gene not in new_map.keys():
+            new_map[gene] = {}
+        for variant in match_map[gene].keys():
+            new_map[gene][variant] = {}
+            # Sanity check that provided match_map has expected format (i.e. is annotated with drug support)
+            check_keys(list(match_map[gene][variant].keys()),"match_map",sorted_tiers,matches_all=True)
+            for tier in match_map[gene][variant].keys():
+                new_map[gene][variant][tier] = {}
+                # Sanity check that provided match_map has expected format
                 # NOTE: tier4 has specific format compared to the others (boolean vs. list)
                 if tier == "tier_4":
-                    check_is_bool(matchMap[gene][variant][tier],tier)
-                    newMap[gene][variant][tier]['matched'] = False
+                    check_is_bool(match_map[gene][variant][tier],tier)
+                    new_map[gene][variant][tier]["matched"] = False
                 else:
-                    check_is_list(matchMap[gene][variant][tier],tier)
-                    newMap[gene][variant][tier]['matched'] = []
+                    check_is_list(match_map[gene][variant][tier],tier)
+                    new_map[gene][variant][tier]["matched"] = []
 
 # TODO: drug support for tier 1, 1b and 2 is clear
 # TODO: drug support for tier 3 will not make sense (averaging across variants) -> leave it in case the user is interested
 # TODO: drug support for tier 4 should directly be empty
-                newMap[gene][variant][tier]['drug_support'] = []
-                drugMap = {}
+                new_map[gene][variant][tier]["drug_support"] = []
+                drug_map = {}
                 if tier != "tier_4":
-                    for varId in matchMap[gene][variant][tier]:
-                        newMap[gene][variant][tier]['matched'].append(varId)
+                    for var_id in match_map[gene][variant][tier]:
+                        new_map[gene][variant][tier]["matched"].append(var_id)
                         # NOTE: check for special case when tier3 but no matching variant returned for the given data type
-                        # This is a dummy tag and not an actual variant record from CIVICdb, so skip checking in varMap
-                        if varId.upper() in special_cases:
+                        # This is a dummy tag and not an actual variant record from CIVICdb, so skip checking in var_map
+                        if var_id.upper() in special_cases:
                             # Sanity check that no other variant was matched when this special case was matched (length of matches should always be one)
-                            if len(matchMap[gene][variant][tier]) != 1:
-                                raise ValueError("Unexpected: encountered multiple matches in special case of empty tier3 match '%s'!" %(matchMap[gene][variant][tier]))
+                            if len(match_map[gene][variant][tier]) != 1:
+                                raise ValueError("Unexpected: encountered multiple matches in special case of empty tier3 match '%s'!" %(match_map[gene][variant][tier]))
                             continue
 
-                        # For matched variants, they must be contained in the provided varMap
-                        check_dict_entry(varMap,"varMap",gene,"gene")
-                        check_dict_entry(varMap[gene],"varMap",varId,"variant")
-                        check_dict_entry(varMap[gene][varId],"varMap","evidence_items","key")
+                        # For matched variants, they must be contained in the provided var_map
+                        check_dict_entry(var_map,"var_map",gene,"gene")
+                        check_dict_entry(var_map[gene],"var_map",var_id,"variant")
+                        check_dict_entry(var_map[gene][var_id],"var_map","evidence_items","key")
 
-# TODO: ensure that filtering returnEmpty=False does affect other functions
+# TODO: ensure that filtering return_empty=False does affect other functions
 # TODO: sanity check that all expected evidence types can be found -> use config for expected values of all dicts, etc.
-                        if evidenceType in varMap[gene][varId]['evidence_items'].keys():
-                            # Sanity check that provided varMap has expected format (ie. annotated for disease specificity)
-                            check_keys(list(varMap[gene][varId]['evidence_items'][evidenceType].keys()),"varMap",sorted_cts,matches_all=True)
-                            for ct in varMap[gene][varId]['evidence_items'][evidenceType].keys():
-                                for disease in varMap[gene][varId]['evidence_items'][evidenceType][ct].keys():
-                                    for drug in varMap[gene][varId]['evidence_items'][evidenceType][ct][disease].keys():
-                                        if drug not in drugMap.keys():
-                                            drugMap[drug] = {}
-                                        if ct not in drugMap[drug].keys():
-                                            drugMap[drug][ct] = []
-                                        for evidence in varMap[gene][varId]['evidence_items'][evidenceType][ct][disease][drug].keys():
+                        if evidence_type in var_map[gene][var_id]["evidence_items"].keys():
+                            # Sanity check that provided var_map has expected format (i.e. annotated for disease specificity)
+                            check_keys(list(var_map[gene][var_id]["evidence_items"][evidence_type].keys()),"var_map",sorted_cts,matches_all=True)
+                            for ct in var_map[gene][var_id]["evidence_items"][evidence_type].keys():
+                                for disease in var_map[gene][var_id]["evidence_items"][evidence_type][ct].keys():
+                                    for drug in var_map[gene][var_id]["evidence_items"][evidence_type][ct][disease].keys():
+                                        if drug not in drug_map.keys():
+                                            drug_map[drug] = {}
+                                        if ct not in drug_map[drug].keys():
+                                            drug_map[drug][ct] = []
+                                        for evidence in var_map[gene][var_id]["evidence_items"][evidence_type][ct][disease][drug].keys():
                                             # Split the evidence direction and clinical significance
-                                            evidenceArr = evidence.strip().split(':')
+                                            evidenceArr = evidence.strip().split(":")
                                             if (len(evidenceArr) != 2):
                                                 raise ValueError("Unexpected format of evidence '%s'! Please provide string as 'EVIDENCE_DIRECTION:CLINICAL_SIGNIFICANCE'." %(evidence))
                                             direction = evidenceArr[0]
@@ -1292,149 +1417,157 @@ def process_drug_support(matchMap, varMap, supportDict):
 
                                             # For each evidence (ie combination of direction+clin_signf), count how many different evidence items support it
                                             # At this stage, we find count evidence items by counting how many different combinations of level+pmids there are for the same drug, disease and evidence
-                                            if ('NULL' in direction) or ('N/A' in direction) or ('NULL' in clin_signf) or ('N/A' in clin_signf):
+                                            if ("NULL" in direction) or ("N/A" in direction) or ("NULL" in clin_signf) or ("N/A" in clin_signf):
 # FIXME: have this as part of input config
-                                                thisSupport = 'UNKNOWN_BLANK'
+                                                this_drug_support = "UNKNOWN_BLANK"
                                             else:
                                                 if direction not in supportDict.keys():
                                                     raise ValueError("Could not find evidence direction '%s' in provided 'supportDict'!" %(direction))
                                                 if clin_signf not in supportDict[direction].keys():
                                                     raise ValueError("Could not find clinical significance '%s' in provided 'supportDict'!" %(clin_signf))
-                                                thisSupport = supportDict[direction][clin_signf]
+                                                this_drug_support = supportDict[direction][clin_signf]
 
                                             # Keep track of number of occurrences for each support type for the given drug
                                             # Here, take into account the number of supporting PMIDs associated to each evidence item
-                                            for evidence_level in varMap[gene][varId]['evidence_items'][evidenceType][ct][disease][drug][evidence].keys():
-                                                for thisString in varMap[gene][varId]['evidence_items'][evidenceType][ct][disease][drug][evidence][evidence_level]:
-                                                    drugMap[drug][ct].append(thisSupport)
+                                            for evidence_level in var_map[gene][var_id]["evidence_items"][evidence_type][ct][disease][drug][evidence].keys():
+                                                for this_evidence_string in var_map[gene][var_id]["evidence_items"][evidence_type][ct][disease][drug][evidence][evidence_level]:
+                                                    drug_map[drug][ct].append(this_drug_support)
 
                 # Process drug support information parsed for the current tier match
                 # Drug support for tier 4 will never be available
-                for thisDrug in drugMap.keys():
-                    for thisCt in drugMap[thisDrug].keys():
+                for this_drug in drug_map.keys():
+                    for this_ct in drug_map[this_drug].keys():
                         # Given the selected ct, count number of occurrences for each possible support type (if any)
 # FIXME: have this as part of input config
-                        count_pos = drugMap[thisDrug][thisCt].count('POSITIVE')
-                        count_neg = drugMap[thisDrug][thisCt].count('NEGATIVE')
-                        count_unk = drugMap[thisDrug][thisCt].count('UNKNOWN_BLANK')
-                        count_dns = drugMap[thisDrug][thisCt].count('UNKNOWN_DNS')
+                        count_pos = drug_map[this_drug][this_ct].count("POSITIVE")
+                        count_neg = drug_map[this_drug][this_ct].count("NEGATIVE")
+                        count_unk = drug_map[this_drug][this_ct].count("UNKNOWN_BLANK")
+                        count_dns = drug_map[this_drug][this_ct].count("UNKNOWN_DNS")
 
-                        # Pool UNKNOWN_BLANK and UNKNOWN_DNS together (as both result in unknown CIVIC support)
+                        # Pool UNKNOWN_BLANK and UNKNOWN_DNS together (as both result in unknown CIViC support)
                         count_total_unk = count_unk + count_dns
                         # Sanity check that there is at least some support
                         if (count_pos == 0) and (count_neg == 0) and (count_total_unk == 0):
                             raise ValueError("Encountered unexpected support case for gene '%s'." %(gene))
 
                         # Resolve contradicting evidence (if any) by majority vote
-                        tempSupport = ''
+                        temp_support = ""
                         # For this, pool UNKNOWN_BLANK and UNKNOWN_DNS together
                         # Whenever there is a tie of "confident" (pos or neg) vs "non-confident" (unk), choose the confident one
                         if (count_total_unk > count_pos) and (count_total_unk > count_neg):
-                            tempSupport = "CIVIC_UNKNOWN"
+                            temp_support = "CIVIC_UNKNOWN"
                         elif count_pos == count_neg:
-                            tempSupport = "CIVIC_CONFLICT"
+                            temp_support = "CIVIC_CONFLICT"
                         elif (count_pos > count_neg) and (count_pos >= count_total_unk):
-                            tempSupport = "CIVIC_SUPPORT"
+                            temp_support = "CIVIC_SUPPORT"
                         elif (count_neg > count_pos) and (count_neg >= count_total_unk):
-                            tempSupport = "CIVIC_RESISTANCE"
+                            temp_support = "CIVIC_RESISTANCE"
                         else:
                             raise ValueError("Encountered unexpected support case for gene '%s'." %(gene))
 
                         # Build support string for each given combination of drug, ct and matched tier
                         # Format: DRUG:CT:SUPPORT:#pos|#neg|#unk|#dns
-                        drugSupport = thisDrug + ':' + thisCt.upper() + ':' + tempSupport + ':' + str(count_pos) + '|' + str(count_neg) + '|' + str(count_unk) + '|' + str(count_dns)
-                        newMap[gene][variant][tier]['drug_support'].append(drugSupport)
+                        drug_support = this_drug + ":" + this_ct.upper() + ":" + temp_support + ":" + str(count_pos) + "|" + str(count_neg) + "|" + str(count_unk) + "|" + str(count_dns)
+                        new_map[gene][variant][tier]["drug_support"].append(drug_support)
 
 # TODO: Loop for all available tiers that are not tier 4 (could be indicated in the config) -> to make it robust to changes in the tier categories
             # Always check if current match corresponds to a tier_4 situation (all other tiers will be empty)
-            if not (newMap[gene][variant]["tier_1"]["matched"] or newMap[gene][variant]["tier_1b"]["matched"] or newMap[gene][variant]["tier_2"]["matched"] or newMap[gene][variant]["tier_3"]["matched"]):
-                newMap[gene][variant]["tier_4"]["matched"] = True
+            if not (new_map[gene][variant]["tier_1"]["matched"] or new_map[gene][variant]["tier_1b"]["matched"] or new_map[gene][variant]["tier_2"]["matched"] or new_map[gene][variant]["tier_3"]["matched"]):
+                new_map[gene][variant]["tier_4"]["matched"] = True
 
-    return newMap
+    return new_map
 
 
 # TODO
-# For 'predictive' evidence (writeDrug=True), keep dictionary of drug support for the current variant match (one support per tier)
-# Format: drug -> ct -> [support1,support2,..,support1] (keep track of all occurrences)
-def reprocess_drug_support_across_selected_variants(inputData, matchMap, varMap, supportDict, hasSupport=True):
+def reprocess_drug_support_across_selected_variants(inputData, match_map, var_map, supportDict, hasSupport=True):
+    """
+    For 'predictive' evidence (writeDrug=True), keep dictionary of drug support for the current variant match (one support per tier).
+    :param inputData:	
+    :param match_map:	
+    :param var_map:	
+    :param supportDict:	
+    :param hasSupport:	
+    :return:		
+    """
     sorted_tiers = ["tier_1","tier_1b","tier_2","tier_3","tier_4"]
     sorted_cts = ["ct","gt","nct"]
-    evidenceType = "PREDICTIVE"
+    evidence_type = "PREDICTIVE"
     special_cases = ["NON_SNV_MATCH_ONLY","NON_CNV_MATCH_ONLY","NON_EXPR_MATCH_ONLY"]
 
     # Check provided argument
-    check_arguments([matchMap,supportDict],["matchMap","supportDict"])
+    check_arguments([match_map,supportDict],["match_map","supportDict"])
     check_is_dict(inputData,"inputData")
-    check_is_dict(matchMap,"matchMap")
-    check_is_dict(varMap,"varMap")
+    check_is_dict(match_map,"match_map")
+    check_is_dict(var_map,"var_map")
     check_is_dict(supportDict,"supportDict")
 
     # Process and aggregate drug support across all the available evidences for the supplied inputData (genes + vaiants)
     drug_support_strings = []
-    drugMap = {}
+    # Format: drug -> ct -> [support1,support2,..,support1] (keep track of all occurrences)
+    drug_map = {}
 
     # gene -> variant -> {tier1,tier1b..} -> [matched_vars]
     # where variant -> var="dna|prot|impact|exon|lineNumber"
     for gene in inputData.keys():
-        if gene not in matchMap.keys():
-            raise ValueError("Input gene '%s' from 'inputData' could not be found in provided 'matchMap'!" %(gene))
+        if gene not in match_map.keys():
+            raise ValueError("Input gene '%s' from 'inputData' could not be found in provided 'match_map'!" %(gene))
         for variant in inputData[gene].keys():
-            if variant not in matchMap[gene].keys():
-                raise ValueError("Input variant '%s' (gene '%s') from 'inputData' could not be found in provided 'matchMap'!" %(variant, gene))
+            if variant not in match_map[gene].keys():
+                raise ValueError("Input variant '%s' (gene '%s') from 'inputData' could not be found in provided 'match_map'!" %(variant, gene))
 
-            # Sanity check that provided matchMap has expected format (ie. is annotated with drug support)
-            check_keys(list(matchMap[gene][variant].keys()),"matchMap",sorted_tiers,matches_all=True)
-            for tier in matchMap[gene][variant].keys():
-                # Sanity check that provided matchMap has expected format
+            # Sanity check that provided match_map has expected format (i.e. is annotated with drug support)
+            check_keys(list(match_map[gene][variant].keys()),"match_map",sorted_tiers,matches_all=True)
+            for tier in match_map[gene][variant].keys():
+                # Sanity check that provided match_map has expected format
                 # NOTE: tier4 has specific format compared to the others (boolean vs. list)
                 if tier == "tier_4":
                     if hasSupport:
-                        check_is_bool(matchMap[gene][variant][tier]["matched"],tier)
+                        check_is_bool(match_map[gene][variant][tier]["matched"],tier)
                     else:
-                        check_is_bool(matchMap[gene][variant][tier],tier)
+                        check_is_bool(match_map[gene][variant][tier],tier)
                 else:
                     if hasSupport:
-                        check_is_list(matchMap[gene][variant][tier]["matched"],tier)
+                        check_is_list(match_map[gene][variant][tier]["matched"],tier)
                     else:
-                        check_is_list(matchMap[gene][variant][tier],tier)
+                        check_is_list(match_map[gene][variant][tier],tier)
 
 # TODO: drug support for tier 1, 1b and 2 is clear
 # TODO: drug support for tier 3 will not make sense (averaging across variants) -> leave it in case the user is interested
 # TODO: drug support for tier 4 should directly be empty
                 if tier != "tier_4":
                     if hasSupport:
-                        variant_list = matchMap[gene][variant][tier]["matched"]
+                        variant_list = match_map[gene][variant][tier]["matched"]
                     else:
-                        variant_list = matchMap[gene][variant][tier]
-                    for varId in variant_list:
+                        variant_list = match_map[gene][variant][tier]
+                    for var_id in variant_list:
                         # NOTE: check for special case when tier3 but no matching variant returned for the given data type
-                        # This is a dummy tag and not an actual variant record from CIVICdb, so skip checking in varMap
-                        if varId.upper() in special_cases:
+                        # This is a dummy tag and not an actual variant record from CIVICdb, so skip checking in var_map
+                        if var_id.upper() in special_cases:
                             # Sanity check that no other variant was matched when this special case was matched (length of matches should always be one)
                             if len(variant_list) != 1:
-                                raise ValueError("Unexpected: encountered multiple matches in special case of empty tier3 match '%s'!" %(matchMap[gene][variant][tier]))
+                                raise ValueError("Unexpected: encountered multiple matches in special case of empty tier3 match '%s'!" %(match_map[gene][variant][tier]))
                             continue
 
-                        # For matched variants, they must be contained in the provided varMap
-                        check_dict_entry(varMap,"varMap",gene,"gene")
-                        check_dict_entry(varMap[gene],"varMap",varId,"variant")
-                        check_dict_entry(varMap[gene][varId],"varMap","evidence_items","key")
+                        # For matched variants, they must be contained in the provided var_map
+                        check_dict_entry(var_map,"var_map",gene,"gene")
+                        check_dict_entry(var_map[gene],"var_map",var_id,"variant")
+                        check_dict_entry(var_map[gene][var_id],"var_map","evidence_items","key")
 
-# TODO: ensure that filtering returnEmpty=False does affect other functions
+# TODO: ensure that filtering return_empty=False does affect other functions
 # TODO: sanity check that all expected evidence types can be found -> use config for expected values of all dicts, etc.
-                        if evidenceType in varMap[gene][varId]['evidence_items'].keys():
-                            # Sanity check that provided varMap has expected format (ie. annotated for disease specificity)
-                            check_keys(list(varMap[gene][varId]['evidence_items'][evidenceType].keys()),"varMap",sorted_cts,matches_all=True)
-                            for ct in varMap[gene][varId]['evidence_items'][evidenceType].keys():
-                                for disease in varMap[gene][varId]['evidence_items'][evidenceType][ct].keys():
-                                    for drug in varMap[gene][varId]['evidence_items'][evidenceType][ct][disease].keys():
-                                        if drug not in drugMap.keys():
-                                            drugMap[drug] = {}
-                                        if ct not in drugMap[drug].keys():
-                                            drugMap[drug][ct] = []
-                                        for evidence in varMap[gene][varId]['evidence_items'][evidenceType][ct][disease][drug].keys():
+                        if evidence_type in var_map[gene][var_id]["evidence_items"].keys():
+                            # Sanity check that provided var_map has expected format (i.e. annotated for disease specificity)
+                            check_keys(list(var_map[gene][var_id]["evidence_items"][evidence_type].keys()),"var_map",sorted_cts,matches_all=True)
+                            for ct in var_map[gene][var_id]["evidence_items"][evidence_type].keys():
+                                for disease in var_map[gene][var_id]["evidence_items"][evidence_type][ct].keys():
+                                    for drug in var_map[gene][var_id]["evidence_items"][evidence_type][ct][disease].keys():
+                                        if drug not in drug_map.keys():
+                                            drug_map[drug] = {}
+                                        if ct not in drug_map[drug].keys():
+                                            drug_map[drug][ct] = []
+                                        for evidence in var_map[gene][var_id]["evidence_items"][evidence_type][ct][disease][drug].keys():
                                             # Split the evidence direction and clinical significance
-                                            evidenceArr = evidence.strip().split(':')
+                                            evidenceArr = evidence.strip().split(":")
                                             if (len(evidenceArr) != 2):
                                                 raise ValueError("Unexpected format of evidence '%s'! Please provide string as 'EVIDENCE_DIRECTION:CLINICAL_SIGNIFICANCE'." %(evidence))
                                             direction = evidenceArr[0]
@@ -1442,58 +1575,58 @@ def reprocess_drug_support_across_selected_variants(inputData, matchMap, varMap,
 
                                             # For each evidence (ie combination of direction+clin_signf), count how many different evidence items support it
                                             # At this stage, we find count evidence items by counting how many different combinations of level+pmids there are for the same drug, disease and evidence
-                                            if ('NULL' in direction) or ('N/A' in direction) or ('NULL' in clin_signf) or ('N/A' in clin_signf):
+                                            if ("NULL" in direction) or ("N/A" in direction) or ("NULL" in clin_signf) or ("N/A" in clin_signf):
 # FIXME: have this as part of input config
-                                                thisSupport = 'UNKNOWN_BLANK'
+                                                this_drug_support = "UNKNOWN_BLANK"
                                             else:
                                                 if direction not in supportDict.keys():
                                                     raise ValueError("Could not find evidence direction '%s' in provided 'supportDict'!" %(direction))
                                                 if clin_signf not in supportDict[direction].keys():
                                                     raise ValueError("Could not find clinical significance '%s' in provided 'supportDict'!" %(clin_signf))
-                                                thisSupport = supportDict[direction][clin_signf]
+                                                this_drug_support = supportDict[direction][clin_signf]
 
                                             # Keep track of number of occurrences for each support type for the given drug
                                             # Here, take into account the number of supporting PMIDs associated to each evidence item
-                                            for evidence_level in varMap[gene][varId]['evidence_items'][evidenceType][ct][disease][drug][evidence].keys():
-                                                for thisString in varMap[gene][varId]['evidence_items'][evidenceType][ct][disease][drug][evidence][evidence_level]:
-                                                    drugMap[drug][ct].append(thisSupport)
+                                            for evidence_level in var_map[gene][var_id]["evidence_items"][evidence_type][ct][disease][drug][evidence].keys():
+                                                for this_evidence_string in var_map[gene][var_id]["evidence_items"][evidence_type][ct][disease][drug][evidence][evidence_level]:
+                                                    drug_map[drug][ct].append(this_drug_support)
 
     # Process drug support information parsed and aggregated across all provided genes and variants
     # Drug support for tier 4 will never be available
-    for thisDrug in drugMap.keys():
-        for thisCt in drugMap[thisDrug].keys():
+    for this_drug in drug_map.keys():
+        for this_ct in drug_map[this_drug].keys():
             # Given the selected ct, count number of occurrences for each possible support type (if any)
 # FIXME: have this as part of input config
-            count_pos = drugMap[thisDrug][thisCt].count('POSITIVE')
-            count_neg = drugMap[thisDrug][thisCt].count('NEGATIVE')
-            count_unk = drugMap[thisDrug][thisCt].count('UNKNOWN_BLANK')
-            count_dns = drugMap[thisDrug][thisCt].count('UNKNOWN_DNS')
+            count_pos = drug_map[this_drug][this_ct].count("POSITIVE")
+            count_neg = drug_map[this_drug][this_ct].count("NEGATIVE")
+            count_unk = drug_map[this_drug][this_ct].count("UNKNOWN_BLANK")
+            count_dns = drug_map[this_drug][this_ct].count("UNKNOWN_DNS")
 
-            # Pool UNKNOWN_BLANK and UNKNOWN_DNS together (as both result in unknown CIVIC support)
+            # Pool UNKNOWN_BLANK and UNKNOWN_DNS together (as both result in unknown CIViC support)
             count_total_unk = count_unk + count_dns
             # Sanity check that there is at least some support
             if (count_pos == 0) and (count_neg == 0) and (count_total_unk == 0):
                 raise ValueError("Encountered unexpected support case when aggregating evidences across provided 'inputData'!")
 
             # Resolve contradicting evidence (if any) by majority vote
-            tempSupport = ''
+            temp_support = ""
             # For this, pool UNKNOWN_BLANK and UNKNOWN_DNS together
             # Whenever there is a tie of "confident" (pos or neg) vs "non-confident" (unk), choose the confident one
             if (count_total_unk > count_pos) and (count_total_unk > count_neg):
-                tempSupport = "CIVIC_UNKNOWN"
+                temp_support = "CIVIC_UNKNOWN"
             elif count_pos == count_neg:
-                tempSupport = "CIVIC_CONFLICT"
+                temp_support = "CIVIC_CONFLICT"
             elif (count_pos > count_neg) and (count_pos >= count_total_unk):
-                tempSupport = "CIVIC_SUPPORT"
+                temp_support = "CIVIC_SUPPORT"
             elif (count_neg > count_pos) and (count_neg >= count_total_unk):
-                tempSupport = "CIVIC_RESISTANCE"
+                temp_support = "CIVIC_RESISTANCE"
             else:
                 raise ValueError("Encountered unexpected support case when aggregating evidences across provided 'inputData'!")
 
             # Build support string for each given combination of drug, ct and matched tier
             # Format: DRUG:CT:SUPPORT:#pos|#neg|#unk|#dns
-            drugSupport = thisDrug + ':' + thisCt.upper() + ':' + tempSupport + ':' + str(count_pos) + '|' + str(count_neg) + '|' + str(count_unk) + '|' + str(count_dns)
-            drug_support_strings.append(drugSupport)
+            drug_support = this_drug + ":" + this_ct.upper() + ":" + temp_support + ":" + str(count_pos) + "|" + str(count_neg) + "|" + str(count_unk) + "|" + str(count_dns)
+            drug_support_strings.append(drug_support)
 
     return drug_support_strings
 
