@@ -194,7 +194,7 @@ def expr_is_exon_string(var_name):
     Given a single CIViC record name, return whether it corresponds to an expression record related to exons, and the type of expression change.
     For this, check whether the variant name matches special EXPRESSION exon cases known to be contained in CIViC (e.g. EXON 1-2 EXPRESSION, EXON 5 OVEREXPRESSION...).
     :param var_name:	Name of the CIViC variant record.
-    :return:		Tuple of two booleans; first indicates if the record corresponds to differential expression, and second indicates if CIViC record relates to exons.
+    :return:		Tuple of one boolean and one string; first indicates if the record corresponds to a differential expression record, and second indicates what type of expression change the record relates to (i.e. expression, overexpression or underexpression).
     """
     # Sanity check of provided arguments
     check_argument(var_name, "var_name")
@@ -467,8 +467,7 @@ def input_match_strings(var_annotations, data_type, impact_annots=[], exon_annot
             rank = exon.split("/")[0]
             # After checking some examples, it seems that intron information is associated to variant impacts "intron_variant"
             # and "sequence_feature" (can be contained in impact e.g. "splice_donor_variant&intron_variant")
-            # NOTE: any variant impact other than the above two will generate a tag "EXON XX MUTATION",
-            # even "synonymous" mutations
+            # NOTE: any variant impact other than the above two will generate a tag "EXON XX MUTATION", even "synonymous" mutations
             if re.search("INTRON_VARIANT", impact_annots[i]) or re.search("SEQUENCE_FEATURE", impact_annots[i]):
                 new_tags.append("INTRON " + rank + " MUTATION")
             else:
@@ -552,26 +551,19 @@ def get_expression_strings(gene, logfc):
     return match_strings
 
 
-# FIXME
-# I AM HERE
-
 def match_variants_in_civic(gene, variants, var_map, data_type, impacts=[], exons=[]):
     """
     Match input variants from a given gene (either SNVs/InDels or CNVs) to provided variant-level CIViC records.
-    An exhaustive search of potential matches is performed by the algorithm, as there could be multiple hits matches in cases of redundancy (e.g. E55FS and E55RFSTER11 from CIViC both translate to p.Glu55fs), as well as multiple positional matches (note that for SNVs, so-called 'general' variants are prioritized over other potential positional hits, e.g. V600). Also, in case of having perfect and non-perfect matches available for SNVs (e.g. V600E and EXON 15 MUTATION), the former are prioritized over the second.
-
-given a list of variant annotations for the gene (), and all CIViC variant records for said gene, attempt mapping of any input annotations to one or more CIViC records.
-
+    An exhaustive search of potential matches between input and CIViC is performed by this function, as there could be multiple hits matches in cases of redundancy (e.g. E55FS and E55RFSTER11 from CIViC both translate to p.Glu55fs), as well as multiple positional matches (note that for SNVs, so-called 'general' variants are prioritized over other potential positional hits, e.g. V600). Also, in case of having perfect and non-perfect matches available for SNVs (e.g. V600E and EXON 15 MUTATION), the former are prioritized over the second.
     :param gene:	One single gene identifier (Entrez symbol, Entrez ID or CIViC ID).
-    :param variants:	List of associated variant annotations to be matched to CIViC data (HGVS, synonym descriptive terms e.g. EXON 15 MUTATION and positional strings e.g. p.Val600).
+    :param variants:	List of variant annotations associated to the provided gene, to be matched to CIViC data (HGVS, synonym descriptive terms e.g. EXON 15 MUTATION and positional strings e.g. p.Val600).
     :param var_map:	Nested dictionary of genes (must use same type of identifier as 'gene') and variants retrieved from CIViC. See README for more details about the specific structure.
-    :param data_type:	['SNV', 'CNV', 'EXPR']
+    :param data_type:	['SNV', 'CNV']
                         SNV:   Variants correspond to genomic single nucleotide mutations and insertions/deletions.
                         CNV:   Variants correspond to genomic copy number alterations.
-                        EXPR:  Variants correspond to differential gene expression data.
 			Type of data being queried.
-    :param impacts:	Optional (only supported for data_type='SNV').
-    :param exons:	Optional (only supported for data_type='SNV'). 
+    :param impacts:	Optional (only supported for data_type='SNV'). List of impact annotations associated to the input variant. When provided, variant impacts will be used to generate additional potential record names to match CIViC evidence. See README for more details about these annotations.
+    :param exons:	Optional (only supported for data_type='SNV'). List of exon/intron annotations associated to the input variant. When provided, exon/intron information will be used to generate additional potential record names to match CIViC evidence. Note that if exon annotations are provided, then variant impacts must also be provided, and there must be a 1-1 correspondance in the order between the listed variant impacts and the provided exon/intron annotations (as impacts are used to determine if variant is intronic or exonic). See README for more details about these annotations.
     :return:		Nested dictionary with fixed structure containing all tier categories and corresponding list of CIViC variant matches found in each case (if any). See README for more details about the returned dictionary (i.e. 'match_map').
     """
     # Returns dictionary with the following structure
@@ -592,10 +584,9 @@ given a list of variant annotations for the gene (), and all CIViC variant recor
     exons = uppercase_list(exons, "exons")
 
     # Function for generating additional synonym strings for input annotations (e.g. EXON 15 MUTATION)
-    # is_exact is a list of equal length to input_strings, indicating whether a given string corresponds
-    # to an exact (True) or positional (False) match
-    # allVariants must refer to the same variant, e.g. "c." and "p." annotations of the same variant
-    # allImpacts and allExons can be empty. When exons is provided, then impacts must be provided as well and elements must have a 1-1 correspondance with the impacts.
+    # is_exact is a list of equal length to input_strings, indicating whether a given string corresponds to an exact (True) or positional (False) match
+    # variants must refer to the same variant, e.g. "c." and "p." annotations of the same genomic aberration
+    # impacts and exons can be empty. When exons is provided, then impacts must be provided as well and elements must have a 1-1 correspondance with the impacts.
     (input_strings, is_exact, is_true_exact) = input_match_strings(variants, data_type, impacts, exons)
 
     ## If gene is in CIViC, possible tier levels are 1,2,3
@@ -613,8 +604,8 @@ given a list of variant annotations for the gene (), and all CIViC variant recor
 
             # Iterate input annotations strings and attempt match to any CIViC variant string
             # The position of each input string corresponds to the type of match (true exact, synonym exact or positional)
-            for indx,inputAnnot in enumerate(input_strings):
-                if inputAnnot in civic_strings:
+            for indx,input_annot in enumerate(input_strings):
+                if input_annot in civic_strings:
                     # Determine type of match using its position and store accordingly
                     # For CNV, all matches will be exact and true exact matches (either variant is in CIViC or not)
                     if is_exact[indx]:
@@ -638,7 +629,7 @@ given a list of variant annotations for the gene (), and all CIViC variant recor
                             match["tier_2"].append(var_id)
                 # For CNV: When there is no exact match for a "DELETION", also consider special CIViC CNV records related to exons (these will be positional matches)
                 else:
-                    if (data_type == "CNV") and (inputAnnot == "DELETION"):
+                    if (data_type == "CNV") and (input_annot == "DELETION"):
                         # In CNV case, civic_strings corresponds to the CIViC variant name (single string)
                         for temp_string in civic_strings:
                             # Look for special cases like e.g. "EXON 5 DELETION", "EXON 1-2 DELETION" or "3' EXON DELETION"
@@ -693,26 +684,33 @@ given a list of variant annotations for the gene (), and all CIViC variant recor
     return match
 
 
-# For EXPRESSION data
 def match_expression_in_civic(gene, expression_strings, var_map):
+    """
+    Match input differential expression data for a given gene to provided CIViC records.
+    An exhaustive search of potential matches between input and CIViC is performed by this function, as there could be multiple hits (e.g. EXPRESSION and OVEREXPRESSION from CIViC both can be matched to an input gene with logFC>0). Note that tier1b and tier2 are not supported for this kind of data.
+    :param gene:		One single gene identifier (Entrez symbol, Entrez ID or CIViC ID).
+    :param expression_strings:	List of expression annotations associated to the provided gene, to be matched to CIViC data (i.e. synonym descriptive terms e.g. OVEREXPRESSION, UNDEREXPRESSION or even EXON 15 UNDEREXPRESSION).
+    :param var_map:		Nested dictionary of genes (must use same type of identifier as 'gene') and variant-level records retrieved from CIViC. See README for more details about the specific structure.
+    :return:			Nested dictionary with fixed structure containing all tier categories and corresponding list of CIViC variant matches found in each case (if any). See README for more details about the returned dictionary (i.e. 'match_map').
+    """
     # NOTE: tier1b and tier2 are not supported for this kind of data
     match = {"tier_1":[], "tier_1b":[], "tier_2":[], "tier_3":[], "tier_4":False}
 
     # Sanity check of provided arguments
-    check_arguments([gene,expression_strings],["gene","expression_strings"])
-    check_is_str(gene,"gene")
-    check_is_list(expression_strings,"expression_strings")
-    check_is_dict(var_map,"var_map")
+    check_arguments([gene, expression_strings], ["gene", "expression_strings"])
+    check_is_str(gene, "gene")
+    check_is_list(expression_strings, "expression_strings")
+    check_is_dict(var_map, "var_map")
     # NOTE: uppercase is critical for the match!
     gene = gene.upper()
-    expression_strings = uppercase_list(expression_strings,"expression_strings")
+    expression_strings = uppercase_list(expression_strings, "expression_strings")
 
     # If gene is in CIViC, only possible tier level is 1
     if gene in var_map.keys():
         for var_id in var_map[gene].keys():
             # Only variant name is relevant in this case
             # Disregard HGVS strings for expression variants
-            check_dict_entry(var_map[gene][var_id],"var_map","name","name")
+            check_dict_entry(var_map[gene][var_id], "var_map", "name", "name")
             variant_name = var_map[gene][var_id]["name"]
 
             # For data_type=EXPR (in truth, data_type!=SNV), variant matching is not based on HGVS, so match_strings will only contain the variant name and the list of HGVS is empty
@@ -731,7 +729,7 @@ def match_expression_in_civic(gene, expression_strings, var_map):
             for this_string in civic_strings:
                 (is_exon, expr_type) = expr_is_exon_string(this_string)
                 if is_exon and expr_type:
-                    # FIXME: Records of the type "P16 EXPRESSION" would be missed
+                    # NOTE: records of the type "P16 EXPRESSION" would be missed
                     if expr_type in expression_strings:
                         if var_id not in match["tier_1"]:
                             match["tier_1"].append(var_id)
@@ -757,27 +755,34 @@ def match_expression_in_civic(gene, expression_strings, var_map):
     return match
 
 
-def add_match(match_map,gene,variant,match):
-    sorted_tiers = ["tier_1","tier_1b","tier_2","tier_3","tier_4"]
+def add_match(match_map, gene, variant, match):
+    """
+    :param match_map:	Nested dictionary with fixed structure containing all tier categories and corresponding list of CIViC variant matches found in each case (if any) for the input gene and variant at hand. See README for more details about the specific structure used in 'match_map'.
+    :param gene:	Single gene identifier (Entrez symbol, Entrez ID or CIViC ID) to append the given match into in dictionary 'match_map'.
+    :param variant:	Single input variant annotation to append the given match into in dictionary 'match_map'.
+    :param match:	Nested dictionary with fixed structure containing all tier matches found in CIViC for the given gene and variant annotation (if any).
+    :return:		Tuple of one nested dictionary (updated 'match_map' dictionary, now including the new provided 'match' for the given gene and variant) and list (list of variant ids in CIViC which have been matched overall across all tiers for the given gene and variant). 
+    """
+    sorted_tiers = ["tier_1", "tier_1b", "tier_2", "tier_3", "tier_4"]
 
     # Sanity check of provided arguments
-    check_arguments([match_map,gene,variant,match],["match_map","gene","variant","match"])
-    check_is_dict(match_map,"match_map")
-    check_is_str(gene,"gene")
-    check_is_str(variant,"variant")
-    check_is_dict(match,"match")
+    check_arguments([match_map, gene, variant, match], ["match_map", "gene", "variant", "match"])
+    check_is_dict(match_map, "match_map")
+    check_is_str(gene, "gene")
+    check_is_str(variant, "variant")
+    check_is_dict(match, "match")
 
     # Sanity check that dict contains all expected keys (throws an error if not)
-    check_keys(list(match.keys()),"match",sorted_tiers,matches_all=True)
+    check_keys(list(match.keys()), "match", sorted_tiers, matches_all=True)
     # Sanity check that provided match dict is not annotated for drug support
     for this_tier in match.keys():
         if this_tier != "tier_4":
-            check_is_list(match[this_tier],this_tier)
+            check_is_list(match[this_tier], this_tier)
         else:
-            check_is_bool(match[this_tier],this_tier)
+            check_is_bool(match[this_tier], this_tier)
     # Sanity check that gene and variant are keys of the dict
-    check_dict_entry(match_map,"match_map",gene,"gene")
-    check_dict_entry(match_map[gene],"match_map",variant,"variant")
+    check_dict_entry(match_map, "match_map", gene, "gene")
+    check_dict_entry(match_map[gene], "match_map", variant, "variant")
     # Overwritte any existing matches already assigned to the current variant
     match_map[gene][variant] = {}
 
@@ -801,31 +806,35 @@ def add_match(match_map,gene,variant,match):
 def match_in_civic(var_data, data_type, identifier_type, select_tier="all", var_map=None):
     """
     Match input molecular alterations to variant-level CIViC information.
-    :param var_data:		
+    :param var_data:		Dictionary of input molecular data of a given type (SNV, CNV or EXPR) to be matched in CIViC, with an assumed fixed structure. See README for more details about the specific structure of 'var_data' depending on the data type (i.e. 'snv_data', 'cnv_data', 'expr_data'). 
     :param data_type:		['SNV', 'CNV', 'EXPR']
-                        	SNV:   Variants correspond to genomic single nucleotide mutations and insertions/deletions.
-                        	CNV:   Variants correspond to genomic copy number alterations.
-                        	EXPR:  Variants correspond to differential gene expression data.
+                        	SNV:   Variants correspond to genomic single nucleotide mutations and insertions/deletions
+                        	CNV:   Variants correspond to genomic copy number alterations
+                        	EXPR:  Variants correspond to differential gene expression data
 				Type of data being queried.
     :param identifier_type:	['entrez_symbol', 'entrez_id', 'civic_id']
-                        	entrez_symbol:   Entrez gene symbol.
-                        	entrez_id: 	 Entrez gene identifier.
-                        	civic_id: 	 CIViC internal identifier.
+                        	entrez_symbol:   Entrez gene symbol
+                        	entrez_id: 	 Entrez gene identifier
+                        	civic_id: 	 CIViC internal identifier
                         	Type of gene identifier used in your query. Defaults to 'entrez_symbol'.
-    :param select_tier:		
-    :param var_map:		NOTE: when supplying custom var_map (e.g. when filters need to be applied to CIViC data), anything that is not provided will be interpreted as not available in CIViC.
-    :return:			Nested dictionary with fixed structure containing all tier categories and corresponding list of CIViC variant matches found in each case (if any).
+    :param select_tier:		['highest', 'all', <custom list>]
+				highest:	Select the highest encountered tier per variant match case (hierarchy 1>1b>2>3>4)
+				all:		Do not apply any filtering and return all available tiers for each variant match.
+				<custom_list>:	Alternatively, the user can provide a list of the specific tier categories to select for (if all are provided, then no filtering is applied)
+				Type of tier selection to be performed on the returned variant matches. Can be either a list or a string, and defaults to 'all'.
+    :param var_map:		Optional. Nested dictionary of genes (must use the provided type of identifier) and variant records retrieved from CIViC, to be used for matching the input molecular alterations. Note: when supplying a custom 'var_map' for perfoming the matching of CIViC data (e.g. when filters need to be applied beforehand to remove undesirable CIViC records), anything that is not provided in this dictionary will be interpreted as not available in the knowledgebase. See README for more details about the specific structure expected for dictionary 'var_map'.
+    :return:			Tuple of 3 elements: 'match_map' (nested dictionary with fixed structure containing all tier categories and corresponding matches found in CIViC), 'matched_ids' (list of all variant ids that could be matched in CIViC) and updated 'var_map' (nested dictionary with fixed structure containing all CIViC records associated with the matched variants).
     """
     # Hierarchy of tier classes (descending priority)
-    sorted_tiers = ["tier_1","tier_1b","tier_2","tier_3","tier_4"]
+    sorted_tiers = ["tier_1", "tier_1b", "tier_2", "tier_3", "tier_4"]
 
     # Sanity check of provided arguments
-    check_argument(var_data,"var_data")
-    check_is_dict(var_data,"var_data")
+    check_argument(var_data, "var_data")
+    check_is_dict(var_data, "var_data")
     check_data_type(data_type)
     check_identifier_type(identifier_type)
     # Process and sanity check provided select_tier (expected format, valid values, etc.)
-    select_tier = check_tier_selection(select_tier,sorted_tiers)
+    select_tier = check_tier_selection(select_tier, sorted_tiers)
 
     match_map = {}
     matched_ids = []     # keep track of all matched variant ids across genes and tiers
@@ -836,63 +845,62 @@ def match_in_civic(var_data, data_type, identifier_type, select_tier="all", var_
         # gene -> variant -> null
         all_genes = list(var_data.keys())
         var_map = query_civic(all_genes, identifier_type)
-    # TODO: Check correct structure of var_map?
     else:
-        check_is_dict(var_map,"var_map")
+        check_is_dict(var_map, "var_map")
 
     # gene -> variant -> null
     # where variant -> var="dna|prot|impact|exon|lineNumber"
     for gene in var_data.keys():
-        gene = check_empty_input(gene, "Gene", isRequired=True)
+        gene = check_empty_input(gene, "Gene", is_required=True)
         if gene not in match_map.keys():
             match_map[gene] = {}
         for variant in var_data[gene].keys():
-            variant = check_empty_input(variant, "Variant", isRequired=True)
+            variant = check_empty_input(variant, "variant", is_required=True)
             # Overwrite duplicated variant ids (should never happen)
             match_map[gene][variant] = {}
             variants = []
-            impactArr = []
-            exonArr = []
+            impact_list = []
+            exon_list = []
 
-            varArr = variant.split("|")
+            variant_list = variant.split("|")
             if data_type == "SNV":
                 # Sanity check for expected SNV format (at least 4 fields should exist, even if empty)
-                if (len(varArr) < 4):
+                if (len(variant_list) < 4):
                     raise ValueError("Must provide at least 4 fields to describe a SNV variant (even if some can be empty): 'dna|prot|impact|exon|..|'")
                 # Format: var="dna|prot|[impact]|[exon]|..|"
                 # NOTE: all fields can contain >1 terms separated with "," (no spaces). Fields "dna" and "prot" are required and "impacts" and "exons" are optional
                 # NOTE: there might be additional fields after, e.g. "lineNumber" when data has been parsed from a file
-                cVars = varArr[0]
-                pVars = varArr[1]
-                impacts = varArr[2]
-                exons = varArr[3]
+                c_variants = variant_list[0]
+                p_variants = variant_list[1]
+                impacts = variant_list[2]
+                exons = variant_list[3]
 
                 # Sanity check for required and optional fields
 
-                # Field "Variant_dna" must exist and cannot contain empty values
-                cVarArr = parse_input(cVars, "Variant_dna", isRequired=False)
-                # Field "Variant_prot" must exist but can contain empty values
-                pVarArr = parse_input(pVars, "Variant_prot", isRequired=False)
-                for cVar in cVarArr:
+                # Field must exist and cannot contain empty values
+                c_variants_list = parse_input(c_variants, "c_variants", is_required=True)
+                # Field must exist but can contain empty values
+                p_variants_list = parse_input(p_variants, "p_variants", is_required=True)
+                for c_var in c_variants_list:
                     # Sanity check that c. variant is not empty (as this field is not always required)
-                    if not cVar:
+                    if not c_var:
                         continue
                     # Sanity check that variant starts with "c."
-                    check_is_chgvs(cVar)
-                    if cVar not in variants:
-                        variants.append(cVar)
-                for pVar in pVarArr:
+                    check_is_chgvs(c_var)
+                    if c_var not in variants:
+                        variants.append(c_var)
+                for p_var in p_variants_list:
                     # Sanity check that p. variant is not empty (as this field is not always required)
-                    if not pVar:
+                    if not p_var:
                         continue
                     # Sanity check that variant starts with "p."
-                    check_is_phgvs(pVar)
-                    if pVar not in variants:
-                        variants.append(pVar)
-                # Field "Variant_impact" is optional and can contain empty values
-                impactArr = parse_input(impacts, "Variant_impact", isRequired=False)
-                # Field "Variant_exon" is optional and can contain empty values
-                exonArr = parse_input(exons, "Variant_exon", isRequired=False)
+                    check_is_phgvs(p_var)
+                    if p_var not in variants:
+                        variants.append(p_var)
+                # Field is optional and can contain empty values
+                impact_list = parse_input(impacts, "impacts", is_required=False)
+                # Field is optional and can contain empty values
+                exon_list = parse_input(exons, "exons", is_required=False)
 
                 # Since c. and p. annotations can be optionally provided for each variant, sanity check that at least 1 annotation was provided (of either type)
                 if not variants:
@@ -902,20 +910,19 @@ def match_in_civic(var_data, data_type, identifier_type, select_tier="all", var_
                 # Format: var="cnv|.."
                 # NOTE: CNV field can contain >1 terms separated with "," (no spaces)
                 # NOTE: there might be additional fields after, e.g. "lineNumber" when data has been parsed from a file
-                cnvVars = varArr[0]
-                variants = parse_input(cnvVars, "Variant_cnv", isRequired=True)
+                cnv_variants = variant_list[0]
+                variants = parse_input(cnv_variants, "cnv_variants", is_required=True)
 
             if data_type == "EXPR":
                 # Format: expr="logFC|.."
                 # NOTE: logFC field should be a single number (sign will determine if gene is overexpressed or underexpressed)
                 # NOTE: there might be additional fields after, e.g. "lineNumber" when data has been parsed from a file
-                logfc = varArr[0]
+                logfc = variant_list[0]
                 variants = get_expression_strings(gene, logfc)
 
-# TODO: check that data type is valid and one of the 3 options
             # tier -> [matched_vars]
             if (data_type == "SNV") or (data_type == "CNV"):
-                match = match_variants_in_civic(gene, variants, var_map, data_type, impacts=impactArr, exons=exonArr)
+                match = match_variants_in_civic(gene, variants, var_map, data_type, impacts=impact_list, exons=exon_list)
 
                 # Avoid executing unnecessary filter when select_tier="all" (as resulting dict will be identical)
                 if select_tier != "all":
@@ -927,10 +934,10 @@ def match_in_civic(var_data, data_type, identifier_type, select_tier="all", var_
 
             # Add the match to the current entry for gene + variant
             # gene -> variant -> {tier1,tier1b..} -> [matched_vars]
-            (match_map,allIds) = add_match(match_map,gene,variant,match)
+            (match_map, all_ids) = add_match(match_map, gene, variant, match)
 
             # Keep track of all the variant ids matched across genes and tiers
-            for var_id in allIds:
+            for var_id in all_ids:
                 if var_id not in matched_ids:
                     matched_ids.append(var_id)
 
@@ -943,63 +950,66 @@ def match_in_civic(var_data, data_type, identifier_type, select_tier="all", var_
     return (match_map, matched_ids, var_map)
 
 
-# TODO: make match of tier case-insensitive?
 def filter_match(match, select_tier):
     """
-
-    :param match:	
-    :param select_tier:	
-    :return:		
+    Filter tier matches associated to one single gene and variant from the input, according to the provided tier selection.
+    :param match:		Nested dictionary with fixed structure containing all tier matches found in CIViC (if any) for one given gene and variant annotation.
+    :param select_tier:		['highest', 'all', <custom list>]
+				highest:	Select the highest encountered tier per variant match case (hierarchy 1>1b>2>3>4)
+				all:		Do not apply any filtering and return all available tiers for each variant match.
+				<custom_list>:	Alternatively, the user can provide a list of the specific tier categories to select for (if all are provided, then no filtering is applied)
+				Type of tier selection to be performed on the provided variant matches. Can be either a list or a string.
+    :return:			Updated 'match' dictionary after applying the provided tier filter/selection.
     """
-    sorted_tiers = ["tier_1","tier_1b","tier_2","tier_3","tier_4"]
+    sorted_tiers = ["tier_1", "tier_1b", "tier_2", "tier_3", "tier_4"]
 
     # Sanity check of provided arguments
-    check_argument(match,"match")
-    check_is_dict(match,"match")
+    check_argument(match, "match")
+    check_is_dict(match, "match")
     # Process and sanity check provided select_tier (expected format, valid values, etc.)
-    select_tier = check_tier_selection(select_tier,sorted_tiers)
+    select_tier = check_tier_selection(select_tier, sorted_tiers)
     # Sanity check that dict contains all expected keys (throws an error if not)
-    check_keys(list(match.keys()),"match",sorted_tiers,matches_all=True)
+    check_keys(list(match.keys()), "match", sorted_tiers, matches_all=True)
     # Sanity check that provided match dict is not annotated for drug support
     for this_tier in match.keys():
         if this_tier != "tier_4":
-            check_is_list(match[this_tier],this_tier)
+            check_is_list(match[this_tier], this_tier)
         else:
-            check_is_bool(match[this_tier],this_tier)
+            check_is_bool(match[this_tier], this_tier)
 
     new = {"tier_1":[], "tier_1b":[], "tier_2":[], "tier_3":[], "tier_4":False}
-    keepTiers = []
+    keep_tiers = []
 
     # When select_tier="all", filter is off (keep data for all tiers)
     if isinstance(select_tier, str) and (select_tier == "all"):
-        for tmpTier in sorted_tiers:
-            keepTiers.append(tmpTier)
+        for tmp_tier in sorted_tiers:
+            keep_tiers.append(tmp_tier)
 
     # When select_tier="highest", then keep data only for the highest tier 1>1b>2>3>4
     elif isinstance(select_tier, str) and (select_tier == "highest"):
-        for tmpTier in sorted_tiers:
-            if tmpTier != "tier_4":
-                if match[tmpTier]:
-                    keepTiers.append(tmpTier)
+        for tmp_tier in sorted_tiers:
+            if tmp_tier != "tier_4":
+                if match[tmp_tier]:
+                    keep_tiers.append(tmp_tier)
                     break
             else:
                 # If we reached to this point, that means all other tiers were empty (tier_4=True)
-                keepTiers.append(tmpTier)
+                keep_tiers.append(tmp_tier)
                 break
 
     # When select_tier is a list of tiers, then keep data only for those tiers
     elif isinstance(select_tier, list):
-        for tmpTier in sorted_tiers:
-            if tmpTier in select_tier:
-                keepTiers.append(tmpTier)
+        for tmp_tier in sorted_tiers:
+            if tmp_tier in select_tier:
+                keep_tiers.append(tmp_tier)
 
     # Sanity check for any duplicated tiers
-    keepTiers = list(set(keepTiers))
+    keep_tiers = list(set(keep_tiers))
 
     # Keep variant matches only for the selected tiers (all other data will be excluded from output)
     # Respect the order of tiers while filling the new dictionary
     for tier in sorted_tiers:
-        if tier in keepTiers:
+        if tier in keep_tiers:
             if tier != "tier_4":
                 for var_id in match[tier]:
                     new[tier].append(var_id)
@@ -1014,16 +1024,20 @@ def filter_match(match, select_tier):
 
 def filter_matches(match_map, select_tier):
     """
-
-    :param match_map:	
-    :param select_tier:	
-    :return:		
+    Apply filtering of tier matches (according to the provided tier selection) to the entire nested dictionary of input genes and variants queried in CIViC.
+    :param match_map:		Nested dictionary with fixed structure containing all tier matches found in CIViC (if any) for a set of genes and associated variant annotations. See README for more details about the structure of 'match_map'.
+    :param select_tier:		['highest', 'all', <custom list>]
+				highest:	Select the highest encountered tier per variant match case (hierarchy 1>1b>2>3>4)
+				all:		Do not apply any filtering and return all available tiers for each variant match.
+				<custom_list>:	Alternatively, the user can provide a list of the specific tier categories to select for (if all are provided, then no filtering is applied)
+				Type of tier selection to be performed on the provided variant matches. Can be either a list or a string.
+    :return:			Tuple of 2 elements: 'clean_map' (updated 'match_map' dictionary after applying the provided tier filter/selection) and 'matched_ids' (list of all variant ids that could be matched in CIViC).
     """
-    sorted_tiers = ["tier_1","tier_1b","tier_2","tier_3","tier_4"]
+    sorted_tiers = ["tier_1", "tier_1b", "tier_2", "tier_3", "tier_4"]
 
     # Check provided argument
-    check_argument(match_map,"match_map")
-    check_is_dict(match_map,"match_map")
+    check_argument(match_map, "match_map")
+    check_is_dict(match_map, "match_map")
 
     clean_map = {}
     matched_ids = []
@@ -1037,27 +1051,26 @@ def filter_matches(match_map, select_tier):
             clean_map[gene][variant] = {}
             new = filter_match(match_map[gene][variant], select_tier)
             # Add the filtered match to the current entry for gene + variant
-            (clean_map,allIds) = add_match(clean_map,gene,variant,new)
+            (clean_map, all_ids) = add_match(clean_map, gene, variant, new)
             # Keep track of all the variant ids matched across genes and tiers
-            for var_id in allIds:
+            for var_id in all_ids:
                 if var_id not in matched_ids:
                     matched_ids.append(var_id)
 
     return (clean_map, matched_ids)
 
 
-
 def classify_diseases(disease_list, disease_name_not_in, disease_name_in, alt_disease_names):
     """
-    Given a list of disease names, first filter out those matching the non-allowed terms (if any), and from the remaining set, return either:
-       - Subset of diseases matching white-listed terms - partial match (e.g. 'Melanoma')
-       - If previous is not available, subset of matching high-level diseases - exact match (e.g. 'Cancer', 'Solid tumor')
-       - If previous is not available, return all available diseases (i.e. so, original set except those matched to the non-allowed list, if any)
-    :param disease_list:	
-    :param disease_name_not_in:	
-    :param disease_name_in:	
-    :param alt_disease_names:	
-    :return:		
+    Given a list of disease names, first filter out those partially matching the non-allowed terms (if any), and from the remaining set, return either:
+       - Subset of diseases names from the list matching white-listed terms - use a partial match. These disease names can be considered as 'ct' (cancer type specific).
+       - If previous is not available, subset of disease names matching high-level or general terms - use an exact match. These disease names can be considered as 'gt' (general cancer type).
+       - If previous is not available, return all available disease names supplied as input (i.e. thus, original set except those matched to the non-allowed list, if any where provided and foun). These disease names can be considered as 'nct' (non cancer type specific).
+    :param disease_list:		List of disease names from CIViC to be classified into 'ct', 'gt' or 'nct' categories.
+    :param disease_name_not_in:		List of non-allowed terms to remove undesirable disease names. Partial matching is applied. Can be empty.
+    :param disease_name_in:		List of clinically relevant ('ct') terms to select disease names of interest. Partial matching is applied (e.g. returns 'Uveal melanoma' when term 'melanoma' is provided). Can be empty.
+    :param alt_disease_names:		List of alternative broad-definition or general ('gt') terms to use as a second-best strategy to select disease names of interest (e.g. 'Cancer', 'Solid tumor'). Exact matching is applied (e.g. returns disease 'cancer' only when 'cancer' is the provided term). Can be empty.
+    :return:				Tuple of 3 lists: 'ct_list' (disease names classified as 'ct'), 'gt_list' (disease names classified as 'gt'), 'nct_list' (disease names classified as 'nct').
     """
     # Sanity check and uppercase terms in all the provided lists
     disease_list = uppercase_list(disease_list, "disease_list")
@@ -1065,13 +1078,13 @@ def classify_diseases(disease_list, disease_name_not_in, disease_name_in, alt_di
     disease_name_in = uppercase_list(disease_name_in, "disease_name_in")
     alt_disease_names = uppercase_list(alt_disease_names, "alt_disease_names")
 
-    ## Keep track of diseases that did not pass the non-allowed filter
+    # Keep track of diseases that did not pass the non-allowed filter
     non_allowed_matched = []
-    ## Keep track of diseases that passed the non-allowed filter
+    # Keep track of diseases that passed the non-allowed filter
     clean_set = []
-    ## Final list of matched diseases (associated to one of 3 categories depending on match type: "ct", "gt" or "nct")
+    # Final list of matched diseases (associated to one of 3 categories depending on match type: "ct", "gt" or "nct")
     matched = []
-    ## Keep track of which type of disease specificy was matched in the end ("ct", "gt" or "nct")
+    # Keep track of which type of disease specificy was matched in the end ("ct", "gt" or "nct")
     ct_list = []
     gt_list = []
     nct_list = []
@@ -1139,6 +1152,7 @@ def classify_diseases(disease_list, disease_name_not_in, disease_name_in, alt_di
     return (ct_list, gt_list, nct_list)
 
 
+# TODO
 def add_ct(diseases, ct, gene, variant, evidence_type, new_map, var_map, is_annot=False):
     """
 
@@ -1152,14 +1166,14 @@ def add_ct(diseases, ct, gene, variant, evidence_type, new_map, var_map, is_anno
     :param is_annot:	
     :return:		
     """
-    sorted_cts = ["ct","gt","nct"]
+    sorted_cts = ["ct", "gt", "nct"]
 
     # Sanity check for the expected object types and also expected keys contained in both dicts
     check_is_dict(new_map, "new_map")
     check_is_dict(var_map, "var_map")
     check_is_none(is_annot, "is_annot")
     if ct not in sorted_cts:
-        raise ValueError("Provided ct '%s' is not valid! Please provide one of: %s" %(ct,sorted_cts))
+        raise ValueError("Provided ct '%s' is not valid! Please provide one of: %s" %(ct, sorted_cts))
     check_is_bool(is_annot, "is_annot")
     check_dict_entry(new_map, "new_map", gene, "gene")
     check_dict_entry(new_map[gene], "new_map", variant, "variant")
@@ -1214,15 +1228,15 @@ def add_ct(diseases, ct, gene, variant, evidence_type, new_map, var_map, is_anno
 
 def annotate_ct(var_map, disease_name_not_in, disease_name_in, alt_disease_names):
     """
-
-    :param var_map:	
-    :param disease_name_not_in:	
-    :param disease_name_in:	
-    :param alt_disease_names:	
-    :return:		
+    Annotate a nested dictionary of variant-level CIViC records with cancer type specificity annotations according to the associated disease name in each case.
+    :param var_map:			Nested dictionary of genes and variants retrieved from CIViC. See README for more details about the specific structure.
+    :param disease_name_not_in:		List of non-allowed terms to remove undesirable disease names. Partial matching is applied. Can be empty.
+    :param disease_name_in:		List of clinically relevant ('ct') terms to select disease names of interest. Partial matching is applied (e.g. returns 'Uveal melanoma' when term 'melanoma' is provided). Can be empty.
+    :param alt_disease_names:		List of alternative broad-definition or general ('gt') terms to use as a second-best strategy to select disease names of interest (e.g. 'Cancer', 'Solid tumor'). Exact matching is applied (e.g. returns disease 'cancer' only when 'cancer' is the provided term). Can be empty.
+    :return:				Updated 'var_map' dictionary after annotating disease specificity according to the provided terms. See README for more details about the specific structure of 'var_map' when disease specificity annotations are included.
     """
-    sorted_cts = ["ct","gt","nct"]
-    varmap_entries = ["name","civic_score","hgvs","types","n_evidence_items","evidence_items"]
+    sorted_cts = ["ct", "gt", "nct"]
+    varmap_entries = ["name", "civic_score", "hgvs", "types", "n_evidence_items", "evidence_items"]
     new_map = {}
 
     # Iterate the complete var_map dict and reorganize it to classify diseases
@@ -1233,7 +1247,7 @@ def annotate_ct(var_map, disease_name_not_in, disease_name_in, alt_disease_names
             # Overwrite duplicated variant ids (should never happen)
             new_map[gene][variant] = {}
             # Sanity check that some expected fields can be found in the dictionary
-            check_keys(list(var_map[gene][variant].keys()),"var_map",varmap_entries,matches_all=True)
+            check_keys(list(var_map[gene][variant].keys()), "var_map", varmap_entries, matches_all=True)
             new_map[gene][variant]["name"] = var_map[gene][variant]["name"]
             new_map[gene][variant]["civic_score"] = var_map[gene][variant]["civic_score"]
             new_map[gene][variant]["hgvs"] = [a for a in var_map[gene][variant]["hgvs"]]
@@ -1243,38 +1257,41 @@ def annotate_ct(var_map, disease_name_not_in, disease_name_in, alt_disease_names
             for evidence_type in var_map[gene][variant]["evidence_items"].keys():
                 new_map[gene][variant]["evidence_items"][evidence_type] = {}
                 # Retrieve all disease names associated witht he current evidence type, and classify them into ct, gt, nct
-                allDiseases = list(var_map[gene][variant]["evidence_items"][evidence_type].keys())
+                all_diseases = list(var_map[gene][variant]["evidence_items"][evidence_type].keys())
                 # Check that provided var_map is not annotated with disease specificity info (ct/gt/nct)
-                # check_keys_not(allDiseases,"var_map",sorted_cts)
+                # check_keys_not(all_diseases, "var_map", sorted_cts)
                 # Classify diseases by provided specificity criteria (ct/gt/nct)
-                (ctDis,gtDis,nctDis) = classify_diseases(allDiseases, disease_name_not_in, disease_name_in, alt_disease_names)
+                (ct_diseases, gt_diseases, nct_diseases) = classify_diseases(all_diseases, disease_name_not_in, disease_name_in, alt_disease_names)
                 # Add new layer of classification within the evidence types: specificity of the disease (ct, gt, nct)
                 for ct in sorted_cts:
-# TODO what happens when list of diseases to add is empty?
                     if ct == "ct":
-                        new_map = add_ct(ctDis,ct,gene,variant,evidence_type,new_map,var_map,is_annot=False)
+                        new_map = add_ct(ct_diseases, ct, gene, variant, evidence_type, new_map, var_map, is_annot=False)
                     if ct == "gt":
-                        new_map = add_ct(gtDis,ct,gene,variant,evidence_type,new_map,var_map,is_annot=False)
+                        new_map = add_ct(gt_diseases, ct, gene, variant, evidence_type, new_map, var_map, is_annot=False)
                     if ct == "nct":
-                        new_map = add_ct(nctDis,ct,gene,variant,evidence_type,new_map,var_map,is_annot=False)
+                        new_map = add_ct(nct_diseases, ct, gene, variant, evidence_type, new_map, var_map, is_annot=False)
 
     return new_map
 
 
 def filter_ct(var_map, select_ct):
     """
-
-    :param var_map:	
-    :param select_ct:	
-    :return:		
+    Apply filtering of variant-level CIViC records according to their associated disease names, based on the provided cancer type specificity selection.
+    :param var_map:		Nested dictionary of genes and variants retrieved from CIViC. Must be annotated with disease specificity information (i.e. 'ct'). See README for more details about the specific structure expected by this function.
+    :param select_ct:		['highest', 'all', <custom list>]
+				highest:	Select the highest encountered disease specificity category per variant match case (hierarchy ct>gt>nct)
+				all:		Do not apply any filtering and return all available disease specificities for each variant match.
+				<custom_list>:	Alternatively, the user can provide a list of the specific disease specificity categories to select for (if all are provided, then no filtering is applied)
+				Type of cancer type specificity selection to be performed on the provided variant records. Can be either a list or a string.
+    :return:			Updated 'var_map' dictionary after filtering disease specificity according to the provided selection.
     """
-    sorted_cts = ["ct","gt","nct"]
-    varmap_entries = ["name","civic_score","hgvs","types","n_evidence_items","evidence_items"]
+    sorted_cts = ["ct", "gt", "nct"]
+    varmap_entries = ["name", "civic_score", "hgvs", "types", "n_evidence_items", "evidence_items"]
 
     # Sanity check for the expected object types
-    check_is_dict(var_map,"var_map")
+    check_is_dict(var_map, "var_map")
     # Process and sanity check provided select_ct (expected format, valid values, etc.)
-    select_ct = check_tier_selection(select_ct,sorted_cts)
+    select_ct = check_tier_selection(select_ct, sorted_cts)
 
     new_map = {}
 
@@ -1284,9 +1301,9 @@ def filter_ct(var_map, select_ct):
         # Sanity check that provided var_map has expected format and is annotated for ct
         for gene in var_map.keys():
             for variant in var_map[gene].keys():
-                check_keys(list(var_map[gene][variant].keys()),"var_map",varmap_entries,matches_all=True)
+                check_keys(list(var_map[gene][variant].keys()), "var_map", varmap_entries, matches_all=True)
                 for evidence_type in var_map[gene][variant]["evidence_items"].keys():
-                    check_keys(list(var_map[gene][variant]["evidence_items"][evidence_type].keys()),"var_map",sorted_cts,matches_all=True)
+                    check_keys(list(var_map[gene][variant]["evidence_items"][evidence_type].keys()), "var_map", sorted_cts, matches_all=True)
         return var_map
 
     # Otherwise, some filtering needs to be done, so iterate var_map
@@ -1298,7 +1315,7 @@ def filter_ct(var_map, select_ct):
             # Overwrite duplicated variant ids (should never happen)
             new_map[gene][variant] = {}
             # Sanity check that some expected fields can be found in the dictionary
-            check_keys(list(var_map[gene][variant].keys()),"var_map",varmap_entries,matches_all=True)
+            check_keys(list(var_map[gene][variant].keys()), "var_map", varmap_entries, matches_all=True)
             new_map[gene][variant]["name"] = var_map[gene][variant]["name"]
             new_map[gene][variant]["civic_score"] = var_map[gene][variant]["civic_score"]
             new_map[gene][variant]["hgvs"] = [a for a in var_map[gene][variant]["hgvs"]]
@@ -1308,7 +1325,7 @@ def filter_ct(var_map, select_ct):
             for evidence_type in var_map[gene][variant]["evidence_items"].keys():
                 new_map[gene][variant]["evidence_items"][evidence_type] = {}
                 # Sanity check that input dict is annotated with disease specificity info (i.e. has the expected format)
-                check_keys(list(var_map[gene][variant]["evidence_items"][evidence_type].keys()),"var_map",sorted_cts,matches_all=True)
+                check_keys(list(var_map[gene][variant]["evidence_items"][evidence_type].keys()), "var_map", sorted_cts, matches_all=True)
                 skip = False
                 for ct in sorted_cts:
                     new_map[gene][variant]["evidence_items"][evidence_type][ct] = {}
@@ -1317,7 +1334,7 @@ def filter_ct(var_map, select_ct):
                     if isinstance(select_ct, str) and (select_ct == "highest"):
                         # Check if data is available for the currently iterated ct
                         if ct_list and (not skip):
-                            new_map = add_ct(ct_list,ct,gene,variant,evidence_type,new_map,var_map,is_annot=True)
+                            new_map = add_ct(ct_list, ct, gene, variant, evidence_type, new_map, var_map, is_annot=True)
                             # Prematurely exit the loop after this successful iteration (to keep only the highest ct)
                             skip = True
 
@@ -1332,24 +1349,24 @@ def filter_ct(var_map, select_ct):
 
 
 # TODO
-def process_drug_support(match_map, var_map, supportDict):
+def process_drug_support(match_map, var_map, support_dict):
     """
-    For 'predictive' evidence (writeDrug=True), keep dictionary of drug support for the current variant match (one support per tier).
+    For 'predictive' evidence (write_drug=True), keep dictionary of drug support for the current variant match (one support per tier).
     :param match_map:	
     :param var_map:	
-    :param supportDict:	
+    :param support_dict:	
     :return:		
     """
-    sorted_tiers = ["tier_1","tier_1b","tier_2","tier_3","tier_4"]
-    sorted_cts = ["ct","gt","nct"]
+    sorted_tiers = ["tier_1", "tier_1b", "tier_2", "tier_3", "tier_4"]
+    sorted_cts = ["ct", "gt", "nct"]
     evidence_type = "PREDICTIVE"
-    special_cases = ["NON_SNV_MATCH_ONLY","NON_CNV_MATCH_ONLY","NON_EXPR_MATCH_ONLY"]
+    special_cases = ["NON_SNV_MATCH_ONLY", "NON_CNV_MATCH_ONLY", "NON_EXPR_MATCH_ONLY"]
 
     # Check provided argument
-    check_arguments([match_map,supportDict],["match_map","supportDict"])
-    check_is_dict(match_map,"match_map")
-    check_is_dict(var_map,"var_map")
-    check_is_dict(supportDict,"supportDict")
+    check_arguments([match_map, support_dict], ["match_map", "support_dict"])
+    check_is_dict(match_map, "match_map")
+    check_is_dict(var_map, "var_map")
+    check_is_dict(support_dict, "support_dict")
 
     # Format: drug -> ct -> [support1,support2,..,support1] (keep track of all occurrences)
     new_map = {}
@@ -1362,7 +1379,7 @@ def process_drug_support(match_map, var_map, supportDict):
         for variant in match_map[gene].keys():
             new_map[gene][variant] = {}
             # Sanity check that provided match_map has expected format (i.e. is annotated with drug support)
-            check_keys(list(match_map[gene][variant].keys()),"match_map",sorted_tiers,matches_all=True)
+            check_keys(list(match_map[gene][variant].keys()), "match_map", sorted_tiers, matches_all=True)
             for tier in match_map[gene][variant].keys():
                 new_map[gene][variant][tier] = {}
                 # Sanity check that provided match_map has expected format
@@ -1374,9 +1391,6 @@ def process_drug_support(match_map, var_map, supportDict):
                     check_is_list(match_map[gene][variant][tier],tier)
                     new_map[gene][variant][tier]["matched"] = []
 
-# TODO: drug support for tier 1, 1b and 2 is clear
-# TODO: drug support for tier 3 will not make sense (averaging across variants) -> leave it in case the user is interested
-# TODO: drug support for tier 4 should directly be empty
                 new_map[gene][variant][tier]["drug_support"] = []
                 drug_map = {}
                 if tier != "tier_4":
@@ -1391,15 +1405,13 @@ def process_drug_support(match_map, var_map, supportDict):
                             continue
 
                         # For matched variants, they must be contained in the provided var_map
-                        check_dict_entry(var_map,"var_map",gene,"gene")
-                        check_dict_entry(var_map[gene],"var_map",var_id,"variant")
-                        check_dict_entry(var_map[gene][var_id],"var_map","evidence_items","key")
+                        check_dict_entry(var_map, "var_map", gene, "gene")
+                        check_dict_entry(var_map[gene], "var_map", var_id, "variant")
+                        check_dict_entry(var_map[gene][var_id], "var_map", "evidence_items", "key")
 
-# TODO: ensure that filtering return_empty=False does affect other functions
-# TODO: sanity check that all expected evidence types can be found -> use config for expected values of all dicts, etc.
                         if evidence_type in var_map[gene][var_id]["evidence_items"].keys():
                             # Sanity check that provided var_map has expected format (i.e. annotated for disease specificity)
-                            check_keys(list(var_map[gene][var_id]["evidence_items"][evidence_type].keys()),"var_map",sorted_cts,matches_all=True)
+                            check_keys(list(var_map[gene][var_id]["evidence_items"][evidence_type].keys()), "var_map", sorted_cts, matches_all=True)
                             for ct in var_map[gene][var_id]["evidence_items"][evidence_type].keys():
                                 for disease in var_map[gene][var_id]["evidence_items"][evidence_type][ct].keys():
                                     for drug in var_map[gene][var_id]["evidence_items"][evidence_type][ct][disease].keys():
@@ -1409,23 +1421,22 @@ def process_drug_support(match_map, var_map, supportDict):
                                             drug_map[drug][ct] = []
                                         for evidence in var_map[gene][var_id]["evidence_items"][evidence_type][ct][disease][drug].keys():
                                             # Split the evidence direction and clinical significance
-                                            evidenceArr = evidence.strip().split(":")
-                                            if (len(evidenceArr) != 2):
+                                            evidence_list = evidence.strip().split(":")
+                                            if (len(evidence_list) != 2):
                                                 raise ValueError("Unexpected format of evidence '%s'! Please provide string as 'EVIDENCE_DIRECTION:CLINICAL_SIGNIFICANCE'." %(evidence))
-                                            direction = evidenceArr[0]
-                                            clin_signf = evidenceArr[1]
+                                            direction = evidence_list[0]
+                                            clin_signf = evidence_list[1]
 
                                             # For each evidence (ie combination of direction+clin_signf), count how many different evidence items support it
                                             # At this stage, we find count evidence items by counting how many different combinations of level+pmids there are for the same drug, disease and evidence
                                             if ("NULL" in direction) or ("N/A" in direction) or ("NULL" in clin_signf) or ("N/A" in clin_signf):
-# FIXME: have this as part of input config
                                                 this_drug_support = "UNKNOWN_BLANK"
                                             else:
-                                                if direction not in supportDict.keys():
-                                                    raise ValueError("Could not find evidence direction '%s' in provided 'supportDict'!" %(direction))
-                                                if clin_signf not in supportDict[direction].keys():
-                                                    raise ValueError("Could not find clinical significance '%s' in provided 'supportDict'!" %(clin_signf))
-                                                this_drug_support = supportDict[direction][clin_signf]
+                                                if direction not in support_dict.keys():
+                                                    raise ValueError("Could not find evidence direction '%s' in provided 'support_dict'!" %(direction))
+                                                if clin_signf not in support_dict[direction].keys():
+                                                    raise ValueError("Could not find clinical significance '%s' in provided 'support_dict'!" %(clin_signf))
+                                                this_drug_support = support_dict[direction][clin_signf]
 
                                             # Keep track of number of occurrences for each support type for the given drug
                                             # Here, take into account the number of supporting PMIDs associated to each evidence item
@@ -1438,7 +1449,6 @@ def process_drug_support(match_map, var_map, supportDict):
                 for this_drug in drug_map.keys():
                     for this_ct in drug_map[this_drug].keys():
                         # Given the selected ct, count number of occurrences for each possible support type (if any)
-# FIXME: have this as part of input config
                         count_pos = drug_map[this_drug][this_ct].count("POSITIVE")
                         count_neg = drug_map[this_drug][this_ct].count("NEGATIVE")
                         count_unk = drug_map[this_drug][this_ct].count("UNKNOWN_BLANK")
@@ -1470,8 +1480,7 @@ def process_drug_support(match_map, var_map, supportDict):
                         drug_support = this_drug + ":" + this_ct.upper() + ":" + temp_support + ":" + str(count_pos) + "|" + str(count_neg) + "|" + str(count_unk) + "|" + str(count_dns)
                         new_map[gene][variant][tier]["drug_support"].append(drug_support)
 
-# TODO: Loop for all available tiers that are not tier 4 (could be indicated in the config) -> to make it robust to changes in the tier categories
-            # Always check if current match corresponds to a tier_4 situation (all other tiers will be empty)
+            # Always check if current match corresponds to a tier_4 situation (i.e. situation where all other tiers are empty)
             if not (new_map[gene][variant]["tier_1"]["matched"] or new_map[gene][variant]["tier_1b"]["matched"] or new_map[gene][variant]["tier_2"]["matched"] or new_map[gene][variant]["tier_3"]["matched"]):
                 new_map[gene][variant]["tier_4"]["matched"] = True
 
@@ -1479,63 +1488,60 @@ def process_drug_support(match_map, var_map, supportDict):
 
 
 # TODO
-def reprocess_drug_support_across_selected_variants(inputData, match_map, var_map, supportDict, hasSupport=True):
+def reprocess_drug_support_across_selected_variants(input_data, match_map, var_map, support_dict, has_support=True):
     """
-    For 'predictive' evidence (writeDrug=True), keep dictionary of drug support for the current variant match (one support per tier).
-    :param inputData:	
+    For 'predictive' evidence (write_drug=True), keep dictionary of drug support for the current variant match (one support per tier).
+    :param input_data:	
     :param match_map:	
     :param var_map:	
-    :param supportDict:	
-    :param hasSupport:	
+    :param support_dict:	
+    :param has_support:	
     :return:		
     """
-    sorted_tiers = ["tier_1","tier_1b","tier_2","tier_3","tier_4"]
-    sorted_cts = ["ct","gt","nct"]
+    sorted_tiers = ["tier_1", "tier_1b", "tier_2", "tier_3", "tier_4"]
+    sorted_cts = ["ct", "gt", "nct"]
     evidence_type = "PREDICTIVE"
-    special_cases = ["NON_SNV_MATCH_ONLY","NON_CNV_MATCH_ONLY","NON_EXPR_MATCH_ONLY"]
+    special_cases = ["NON_SNV_MATCH_ONLY", "NON_CNV_MATCH_ONLY", "NON_EXPR_MATCH_ONLY"]
 
     # Check provided argument
-    check_arguments([match_map,supportDict],["match_map","supportDict"])
-    check_is_dict(inputData,"inputData")
-    check_is_dict(match_map,"match_map")
-    check_is_dict(var_map,"var_map")
-    check_is_dict(supportDict,"supportDict")
+    check_arguments([match_map, support_dict], ["match_map", "support_dict"])
+    check_is_dict(input_data, "input_data")
+    check_is_dict(match_map, "match_map")
+    check_is_dict(var_map, "var_map")
+    check_is_dict(support_dict, "support_dict")
 
-    # Process and aggregate drug support across all the available evidences for the supplied inputData (genes + vaiants)
+    # Process and aggregate drug support across all the available evidences for the supplied input_data (genes + vaiants)
     drug_support_strings = []
     # Format: drug -> ct -> [support1,support2,..,support1] (keep track of all occurrences)
     drug_map = {}
 
     # gene -> variant -> {tier1,tier1b..} -> [matched_vars]
     # where variant -> var="dna|prot|impact|exon|lineNumber"
-    for gene in inputData.keys():
+    for gene in input_data.keys():
         if gene not in match_map.keys():
-            raise ValueError("Input gene '%s' from 'inputData' could not be found in provided 'match_map'!" %(gene))
-        for variant in inputData[gene].keys():
+            raise ValueError("Input gene '%s' from 'input_data' could not be found in provided 'match_map'!" %(gene))
+        for variant in input_data[gene].keys():
             if variant not in match_map[gene].keys():
-                raise ValueError("Input variant '%s' (gene '%s') from 'inputData' could not be found in provided 'match_map'!" %(variant, gene))
+                raise ValueError("Input variant '%s' (gene '%s') from 'input_data' could not be found in provided 'match_map'!" %(variant, gene))
 
             # Sanity check that provided match_map has expected format (i.e. is annotated with drug support)
-            check_keys(list(match_map[gene][variant].keys()),"match_map",sorted_tiers,matches_all=True)
+            check_keys(list(match_map[gene][variant].keys()), "match_map", sorted_tiers, matches_all=True)
             for tier in match_map[gene][variant].keys():
                 # Sanity check that provided match_map has expected format
                 # NOTE: tier4 has specific format compared to the others (boolean vs. list)
                 if tier == "tier_4":
-                    if hasSupport:
-                        check_is_bool(match_map[gene][variant][tier]["matched"],tier)
+                    if has_support:
+                        check_is_bool(match_map[gene][variant][tier]["matched"], tier)
                     else:
-                        check_is_bool(match_map[gene][variant][tier],tier)
+                        check_is_bool(match_map[gene][variant][tier], tier)
                 else:
-                    if hasSupport:
-                        check_is_list(match_map[gene][variant][tier]["matched"],tier)
+                    if has_support:
+                        check_is_list(match_map[gene][variant][tier]["matched"], tier)
                     else:
-                        check_is_list(match_map[gene][variant][tier],tier)
+                        check_is_list(match_map[gene][variant][tier], tier)
 
-# TODO: drug support for tier 1, 1b and 2 is clear
-# TODO: drug support for tier 3 will not make sense (averaging across variants) -> leave it in case the user is interested
-# TODO: drug support for tier 4 should directly be empty
                 if tier != "tier_4":
-                    if hasSupport:
+                    if has_support:
                         variant_list = match_map[gene][variant][tier]["matched"]
                     else:
                         variant_list = match_map[gene][variant][tier]
@@ -1549,15 +1555,13 @@ def reprocess_drug_support_across_selected_variants(inputData, match_map, var_ma
                             continue
 
                         # For matched variants, they must be contained in the provided var_map
-                        check_dict_entry(var_map,"var_map",gene,"gene")
-                        check_dict_entry(var_map[gene],"var_map",var_id,"variant")
-                        check_dict_entry(var_map[gene][var_id],"var_map","evidence_items","key")
+                        check_dict_entry(var_map, "var_map", gene, "gene")
+                        check_dict_entry(var_map[gene], "var_map", var_id, "variant")
+                        check_dict_entry(var_map[gene][var_id], "var_map", "evidence_items", "key")
 
-# TODO: ensure that filtering return_empty=False does affect other functions
-# TODO: sanity check that all expected evidence types can be found -> use config for expected values of all dicts, etc.
                         if evidence_type in var_map[gene][var_id]["evidence_items"].keys():
                             # Sanity check that provided var_map has expected format (i.e. annotated for disease specificity)
-                            check_keys(list(var_map[gene][var_id]["evidence_items"][evidence_type].keys()),"var_map",sorted_cts,matches_all=True)
+                            check_keys(list(var_map[gene][var_id]["evidence_items"][evidence_type].keys()), "var_map", sorted_cts, matches_all=True)
                             for ct in var_map[gene][var_id]["evidence_items"][evidence_type].keys():
                                 for disease in var_map[gene][var_id]["evidence_items"][evidence_type][ct].keys():
                                     for drug in var_map[gene][var_id]["evidence_items"][evidence_type][ct][disease].keys():
@@ -1567,23 +1571,22 @@ def reprocess_drug_support_across_selected_variants(inputData, match_map, var_ma
                                             drug_map[drug][ct] = []
                                         for evidence in var_map[gene][var_id]["evidence_items"][evidence_type][ct][disease][drug].keys():
                                             # Split the evidence direction and clinical significance
-                                            evidenceArr = evidence.strip().split(":")
-                                            if (len(evidenceArr) != 2):
+                                            evidence_list = evidence.strip().split(":")
+                                            if (len(evidence_list) != 2):
                                                 raise ValueError("Unexpected format of evidence '%s'! Please provide string as 'EVIDENCE_DIRECTION:CLINICAL_SIGNIFICANCE'." %(evidence))
-                                            direction = evidenceArr[0]
-                                            clin_signf = evidenceArr[1]
+                                            direction = evidence_list[0]
+                                            clin_signf = evidence_list[1]
 
                                             # For each evidence (ie combination of direction+clin_signf), count how many different evidence items support it
                                             # At this stage, we find count evidence items by counting how many different combinations of level+pmids there are for the same drug, disease and evidence
                                             if ("NULL" in direction) or ("N/A" in direction) or ("NULL" in clin_signf) or ("N/A" in clin_signf):
-# FIXME: have this as part of input config
                                                 this_drug_support = "UNKNOWN_BLANK"
                                             else:
-                                                if direction not in supportDict.keys():
-                                                    raise ValueError("Could not find evidence direction '%s' in provided 'supportDict'!" %(direction))
-                                                if clin_signf not in supportDict[direction].keys():
-                                                    raise ValueError("Could not find clinical significance '%s' in provided 'supportDict'!" %(clin_signf))
-                                                this_drug_support = supportDict[direction][clin_signf]
+                                                if direction not in support_dict.keys():
+                                                    raise ValueError("Could not find evidence direction '%s' in provided 'support_dict'!" %(direction))
+                                                if clin_signf not in support_dict[direction].keys():
+                                                    raise ValueError("Could not find clinical significance '%s' in provided 'support_dict'!" %(clin_signf))
+                                                this_drug_support = support_dict[direction][clin_signf]
 
                                             # Keep track of number of occurrences for each support type for the given drug
                                             # Here, take into account the number of supporting PMIDs associated to each evidence item
@@ -1596,7 +1599,6 @@ def reprocess_drug_support_across_selected_variants(inputData, match_map, var_ma
     for this_drug in drug_map.keys():
         for this_ct in drug_map[this_drug].keys():
             # Given the selected ct, count number of occurrences for each possible support type (if any)
-# FIXME: have this as part of input config
             count_pos = drug_map[this_drug][this_ct].count("POSITIVE")
             count_neg = drug_map[this_drug][this_ct].count("NEGATIVE")
             count_unk = drug_map[this_drug][this_ct].count("UNKNOWN_BLANK")
@@ -1606,7 +1608,7 @@ def reprocess_drug_support_across_selected_variants(inputData, match_map, var_ma
             count_total_unk = count_unk + count_dns
             # Sanity check that there is at least some support
             if (count_pos == 0) and (count_neg == 0) and (count_total_unk == 0):
-                raise ValueError("Encountered unexpected support case when aggregating evidences across provided 'inputData'!")
+                raise ValueError("Encountered unexpected support case when aggregating evidences across provided 'input_data'!")
 
             # Resolve contradicting evidence (if any) by majority vote
             temp_support = ""
@@ -1621,7 +1623,7 @@ def reprocess_drug_support_across_selected_variants(inputData, match_map, var_ma
             elif (count_neg > count_pos) and (count_neg >= count_total_unk):
                 temp_support = "CIVIC_RESISTANCE"
             else:
-                raise ValueError("Encountered unexpected support case when aggregating evidences across provided 'inputData'!")
+                raise ValueError("Encountered unexpected support case when aggregating evidences across provided 'input_data'!")
 
             # Build support string for each given combination of drug, ct and matched tier
             # Format: DRUG:CT:SUPPORT:#pos|#neg|#unk|#dns
