@@ -2,7 +2,7 @@
 
 ## General overview
 
-[CIViCutils](https://github.com/ETH-NEXUS/civicutils) is a Python package for rapid retrieval, annotation, prioritization and downstream processing of information from the expert-curated [CIViC knowledgebase](https://civicdb.org/home) (Clinical Interpretations of Variants in Cancer). CIViCutils can be integrated into novel and existing clinical workflows to provide variant-level disease-specific information about treatment response, pathogenesis, diagnosis, and prognosis of genomic aberrations (SNVs, InDels and CNVs), as well as differentially expressed genes. It streamlines interpreting large numbers of input alterations with querying and analyzing CIViC information, and enables the harmonization of input across different nomenclatures. Key features of CIViCutils include an automated matching framework for linking clinical evidence to input variants, as well as evaluating the accuracy of the resulting hits, and in-silico prediction of drug-target interactions tailored to individual patients and cancer subtypes of interest. For more details, see the CIViCutils publication.
+[CIViCutils](https://github.com/ETH-NEXUS/civicutils) is a Python package for rapid retrieval, annotation, prioritization and downstream processing of information from the expert-curated [CIViC knowledgebase](https://civicdb.org/home) (Clinical Interpretations of Variants in Cancer). CIViCutils can be integrated into novel and existing clinical workflows to provide variant-level disease-specific information about treatment response, pathogenesis, diagnosis, and prognosis of genomic aberrations (SNVs, InDels and CNVs), as well as differentially expressed genes. It streamlines interpreting large numbers of input alterations with querying and analyzing CIViC information, and enables the harmonization of input across different nomenclatures. Key features of CIViCutils include an automated matching framework for linking clinical evidence to input variants, as well as evaluating the accuracy of the resulting hits, and in-silico prediction of therapy-target interactions tailored to individual patients and cancer subtypes of interest. For more details, see the CIViCutils publication.
 
 ![README_diagram](images/civicutils-workflow.png)
 
@@ -135,15 +135,17 @@ var_map
         ├── 'civic_score' ── <var_score>
         ├── 'hgvs' ── [hgvs1, ..., hgvsN]                   # empty when no HGVS are available
         ├── 'types' ── [type1, ..., typeN]                  # 'NULL' when no types are available
-        ├── 'n_evidence_items' ── <n_items>
-        └── 'evidence_items'
-            └── <evidence_type>
-                └── <disease>                               # can be 'NULL'
-                    └── <drug>                              # 'NULL' when no drugs are available
-                        └── <evidence>                      # evidence_direction:clinica_significance
-                            └── <level>
-                                └── [evidence_item1, ...]   # SOURCE_ID:EVIDENCESTATUS:SOURCESTATUS:VARORIGIN:RATING
-```
+        └── <molecular_profile_id>
+            ├── 'name' ── <molecular_profile_name>
+            ├── 'civic_score' ── <molecular_profile_score>
+            ├── 'n_evidence_items' ── <n_items>
+            └── 'evidence_items'
+                └── <evidence_type>
+                    └── <disease>                               # can be 'NULL'
+                        └── <therapy>                              # 'NULL' when no therapies are available
+                            └── <evidence>                      # evidence_direction:clinica_significance
+                                └── <level>
+                                    └── [evidence_item1, ...]   # SOURCE_ID:EVIDENCESTATUS:SOURCESTATUS:VARORIGIN:RATING
 
 
 ### Matching to CIViC
@@ -180,6 +182,17 @@ The `match_map` returned by `match_in_civic()` will contain the same genes and v
 * `tier_3`: gene was found in CIViC but no associated variant record could be matched. In this case, all CIViC variant records available for the gene and found to match the given data type are returned by the function (if any). If a `tier_3` was indicated but no matched variants are listed, then this is a consequence of no CIViC records being found for the provided data type and given gene (but indicates the existance of other CIViC records available for a different data type).
 * `tier_4`: gene was not found in CIViC. No hits are returned by the query.
 
+Structure of the returned `matchMap` after being annotated for consensus therapy support:
+```
+└── matchMap
+    └── gene_id
+        └── input_variant
+            └── tier
+                ├── 'matched'
+                │   └── var_id
+                └── 'therapy_support'
+                    └── support
+```
 
 ### Filtering
 
@@ -197,7 +210,7 @@ Complete list of filters available:
 * Select or exclude CIViC variants based on their number of associated evidence records.
 * Select or exclude CIViC clinical records based on their associated evidence type.
 * Select or exclude evidence records based on their associated cancer type.
-* Select or exclude predictive records based on their associated drug name.
+* Select or exclude predictive records based on their associated therapy name.
 * Select or exclude records based on their associated evidence direction.
 * Select or exclude evidence records based on their associated clinical significance.
 * Select or exclude records based on their associated evidence level.
@@ -218,7 +231,7 @@ NOTE: use of argument `output_empty=True` is not recommended, as other functions
 
 Filtering or prioritizing matched variants by tier is also possible after matching to the CIViC has already been performed, e.g. if function `match_in_civic()` was initially run with argument `select_tier=all` and now further filtering by tier is desired.
 
-This function cannot be applied if the provided `match_map` was already processed and annotated for drug support information.
+This function cannot be applied if the provided `match_map` was already processed and annotated for therapy support information.
 
 
 ### Annotation of CIViC evidence with disease specificity
@@ -242,18 +255,20 @@ var_map
 └── <gene_id>
     └── <var_id>
         ├── 'name'
-        ├── 'civic_score'
         ├── 'hgvs'
         ├── 'types'
-        ├── 'n_evidence_items'
-        └── 'evidence_items'
-            └── <evidence_type>
-                └── <ct>                                # new layer included with disease specificity information
-                    └── <disease>
-                        └── <drug>
-                            └── <evidence>
-                                └── <level>
-                                    └── <evidence_item>
+        └── <molecular_profile_id>
+            ├── 'name' 
+            ├── 'civic_score'       
+            ├── 'n_evidence_items'
+            └── 'evidence_items'
+                └── <evidence_type>
+                    └── <ct>                                # new layer included with disease specificity information
+                        └── <disease>
+                            └── <therapy>
+                                └── <evidence>
+                                    └── <level>
+                                        └── <evidence_item>
 ```
 
 
@@ -279,46 +294,46 @@ TODO
 ```
 
 
-### Annotation of consensus drug response predictions
+### Annotation of consensus therapy response predictions
 
-Function `process_drug_support()` will decide on a consensus drug support for each available tier match and every associated disease specificity category. Note this function can only be applied if the provided `var_map` has been previously annotated with cancer type specificity information. After the annotation of consensus predictions, the returned `match_map` will contain additional entries per tier: `matches`, containing the variant hits found in CIViC (if any), and `drug_support`, listing one string for each consensus drug response annotated using format `DRUG:CT:CIVIC_PREDICTION`.
+Function `process_therapy_support()` will decide on a consensus therapy support for each available tier match and every associated disease specificity category. Note this function can only be applied if the provided `var_map` has been previously annotated with cancer type specificity information. After the annotation of consensus predictions, the returned `match_map` will contain additional entries per tier: `matches`, containing the variant hits found in CIViC (if any), and `therapy_support`, listing one string for each consensus therapy response annotated using format `therapy:CT:CIVIC_PREDICTION`.
 ```
 from read_and_write import get_dict_support
-from match import process_drug_support
+from match import process_therapy_support
 
 # Get custom dictionary of support from data.yml (default already provided by the package)
-# This defines how each combination of evidence direction + clinical significance in CIViC is classified in terms of drug support (e.g. sensitivity, resistance, unknown, etc.)
+# This defines how each combination of evidence direction + clinical significance in CIViC is classified in terms of therapy support (e.g. sensitivity, resistance, unknown, etc.)
 support_dict = get_dict_support()
 
-# Process consensus drug response for the matched variants based on CIViC evidence annotated for disease specificity
-annot_match = process_drug_support(match_map, annot_map, support_dict)
+# Process consensus therapy response for the matched variants based on CIViC evidence annotated for disease specificity
+annot_match = process_therapy_support(match_map, annot_map, support_dict)
 ```
 
-Structure of `match_map` after being annotated for consensus drug response predictions (i.e. `drug_support`):
+Structure of `match_map` after being annotated for consensus therapy response predictions (i.e. `therapy_support`):
 ```
 match_map
 └── <gene_id>
     └── <input_variant>
         └── <tier>
-            ├── 'matched'                       # new layer included to distinguish variant matches from drug information
+            ├── 'matched'                       # new layer included to distinguish variant matches from therapy information
             │   └── [var_id1, ...]
-            └── 'drug_support'                  # new layer included with consensus drug response predictions
-                └── [response_prediction1, ...] # DRUG:CT:CIVIC_PREDICTION
+            └── 'therapy_support'                  # new layer included with consensus therapy response predictions
+                └── [response_prediction1, ...] # therapy:CT:CIVIC_PREDICTION
 ```
 
-Conversion of CIViC evidence items (i.e. combination of terms used for evidence direction and clinical significance) into an specific drug response prediction that can be tailored by the user, can be done through a custom dictionary `drug_support` within the config file `data.yml`.
+Conversion of CIViC evidence items (i.e. combination of terms used for evidence direction and clinical significance) into an specific therapy response prediction that can be tailored by the user, can be done through a custom dictionary `therapy_support` within the config file `data.yml`.
 
-Structure and default values of `drug_support` entry provided by CIViCutils in `data.yml`:
+Structure and default values of `therapy_support` entry provided by CIViCutils in `data.yml`:
 ```
-drug_support:
+therapy_support:
     SUPPORTS:
-        SENSITIVITY/RESPONSE: POSITIVE
+        SENSITIVITYRESPONSE: POSITIVE
         RESISTANCE: NEGATIVE
         REDUCED SENSITIVITY: NEGATIVE
         ADVERSE RESPONSE: NEGATIVE
-    DOES NOT SUPPORT:
+    DOES_NOT_SUPPORT:
         RESISTANCE: UNKNOWN_DNS
-        SENSITIVITY/RESPONSE: UNKNOWN_DNS
+        SENSITIVITYRESPONSE: UNKNOWN_DNS
         REDUCED SENSITIVITY: UNKNOWN_DNS
         ADVERSE RESPONSE: UNKNOWN_DNS
 ```
@@ -332,7 +347,7 @@ New columns appended by CIViCutils in output file:
 * *CIViC_Tier*: tier category assigned by CIViCutils for the listed variant match(es). Can be either: `1`, `1b` (only SNVs), `2` (only SNVs and CNVs), `3` or `4`. Always reported.
 * *CIViC_Score*: semi-colon separated list of CIViC variant record(s) matched for the given input variant, and their corresponding CIViC Actionability Scores (numeric value computed across all evidence records available for each CIViC variant to assess the quality and quantity of the associated clinical data). Format: `GENE_ID:CIVIC_VARIANT_NAME:SCORE`. Always reported.
 * *CIViC_VariantType*: semi-colon separated list of CIViC variant record(s) matched for the given input variant, and their corresponding variant types reported in CIViC. Format: `GENE_ID:CIVIC_VARIANT_NAME:VARIANT_TYPE`. Always reported.
-* *CIViC_Drug_Support*: semi-colon separated list of consensus drug response predictions generated by CIViCutils based on the available predictive CIViC evidence matched for the input variant. Format: `DRUG_NAME:CT:CIVIC_PREDICTION`. Optional column (only reported when `write_support=True`).
+* *CIViC_therapy_Support*: semi-colon separated list of consensus therapy response predictions generated by CIViCutils based on the available predictive CIViC evidence matched for the input variant. Format: `therapy_NAME:CT:CIVIC_PREDICTION`. Optional column (only reported when `write_support=True`).
 * *CIViC_PREDICTIVE*: semi-colon separated list of predictive evidence matched in CIViC for the input variant.
 * *CIViC_DIAGNOSTIC*: semi-colon separated list of diagnostic evidence matched in CIViC for the input variant.
 * *CIViC_PROGNOSTIC*: semi-colon separated list of prognostic evidence matched in CIViC for the input variant.
@@ -344,7 +359,7 @@ Format of the reported evidences:
 ```
 
 * When input `var_map` is annotated for disease specificity, then `has_ct=True` must be selected (and viceversa). Use argument `write_ct` to append the cancer specificity tag to each reported disease in the evidence columns.
-* When input `match_map` was processed for drug support, then `has_support=True` must be selected (and viceversa). Use argument `write_support` to include one additional column listing the consensus drug response predictions computed by CIViCutils for each tier match (one prediction generated for each combination of available drug and disease specificity).
+* When input `match_map` was processed for therapy support, then `has_support=True` must be selected (and viceversa). Use argument `write_support` to include one additional column listing the consensus therapy response predictions computed by CIViCutils for each tier match (one prediction generated for each combination of available therapy and disease specificity).
 * Use argument `write_complete=False` to only list the ids of the publications supporting each reported evidence item. When `write_complete=True`, additional information will be reported as `ID:EVIDENCE_STATUS:SOURCE_STATUS:VARIANT_ORIGIN:RATING`.
 ```
 from read_and_write import write_match
@@ -364,7 +379,7 @@ write_match(match_map, var_map, raw_data, header, data_type="SNV", outfile, has_
 from read_and_write import read_in_snvs, get_dict_support, write_match
 from query import query_civic
 from filtering import filter_civic
-from match import match_in_civic, annotate_ct, filter_ct, process_drug_support
+from match import match_in_civic, annotate_ct, filter_ct, process_therapy_support
 
 # Read-in file of input SNV variants
 (raw_data, snv_data, extra_header) = read_in_snvs("civicutils/data/example_snv.txt")
@@ -389,13 +404,13 @@ annot_map = annotate_ct(var_map, disease_name_not_in, disease_name_in, alt_disea
 annot_map = filter_ct(annot_map, select_ct="highest")
 
 # Get custom dictionary of support from data.yml (provided within the package)
-# This defines how each combination of evidence direction + clinical significance in CIViC is classified in terms of drug support (e.g. sensitivity, resistance, unknown, etc.)
+# This defines how each combination of evidence direction + clinical significance in CIViC is classified in terms of therapy support (e.g. sensitivity, resistance, unknown, etc.)
 support_dict = get_dict_support()
 
-# Process drug support of the matched variants using the annotated CIViC evidences
-annot_match = process_drug_support(match_map, annot_map, support_dict)
+# Process therapy support of the matched variants using the annotated CIViC evidences
+annot_match = process_therapy_support(match_map, annot_map, support_dict)
 
 # Write to output
-# Do not report the CT classification of each disease, and write column with the overall drug support of the match for each available CT class
+# Do not report the CT classification of each disease, and write column with the overall therapy support of the match for each available CT class
 write_match(annot_match, annot_map, raw_data, extra_header, data_type="SNV", outfile, has_support=True, has_ct=True, write_ct=False, write_support=True, write_complete=False)
 ```

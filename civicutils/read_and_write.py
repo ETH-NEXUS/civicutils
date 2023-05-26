@@ -19,7 +19,6 @@ def get_dict_aminoacids():
         except yaml.YAMLError as exc:
             print(exc)
             sys.exit(1)
-
     # Sanity check that expected entry is contained in the yml file
     if entry_name not in data.keys():
         raise ValueError("Please provide a dictionary of one-letter to three-letter aminoacid codes via the '%s' entry in %s!" %(entry_name,f))
@@ -30,21 +29,20 @@ def get_dict_aminoacids():
 
 def get_dict_support():
     """
-    Retrieve dictionary from the data.yml file to translate between CIViC evidence directions and clinical significances and their corresponding drug support (assigned by user)
-    :return:	Dictionary of evidence to drug support.
+    Retrieve dictionary from the data.yml file to translate between CIViC evidence directions and clinical significances and their corresponding therapy support (assigned by user)
+    :return:	Dictionary of evidence to therapy support.
     """
     f = BinPath + "/data/data.yml"
-    entry_name = "drug_support"
+    entry_name = "therapy_support"
     with open(f, "r") as infile:
         try:
             data = yaml.safe_load(infile)
         except yaml.YAMLError as exc:
             print(exc)
             sys.exit(1)
-
     # Sanity check that expected entry is contained in the yml file
     if entry_name not in data.keys():
-        raise ValueError("Please provide a custom dictionary of drug support for CIViC evidences via the '%s' entry in %s!" %(entry_name,f))
+        raise ValueError("Please provide a custom dictionary of therapy support for CIViC evidences via the '%s' entry in %s!" %(entry_name,f))
     support_dict = data[entry_name]
 
     return support_dict
@@ -312,7 +310,7 @@ def write_header_line(data_type, header, write_support):
 				EXPR:  Expects a file of differential gene expression data
 				Data type of the corresponding input file (string).
     :param header:		List of input column names (in order) from splitting the tab-separated header.
-    :param write_support:	Boolean indicating if processed drug support from CIViC should be written to output.
+    :param write_support:	Boolean indicating if processed therapy support from CIViC should be written to output.
     :return:			Tuple of 4 elements (last 3 are only relevant when 'data_type=SNV'): string containing complete header ready to be written to output, list of column names excluding 'Variant_impact' and 'Variant_exon' (if they were present), boolean indicating if column 'Variant_impact' was present, boolean indicating if column '\tVariant_exon' was present.
     """
     sorted_evidence_types = ["PREDICTIVE", "DIAGNOSTIC", "PROGNOSTIC", "PREDISPOSING"]
@@ -345,23 +343,23 @@ def write_header_line(data_type, header, write_support):
         main_header += "\t%s" %("\t".join(clean_header))
 
     if write_support:
-        out_header = "%s\tCIViC_Tier\tCIViC_Score\tCIViC_VariantType\tCIViC_Drug_Support\t%s" %(main_header,"\t".join(["CIViC_" + x for x in sorted_evidence_types]))
+        out_header = "%s\tCIViC_Tier\tCIViC_Score\tCIViC_VariantType\tCIViC_therapy_Support\t%s" %(main_header,"\t".join(["CIViC_" + x for x in sorted_evidence_types]))
     else:
         out_header = "%s\tCIViC_Tier\tCIViC_Score\tCIViC_VariantType\t%s" %(main_header,"\t".join(["CIViC_" + x for x in sorted_evidence_types]))
 
     return (out_header, clean_header, write_impact, write_exon)
 
 
-def write_output_line(tier, main_line, gene_scores, gene_var_types, drug_support, result_map, write_support):
+def write_output_line(tier, main_line, gene_scores, gene_var_types, therapy_support, result_map, write_support):
     """
     Process CIViC information available for a given input line, and generate the corresponding output line. Empty fields are indicated with '.'.
     :param tier:		String with format 'tier_[N]', where N can be: '1', '1b', '2', '3' or '4'. They indicate different tier cases of the variant matching.
     :param main_line:		String already containing the required columns to be written to output. This will be extended with the available CIViC information to generate the complete output line.
     :param gene_scores:		List containing the CIViC scores of the matched variants for the given 'tier'. Already formatted as required i.e. 'GENE:VARIANT_NAME:SCORE'.
     :param gene_var_types:	List containing the variant types of the matched variants in CIViC. Already formatted as required i.e. 'GENE:VARIANT_NAME:VAR_TYPE1,..'.
-    :param drug_support:	List containing the strings of processed drug support for the matched variants. Already formatted as required i.e. 'DRUG:CT_TAG:DRUG_SUPPORT'.
+    :param therapy_support:	List containing the strings of processed therapy support for the matched variants. Already formatted as required i.e. 'therapy:CT_TAG:therapy_SUPPORT'.
     :param result_map:		Nested dictionary containing the CIViC evidences associated with each evidence type, already formatted for writing to output (assumes a particular structure).
-    :param write_support:	Boolean indicating if processed drug support from CIViC should be written to output.
+    :param write_support:	Boolean indicating if processed therapy support from CIViC should be written to output.
     :return:			String containing complete output line ready to be written to output.
     """
     sorted_evidence_types = ["PREDICTIVE", "DIAGNOSTIC", "PROGNOSTIC", "PREDISPOSING"]
@@ -381,8 +379,8 @@ def write_output_line(tier, main_line, gene_scores, gene_var_types, drug_support
         out_line += "\t."
 
     if write_support:
-        if drug_support:
-            out_line += "\t" + ";".join(drug_support)
+        if therapy_support:
+            out_line += "\t" + ";".join(therapy_support)
         else:
             out_line += "\t."
 
@@ -400,31 +398,31 @@ def write_output_line(tier, main_line, gene_scores, gene_var_types, drug_support
     return out_line
 
 
-def write_evidences(item, write_drug=False, write_ct=None, write_complete=False):
+def write_evidences(item, write_therapy=False, write_ct=None, write_complete=False):
     """
     Process CIViC information available for a given evidence type, and reformat into structured strings for reporting to output.
-    Format: DISEASE[|DRUG1,DRUG2..](direction, significance(level(PMID,..,PMID),level(..)));
+    Format: DISEASE[|THERAPY1,THERAPY2..](direction, significance(level(PMID,..,PMID),level(..)));
     :param item:		Nested dictionary containing CIViC evidences associated to a single evidence type (assumes a particular structure).
-    :param write_drug:		Boolean indicating if the current type being evaluated corresponds to 'PREDICTIVE' (i.e. these are the only evidences associated to any drug names in CIViC).
+    :param write_therapy:		Boolean indicating if the current type being evaluated corresponds to 'PREDICTIVE' (i.e. these are the only evidences associated to any therapy names in CIViC).
     :param write_ct:		Boolean indicating if the available disease specificity annotations should be included in the output table.
     :param write_complete:	Boolean indicating if the complete information string of each CIViC evidence should be written to output. When 'write_complete=False', only the ids of the associated publications will be reported instead, already formatted as 'SOURCE_ID' (e.g. 'PUBMED_12345' or 'ASCO_12345').
     :return:			List of complete evidence strings to be written under the current evidence type (one per column).
     """
-    evidences = []
+    evidences = [] 
     # For each disease found in the provided item
     for disease in item.keys():
-        # For each drug associated with the given cancer type
-        for drug in item[disease].keys():
-            # For each evidence associated with the given drug
-            # Evidences are simplified by using the combined form "direction:significance"
-            for evidence in item[disease][drug].keys():
-                # If drug=True, write drug information, i.e. DISEASE|DRUG(..)
-                if write_drug:
-                    # Always one drug (single or combination with "+")
+        # For each therapy associated with the given cancer type
+        for therapy in item[disease].keys():
+            # For each evidence associated with the given therapy
+            # Evidences are simplified by using the combined form 'direction:significance'
+            for evidence in item[disease][therapy].keys():
+                # If therapy=True, write therapy information, i.e. DISEASE|therapy(..)
+                if write_therapy:
+                    # Always one therapy (single or combination with '+')
                     if write_ct:
-                        out_string = disease + "|" + write_ct.upper() + "|" + drug + "("
+                        out_string = disease + '|' + write_ct.upper() + '|' + therapy + '('
                     else:
-                        out_string = disease + "|" + drug + "("
+                        out_string = disease + '|' + therapy + '('
                 else:
                     if write_ct:
                         out_string = disease + "|" + write_ct.upper() + "("
@@ -440,10 +438,10 @@ def write_evidences(item, write_drug=False, write_ct=None, write_complete=False)
                 out_string += direction + "," + clin_signf + "("
                 # There may be several levels grouped per evidence
                 levels = []
-                for level in item[disease][drug][evidence].keys():
+                for level in item[disease][therapy][evidence].keys():
                     pmids = []
                     # There may be several publications (i.e. PMIDs) grouped per level
-                    for z in item[disease][drug][evidence][level]:
+                    for z in item[disease][therapy][evidence][level]:
                         if write_complete:
                             pmids.append(z)
                         else:
@@ -472,33 +470,34 @@ def write_match(match_map, var_map, raw_map, header, data_type, outfile, has_sup
                              	EXPR:  Expects a file of differential gene expression data
                              	String data type of the corresponding input file.
     :param outfile:          	Path to the output file to write the matched CIViC evidences into (tab-separated table with header).
-    :param has_support:       	Boolean indicating if the provided 'match_map' is annotated for drug support.
+    :param has_support:       	Boolean indicating if the provided 'match_map' is annotated for therapy support.
     :param has_ct:            	Boolean indicating if the provided 'var_map' is annotated for disease specificity.
     :param write_ct:          	Boolean indicating if the available disease specificity annotations should be included in the output table. To use this option, 'has_ct' must be True.
-    :param write_support:     	Boolean indicating if the available drug support annotations should be included in the output table. To use this option, 'has_support' must be True.
+    :param write_support:     	Boolean indicating if the available therapy support annotations should be included in the output table. To use this option, 'has_support' must be True.
     :param write_complete:    	Boolean indicating if the complete information string of each CIViC evidence should be written to output. When 'write_complete=False', only the ids of the associated publications will be reported instead, already formatted as 'SOURCE_ID' (e.g. 'PUBMED_12345' or 'ASCO_12345').
     :return:                 	None
     """
     # NOTE: uppercase is critical for matching!
-    sorted_evidence_types = ["PREDICTIVE", "DIAGNOSTIC", "PROGNOSTIC", "PREDISPOSING"]
+    sorted_evidence_types = ['PREDICTIVE', 'DIAGNOSTIC', 'PROGNOSTIC', 'PREDISPOSING']
     evidence_type = "PREDICTIVE"
-    special_cases = ["NON_SNV_MATCH_ONLY", "NON_CNV_MATCH_ONLY", "NON_EXPR_MATCH_ONLY"]
-    sorted_cts = ["ct", "gt", "nct"]
-
-    from utils import check_match_before_writing, check_keys, check_keys_not, check_data_type, check_dict_entry
+    special_cases = ["NON_SNV_MATCH_ONLY","NON_CNV_MATCH_ONLY","NON_EXPR_MATCH_ONLY"]
+    sorted_cts = ["ct","gt","nct"]
+    varmap_entries_variant = ['name','hgvs','types']
+    
+    from utils import check_match_before_writing,check_keys,check_keys_not,check_data_type,check_dict_entry
     check_match_before_writing(match_map, var_map, raw_map, has_support, has_ct, write_ct, write_support, write_complete)
     check_data_type(data_type)
-    outfile = open(outfile, "w")
-
+    outfile = open(outfile,'w')
+    
     # Retrieve the output header given the argument selection
     (out_header, clean_header, write_impact, write_exon) = write_header_line(data_type, header, write_support)
     outfile.write(out_header + "\n")
-
-    for n_line in raw_map.keys():
-        line_list = raw_map[n_line]
+    
+    for nLine in raw_map.keys():
+        lineArr = raw_map[nLine]
         extra_line = []
-        if data_type == "SNV":
-            if (len(line_list) < 5):
+        if dataType == "SNV":
+            if (len(lineArr) < 5):
                 raise ValueError("Must provide at least 5 elements to describe a SNV variant (even if some can be empty): gene,dna,[prot],[impact],[exon],..'")
             gene = line_list[0]
             c_var = line_list[1]
@@ -555,18 +554,18 @@ def write_match(match_map, var_map, raw_map, header, data_type, outfile, has_sup
         for tier in match_map[gene][comb_id].keys():
             gene_scores = []
             gene_var_types = []
-            drug_support = []
+            therapy_support = []
             result_map = {}
             write_line = False
             if tier != "tier_4":
                 all_variants = []
                 if has_support:
-                    drug_support = match_map[gene][comb_id][tier]["drug_support"]
+                    therapy_support = match_map[gene][comb_id][tier]["therapy_support"]
                     for tmp_var in match_map[gene][comb_id][tier]["matched"]:
                         all_variants.append(tmp_var)
                     if write_support:
-                        for i in drug_support:
-                            drug_support.append(i.upper())
+                        for i in therapy_support:
+                            therapy_support.append(i.upper())
                 else:
                     if write_support:
                         raise ValueError("Option 'write_support' cannot be selected when 'has_support'=False!")
@@ -584,31 +583,34 @@ def write_match(match_map, var_map, raw_map, header, data_type, outfile, has_sup
                         continue
 
                     variant = var_map[gene][var_id]["name"]
-                    gene_scores.append(gene + ":" + variant + ":" + str(var_map[gene][var_id]["civic_score"]))
+           
                     gene_var_types.append(gene + ":" + variant + ":" + ",".join(var_map[gene][var_id]["types"]))
-                    for evidence_type in sorted_evidence_types:
-                        if evidence_type in var_map[gene][var_id]["evidence_items"].keys():
-                            if evidence_type not in result_map.keys():
-                                result_map[evidence_type] = []
-                            write_drug = False
-                            if evidence_type == evidence_type:
-                                write_drug=True
-                            if has_ct:
-                                check_keys(list(var_map[gene][var_id]["evidence_items"][evidence_type].keys()),"var_map",sorted_cts,matches_all=True)
-                                for ct in var_map[gene][var_id]["evidence_items"][evidence_type].keys():
+                    molecular_profile_ids = set(list(var_map[gene][var_id].keys())) ^ set(varmap_entries_variant)
+                    for molecular_profil_id in molecular_profile_ids:
+                        gene_scores.append(gene + ':' + variant + ':' + molecular_profil_id + ':' + str(var_map[gene][var_id][molecular_profil_id]['civic_score']))
+                        for evidence_type in sorted_evidence_types:
+                            if evidence_type in var_map[gene][var_id]["evidence_items"].keys():
+                                if evidence_type not in result_map.keys():
+                                    result_map[evidence_type] = []
+                                write_therapy = False
+                                if evidence_type == evidence_type:
+                                    write_therapy=True
+                                if has_ct:
+                                    check_keys(list(var_map[gene][var_id]["evidence_items"][evidence_type].keys()),"var_map",sorted_cts,matches_all=True)
+                                    for ct in var_map[gene][var_id]["evidence_items"][evidence_type].keys():
+                                        if write_ct:
+                                            results = write_evidences(var_map[gene][var_id]["evidence_items"][evidence_type][ct], write_therapy=write_therapy, write_ct=ct, write_complete=write_complete)
+                                        else:
+                                            results = write_evidences(var_map[gene][var_id]["evidence_items"][evidence_type][ct], write_therapy=write_therapy, write_ct=None, write_complete=write_complete)
+                                        for x in results:
+                                            result_map[evidence_type].append(gene + ":" + variant + ":" + x)
+                                else:
+                                    check_keys_not(list(var_map[gene][var_id]["evidence_items"][evidence_type].keys()), "var_map", sorted_cts)
                                     if write_ct:
-                                        results = write_evidences(var_map[gene][var_id]["evidence_items"][evidence_type][ct], write_drug=write_drug, write_ct=ct, write_complete=write_complete)
-                                    else:
-                                        results = write_evidences(var_map[gene][var_id]["evidence_items"][evidence_type][ct], write_drug=write_drug, write_ct=None, write_complete=write_complete)
+                                        raise ValueError("Option 'write_ct' cannot be selected when 'has_ct'=False!")
+                                    results = write_evidences(var_map[gene][var_id]["evidence_items"][evidence_type], write_therapy=write_therapy, write_ct=None, write_complete=write_complete)
                                     for x in results:
                                         result_map[evidence_type].append(gene + ":" + variant + ":" + x)
-                            else:
-                                check_keys_not(list(var_map[gene][var_id]["evidence_items"][evidence_type].keys()), "var_map", sorted_cts)
-                                if write_ct:
-                                    raise ValueError("Option 'write_ct' cannot be selected when 'has_ct'=False!")
-                                results = write_evidences(var_map[gene][var_id]["evidence_items"][evidence_type], write_drug=write_drug, write_ct=None, write_complete=write_complete)
-                                for x in results:
-                                    result_map[evidence_type].append(gene + ":" + variant + ":" + x)
 
                 # Only write line current tier when there was at least one match for it
                 if all_variants:
@@ -625,7 +627,7 @@ def write_match(match_map, var_map, raw_map, header, data_type, outfile, has_sup
                         write_line = True
 
             if write_line:
-                out_line = write_output_line(tier, main_line, gene_scores, gene_var_types, drug_support, result_map, write_support)
+                out_line = write_output_line(tier, main_line, gene_scores, gene_var_types, therapy_support, result_map, write_support)
                 outfile.write(out_line + "\n")
     outfile.close()
 
