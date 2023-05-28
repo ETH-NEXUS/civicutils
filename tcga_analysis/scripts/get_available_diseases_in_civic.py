@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 '''
-Retrieve list of available disease names in CIVIC cache file
+Retrieve list of available disease names in CIViC cache file
 Lourdes Rosano, Feb 2021
 '''
 
@@ -14,13 +14,13 @@ from civicpy import civic
 Script
 '''
 
-parser = argparse.ArgumentParser(description='Parse CIVIC cache file and extract list of available disease names.')
-parser.add_argument('--outFile', dest='outFile', required=True, help='Output file listing disease names available in CIVIC cache file.')
+parser = argparse.ArgumentParser(description="Parse CIViC cache file and extract list of available disease names.")
+parser.add_argument("--outfile", dest="outfile", required=True, help="Output file listing disease names available in CIViC cache file.")
 
 args = parser.parse_args()
 
-# Load offline CIVIC cache file
-civic.load_cache(on_stale='ignore')
+# Load offline CIViC cache file
+civic.load_cache(on_stale="ignore")
 
 # Retrieve all gene records available in the cache file
 all_results = civic.get_all_genes()
@@ -37,12 +37,13 @@ for gene_record in all_results:
             if disease_name not in diseases:
                 diseases.append(disease_name)
 
-print("Total # CIVIC diseases: %s" %(len(diseases)))
+print("Total # CIViC diseases: %s" %(len(diseases)))
 # Sort alphabetically
 diseases.sort()
 
 # Write output list
-outfile = open(args.outFile, 'w')
+outfile = open(args.outfile, "w")
 for disease in diseases:
     outfile.write(disease + "\n")
 outfile.close()
+
