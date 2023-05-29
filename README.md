@@ -2,7 +2,7 @@
 
 ## General overview
 
-[CIViCutils](https://github.com/ETH-NEXUS/civicutils) is a Python package for rapid retrieval, annotation, prioritization and downstream processing of information from the expert-curated [CIViC knowledgebase](https://civicdb.org/home) (Clinical Interpretations of Variants in Cancer). CIViCutils can be integrated into novel and existing clinical workflows to provide variant-level disease-specific information about treatment response, pathogenesis, diagnosis, and prognosis of genomic aberrations (SNVs, InDels and CNVs), as well as differentially expressed genes. It streamlines interpreting large numbers of input alterations with querying and analyzing CIViC information, and enables the harmonization of input across different nomenclatures. Key features of CIViCutils include an automated matching framework for linking clinical evidence to input variants, as well as evaluating the accuracy of the resulting hits, and in-silico prediction of drug-target interactions tailored to individual patients and cancer subtypes of interest. For more details, see the CIViCutils publication.
+[CIViCutils](https://github.com/ETH-NEXUS/civicutils) is a Python package for rapid retrieval, annotation, prioritization and downstream processing of information from the expert-curated [CIViC knowledgebase](https://civicdb.org/welcome) (Clinical Interpretations of Variants in Cancer). CIViCutils can be integrated into novel and existing clinical workflows to provide variant-level disease-specific information about treatment response, pathogenesis, diagnosis, and prognosis of genomic aberrations (SNVs, InDels and CNVs), as well as differentially expressed genes. It streamlines interpreting large numbers of input alterations with querying and analyzing CIViC information, and enables the harmonization of input across different nomenclatures. Key features of CIViCutils include an automated matching framework for linking clinical evidence to input variants, as well as evaluating the accuracy of the resulting hits, and in-silico prediction of drug-target interactions tailored to individual patients and cancer subtypes of interest. For more details, see the CIViCutils publication.
 
 ![README_diagram](images/civicutils-workflow.png)
 
@@ -20,12 +20,11 @@ To install, first activate the relevant Python environment and then use pip inst
 >> pip install civicpy
 ```
 
-The CIViC query implemented in CIViCutils makes use of an offline cache file of the CIViC database. The cache is provided by CIViCpy and retrieved with the initial installation of the CIViCutils package. Afterwards, users have to manually update the cache file if they want to leverage a new release version.
-To update the cache file, open a Python session and load package `civicpy`.
-Then type:
+The CIViC query implemented in CIViCutils makes use of an offline cache file of the CIViC database. The cache is provided by CIViCpy and retrieved with the initial installation of the CIViCutils package. Afterwards, users have to manually update the cache file if they want to leverage a new release version. To update the cache file, open a Python session and load package `civicpy`. Then type:
 ```
 >> civic.update_cache()
 ```
+More information can be found on the [CIViCpy documentation](https://docs.civicpy.org/en/latest/).
 
 
 ## Documentation
@@ -169,10 +168,10 @@ In turn, the following information is returned by the query for each evidence re
 * Associated evidence items, i.e. individual publications used by curators to support the clinical claim (either PubMed identifiers or ASCO abstracts)
 
 Last, in turn, the following information is returned by the query for each individual item:
-* Evidence status (whether the given clinical statement has been submitted/unreviewed, rejected or accepted in the database)
-* Source status (whether the underlying source/publication is considered submitted, rejected or fully curated)
-* Variant origin (presumed origin of the alteration within the underlying study, e.g. inherited or acquired mutation)
-* CIViC confidence rating (score assigned by the curator summarizing the quality of the reported evidence in the knowledgebase)
+* Evidence status: whether the given clinical statement has been submitted/unreviewed, rejected or accepted in the database
+* Source status: whether the underlying source/publication is considered submitted, rejected or fully curated
+* Variant origin: presumed origin of the alteration within the underlying study, e.g. inherited or acquired mutation
+* CIViC confidence rating: score assigned by the curator summarizing the quality of the reported evidence in the knowledgebase
 
 We refer to the [CIViC documentation](https://civic.readthedocs.io/en/latest/) for detailed descriptions about the data contained in the knowledgebase.
 
@@ -189,7 +188,7 @@ Complete list of filters available:
 * `min_civic_score`: select or exclude CIViC variants based on their associated CIViC score.
 * `var_type_in` and `var_type_not_in`: select or exclude CIViC variants based on their associated variant types, respectively.
 * `min_evidence_items`: select or exclude CIViC variants based on their number of associated evidence records.
-* `evidence_type_in` and `evidence_type_not_in: select or exclude CIViC clinical records based on their associated evidence type, respectively.
+* `evidence_type_in` and `evidence_type_not_in`: select or exclude CIViC clinical records based on their associated evidence type, respectively.
 * `disease_in` and `disease_not_in`: select or exclude evidence records based on their associated cancer type, respectively.
 * `drug_name_in` and `drug_name_not_in`: select or exclude predictive records based on their associated drug name, respectively.
 * `evidence_dir_in` and `evidence_dir_not_in`: select or exclude records based on their associated evidence direction, respectively.
@@ -206,7 +205,7 @@ from filtering import filter_civic
 filtered_map = filter_civic(var_map, evidence_status_in = ['ACCEPTED'], var_origin_in = ['SOMATIC'], output_empty=False)
 ```
 
-Function `filter_civic()` additionally provides parameter `output_empty`, which indicates whether empty entries resulting from the applied filtering should be included in the dictionary returned by the function. Note that use of `output_empty=True` is not usually recommended, as other CIViCutils functions may behave unexpectedly or not work entirely when `var_map` containes empty entries. Instead, we recommend to only use this option for checking at which level the different records contained in 'var_map' failed the applied filters.
+Function `filter_civic()` additionally provides parameter `output_empty`, which indicates whether empty entries resulting from the applied filtering should be included in the dictionary returned by the function. Note that use of `output_empty=True` is not usually recommended, as other CIViCutils functions may behave unexpectedly or not work entirely when `var_map` containes empty entries. Instead, we recommend to only use this option for checking at which level the different records contained in `var_map` failed the applied filters.
 
 
 ### Matching to CIViC
@@ -224,7 +223,7 @@ CIViCutils uses a tier-based rating system to assess the quality of the resultin
 
 More details about the matching framework implemented in CIViCutils can be found [here](https://github.com/ETH-NEXUS/civicutils/blob/development/info_on_matching_framework.md).
 
-Note that the user can choose to perform filtering on the collected CIViC data before it is even supplied to `match_in_civic()` by providing a custom `var_map` that is used for the matching framework, e.g. if further filtering of the retrieved CIViC evidences needs to be applied so that undesired information is not considered downstream. We highly recommend this, specially to select only evidences tagged as `ACCEPTED` and avoid matching of submitted evidence that has not yet been expert-reviewed. In the case of genomic variants, it is also recommended to filter for the desired variant origin (e.g. `SOMATIC`, `GERMLINE`, etc.). Be aware that when filtering of CIViC evidence is performed prior to matching, then the returned matches and associated information might not reflect the exact state of the database, e.g. genes present in CIViC but specifically excluded from `var_map` by the user will be classified as `tier 4`). On the other hand, if `var_map` is not provided in the arguments of `match_in_civic()`, then per default the function directly retrieves from the database cache file all CIViC information available for the input genes, without applying any prior filtering.
+Note that the user can choose to perform filtering on the collected CIViC data before it is even supplied to `match_in_civic()` by providing a custom `var_map` that is used for the matching framework, e.g. if further filtering of the retrieved CIViC evidences needs to be applied so that undesired information is not considered downstream. We highly recommend this, specially to select only evidences tagged as `ACCEPTED` and avoid matching of submitted evidence that has not yet been expert-reviewed. In the case of genomic variants, it is also recommended to filter for the desired variant origin (e.g. `SOMATIC`, `GERMLINE`, etc.). Be aware that when filtering of CIViC evidence is performed prior to matching, then the returned matches and associated information might not reflect the exact state of the database, e.g. genes present in CIViC but specifically excluded from `var_map` by the user will be classified as `tier 4`. On the other hand, if `var_map` is not provided in the arguments of `match_in_civic()`, then per default the function directly retrieves from the database cache file all CIViC information available for the input genes, without applying any prior filtering.
 ```
 from match import match_in_civic
 
@@ -267,14 +266,14 @@ filtered_map = filter_matches(match_map, select_tier = ["tier_1", "tier_1b", "ti
 
 Variant-specific clinical data retrieved from CIViC can be further annotated with cancer type specificity information, based on their associated disease names and relative to one or more cancer indications of interest provided by the user. Excluding evidence records from undesired diseases can also be done at this step. To this end, the user can use function `annotate_ct()` and supply lists of non-allowed (`disease_name_not_in`), relevant (`disease_name_in`), and high-level/alternative (`alt_disease_names`) terms. More details about these parameters can be found below. As a result of the annotation, each available disease name retrieved from CIViC and the associated evidence are classified as either cancer type specific (`ct`), general specificity (`gt`) or non cancer type specific (`nct`).
 
-The annotation of disease specificity using function `annotate_ct()` can only be applied if the provided `var_map` is not already annotated with this information. The function returns a similar nested dictionary with a slightly different structure, namely, containing one additional layer per evidence type which groups the disease names by their assigned category (`<ct>`, see below).
+The annotation of disease specificity using function `annotate_ct()` can only be applied if the provided `var_map` is not already annotated with this information. The function returns a similar nested dictionary with a slightly different structure, namely, containing one additional layer per evidence type which groups the disease names by their assigned category (see below).
 ```
 from match import annotate_ct
 
 annotated_map = annotate_ct(var_map, disease_name_not_in, disease_name_in, alt_disease_names)
 ```
 
-Structure of `var_map` after being annotated for disease specificity (i.e. `ct`):
+Structure of `var_map` after being annotated for disease specificity:
 ```
 var_map
 └── <gene_id>
@@ -351,7 +350,11 @@ drug_support:
 ```
 Be aware that CIViCutils can distinguish between two subtypes of `UNKNOWN` drug responses: those deriving from blank or null ("N/A") values for the evidence direction and/or clinical significance (`UNKNOWN_BLANK`), and optionally, those deriving from evidence direction `DOES NOT SUPPORT` (`UNKNOWN_DNS`, shown in the support dictionary above). Manual curation performed in [Krentel et al.](https://pubmed.ncbi.nlm.nih.gov/33712636/) proved evidence direction `DOES NOT SUPPORT` to have an ambiguous meaning, dependant on the specific context of the underlying data, hence making it difficult to translate into a clearly defined consequence without the review of an expert. Nonetheless, CIViCutils allows the user to provide a different mapping of their choosing (however, the available categories to choose from are still restricted to either `POSITIVE`, `NEGATIVE`, `UNKNOWN_BLANK`, or `UNKNOWN_DNS`).
 
-The consensus annotations resulting from the majority vote have format `<DRUG>:<CT>:CIVIC_<CONSENSUS_PREDICTION>:<n_positive>:<n_negative>:<n_unknown_blank>:<n_unknown_dns>`, where `<DRUG>` corresponds to the drug name or therapy retrieved from CIViC, `<CT>` to the corresponding cancer type specificity reported by CIViCutils (i.e. either `CT`, `GT` or `NCT`), and `<CONSENSUS_PREDICTION>` to the unanimous drug response assigned by the package based on the counts of evidence items available for each therapeutic prediction, which are also reported (i.e. `<n_positive>`, `<n_negative>`, `<n_unknown_blank>` and `<n_unknown_dns>`), resulting in the following response categories that can be reported as the final consensus prediction: `SUPPORT` (when most items are `POSITIVE`), `RESISTANCE` (when majority is `NEGATIVE`), `CONFLICT` (unresolved cases of confident and contradicting evidence) and `UNKNOWN` (prevailing category is `UNKNOWN`, i.e. aggregation of `UNKNOWN_BLANK` and `UNKNOWN_DNS` items, meaning that the predictive value is not known).
+The consensus annotations resulting from the majority vote have the following format:
+```
+<DRUG>:<CT>:CIVIC_<CONSENSUS_PREDICTION>:<N_POSITIVE>:<N_NEGATIVE>:<N_UNKNOWN_BLANK>:<N_UNKNOWN_DNS>
+```
+where `<DRUG>` corresponds to the drug name or therapy retrieved from CIViC, `<CT>` to the corresponding cancer type specificity reported by CIViCutils (i.e. either `CT`, `GT` or `NCT`), and `<CONSENSUS_PREDICTION>` to the unanimous drug response assigned by the package based on the counts of evidence items available for each therapeutic prediction, which are also reported (`<N_POSITIVE>`, `<N_NEGATIVE>`, `<N_UNKNOWN_BLANK>` and `<N_UNKNOWN_DNS>`), resulting in the following response categories that can be reported as the final consensus prediction: `SUPPORT` (when most items are `POSITIVE`), `RESISTANCE` (when majority is `NEGATIVE`), `CONFLICT` (unresolved cases of confident and contradicting evidence) and `UNKNOWN` (prevailing category is `UNKNOWN`, i.e. aggregation of `UNKNOWN_BLANK` and `UNKNOWN_DNS` items, meaning that the predictive value is not known).
 
 The annotation of consensus drug response predictions can only be performed if the provided `var_map` has been previously annotated with cancer type specificity information. The function returns a similar nested dictionary as `match_in_civic()`, but with a slightly different structure, namely, containing two additional layers per tier category: `matches` (containing the corresponding variant record hits found in CIViC, if any), and `drug_support` (listing one string for each consensus drug response generated for the given tier match) (see below).
 ```
@@ -392,8 +395,8 @@ write_match(match_map, var_map, raw_data, extra_header_cols, data_type="SNV", ou
 
 New columns appended by CIViCutils to the output file:
 * **CIViC_Tier**: tier category assigned by CIViCutils for the listed variant match(es). Possible categories: `1`, `1b` (only for data type `SNV`), `2` (only data types `SNV` and `CNV`), `3` or `4`.
-* **CIViC_Score**: semi-colon separated list of CIViC variant record(s) matched for the given input variant, and their corresponding CIViC Actionability Scores (numeric value computed across all evidence records available for each CIViC variant to assess the quality and quantity of the associated clinical data).
-* **CIViC_VariantType**: semi-colon separated list of CIViC variant record(s) matched for the given input variant, and their corresponding variant types reported in CIViC.
+* **CIViC_Score**: semi-colon separated list of CIViC variant record(s) matched for the given input variant and their corresponding CIViC Actionability Scores.
+* **CIViC_VariantType**: semi-colon separated list of variant types reported in CIViC for the matched variant record(s).
 * **CIViC_Drug_Support**: semi-colon separated list of consensus drug response predictions generated by CIViCutils based on the available predictive CIViC evidence matched for the input variant. Optional column, only reported when `write_support = True`.
 * **CIViC_PREDICTIVE**: semi-colon separated list of predictive evidence matched in CIViC for the input variant.
 * **CIViC_DIAGNOSTIC**: semi-colon separated list of diagnostic evidence matched in CIViC for the input variant.
@@ -402,7 +405,8 @@ New columns appended by CIViCutils to the output file:
 
 The specific format used for the clinical statements listed in the evidence columns (i.e. `CIViC_PREDICTIVE`, `CIViC_DIAGNOSTIC`, `CIViC_PROGNOSTIC`, `CIViC_PREDISPOSING`) depends on the values supplied for parameters `write_ct` and `write_complete` in function `write_match()`. Furthermore, note that the format of evidences in column `CIViC_PREDICTIVE` deviates slightly from the format used in the other three columns (due to the existance of drugs associated with the evidence records in the former case).
 
-Important remarks:
+#### Important remarks:
+
 * The evidence items reported in the CIViC evidence columns are aggregated whenever possible; namely, at the level of the disease name, combination of evidence direction and clinical significance, and evidence level. Format:
 ```
 # For 'CIViC_DIAGNOSTIC', 'CIViC_PROGNOSTIC' and 'CIViC_PREDISPOSING' data
@@ -426,8 +430,10 @@ Important remarks:
 # For 'CIViC_PREDICTIVE' data (identical but including drug info in a new field)
 <DISEASE>|<CT>|<DRUG>(<DIRECTION>,<SIGNIFICANCE>(<LEVEL>(<SOURCE_ID>,...),...),...);
 ```
-* Argument `write_support=True` can be selected to include one additional column in the output table, which lists the consensus drug response predictions computed by CIViCutils for each tier match (one prediction generated for each combination of available drug and disease specificity). Format: `<DRUG>:<CT>:CIVIC_<CONSENSUS_PREDICTION>` (see more details above). When input `match_map` was annotated with consensus drug response information, then `has_support=True` must be selected in `write_match()` (and viceversa).
-
+* Argument `write_support=True` can be selected to include one additional column in the output table, which lists the consensus drug response predictions computed by CIViCutils for each tier match (one prediction generated for each combination of available drug and disease specificity). When input `match_map` was annotated with consensus drug response information, then `has_support=True` must be selected in `write_match()` (and viceversa). Format:
+```
+<DRUG>:<CT>:CIVIC_<CONSENSUS_PREDICTION>:<N_POSITIVE>:<N_NEGATIVE>:<N_UNKNOWN_BLANK>:<N_UNKNOWN_DNS>
+```
 
 #### Other reporting functions
 
