@@ -378,7 +378,7 @@ match_map
             ├── 'matched'                       # new layer included to distinguish variant matches from drug information
             │   └── [var_id1, ...]
             └── 'drug_support'                  # new layer included with consensus drug response predictions
-                └── [response_prediction1, ...] # <DRUG>:<CT>:CIVIC_<CONSENSUS_PREDICTION>:<n_positive>:<n_negative>:<n_unknown_blank>:<n_unknown_dns>
+                └── [response_prediction1, ...] # <DRUG>:<CT>:CIVIC_<CONSENSUS_PREDICTION>:<N_POSITIVE>:<N_NEGATIVE>:<N_UNKNOWN_BLANK>:<N_UNKNOWN_DNS>
 ```
 
 
