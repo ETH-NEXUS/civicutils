@@ -34,10 +34,11 @@ for gene_record in all_results:
         for molecular_profile_record in molecular_profiles:
             evidence_items = molecular_profile_record.evidence_items
             for evidence_record in evidence_items:
-                # Use uppercase for consistency of disease names
-                disease_name = evidence_record.disease.name.strip().upper()
-                if disease_name not in diseases:
-                    diseases.append(disease_name)
+                if isinstance(evidence_record.disease, civic.Disease):
+                    # Use uppercase for consistency of disease names
+                    disease_name = evidence_record.disease.name.strip().upper()
+                    if disease_name not in diseases:
+                        diseases.append(disease_name)
 
 print("Total # CIViC diseases: %s" %(len(diseases)))
 # Sort alphabetically
