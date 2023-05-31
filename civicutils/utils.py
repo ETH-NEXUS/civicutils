@@ -429,7 +429,7 @@ def check_match_before_writing(match_map, var_map, raw_map, has_support=True, ha
     :return:                 None
     """
     sorted_tiers = ["tier_1", "tier_1b", "tier_2", "tier_3", "tier_4"]
-    varmap_entries = ["name", "civic_score", "hgvs", "types", "n_evidence_items", "evidence_items"]
+    var_map_entries_variant = ['name','hgvs','types']
     special_cases = ["NON_SNV_MATCH_ONLY", "NON_CNV_MATCH_ONLY", "NON_EXPR_MATCH_ONLY"]
 
     check_arguments([match_map, raw_map], ["match_map", "raw_map"])
@@ -486,7 +486,7 @@ def check_match_before_writing(match_map, var_map, raw_map, has_support=True, ha
                 check_dict_entry(var_map, "var_map", gene, "gene")
             for varId in matched:
                 check_dict_entry(var_map[gene], "var_map", varId, "variant")
-                check_keys(list(var_map[gene][varId].keys()), "var_map", varmap_entries, matches_all=True)
+                check_keys(list(var_map[gene][varId].keys()), "var_map", var_map_entries_variant, matches_all=False)
 
     return None
 

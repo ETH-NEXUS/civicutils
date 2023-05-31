@@ -30,12 +30,14 @@ diseases = []
 for gene_record in all_results:
     gene_variants = gene_record.variants
     for variant_record in gene_variants:
-        evidence_items = variant_record.evidence_items
-        for evidence_record in evidence_items:
-            # Use uppercase for consistency of disease names
-            disease_name = evidence_record.disease.name.strip().upper()
-            if disease_name not in diseases:
-                diseases.append(disease_name)
+        molecular_profiles = variant_record.molecular_profiles
+        for molecular_profile_record in molecular_profiles:
+            evidence_items = molecular_profile_record.evidence_items
+            for evidence_record in evidence_items:
+                # Use uppercase for consistency of disease names
+                disease_name = evidence_record.disease.name.strip().upper()
+                if disease_name not in diseases:
+                    diseases.append(disease_name)
 
 print("Total # CIViC diseases: %s" %(len(diseases)))
 # Sort alphabetically
