@@ -236,7 +236,7 @@ def reformat_civic(results, identifier_type="entrez_symbol"):
                         # submitted evidence items can fulfill having 'PREDICTIVE' evidence type and no drugs ('NULL')
                         if (evidence_type != "PREDICTIVE") and (drugs != ["NULL"]):
                             raise ValueError("Only evidences of type 'PREDICTIVE' can have drugs associated!")
-
+                            
                 # Iterate through drugs to add evidences associated to them
                 #   For non-Predictive evidences or Predictive with empty drugs, drugs=['NULL']
                 #   For Predictive and interaction=None, len(drugs) = 1
