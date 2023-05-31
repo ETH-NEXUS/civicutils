@@ -6,7 +6,6 @@
 ## R Version: 4.2.2
 ################################################################################
 
-
 library(optparse)
 library(ggplot2)
 library(reshape2)
@@ -506,21 +505,22 @@ df_civic_fraction =  combine_snv_and_cnv_data_for_plotting(df_civic_snv_fraction
 
 # Combined version of box plot
 # Showing SNVs and CNVs as facets
-outfile_ps1 = paste0(opt$outfile_tag, ".s1.boxplot_fraction_variants_in_civic.png")
-# outfile_ps1 = paste0(opt$outfile_tag, ".boxplot_fraction_variants_in_civic.pdf")
+outfile_ps1 = paste0(opt$outfile_tag, ".s1.boxplot_fraction_variants_in_civic.pdf")
+# outfile_ps1 = paste0(opt$outfile_tag, ".s1.boxplot_fraction_variants_in_civic.png")
 ps1 = ggplot(df_civic_fraction, aes(x=dataset, y=fraction, fill=dataset)) +
   geom_boxplot(outlier.shape=NA, outlier.size=0, notch=FALSE, width=0.4) +
   # geom_jitter(aes(color=dataset), size=1, alpha=0.9, position=position_jitter(seed=123)) +
   # position=position_jitterdodge(jitter.width=0.65, jitter.height=0.65, seed=123)
   ylab("Percent of variants matched in CIViC") + 
   xlab("") +
-  theme(axis.text=element_text(size=14, color="black"),
-        axis.title=element_text(size=16, color="black")) +
+  theme(axis.text = element_text(size=22, color="black"),
+        axis.title = element_text(size=24, color="black")) +
   theme(legend.position="none") +
-  scale_fill_manual(values=c("grey","grey")) +
-  scale_color_manual(values=c("black","black"))
+  scale_fill_manual(values=c("grey", "grey")) +
+  scale_color_manual(values=c("black", "black"))
 # plot(ps1)
 ggsave(outfile_ps1, ps1, width=10, height=8, units="in", dpi=1200)
+
 
 
 ## 2A) PIE CHART TOTAL NUMBER OF VARIANTS MATCHED IN CIVIC ACROSS PATIENTS
@@ -554,21 +554,21 @@ df_civic_pie$label = percent(df_civic_pie$value/100, accuracy=0.1)
 
 # Pie chart
 # Text labels introduced post-generation
-outfile_p2a = paste0(opt$outfile_tag, ".2a.piechart_variants_in_civic_across_patients.png")
-# outfile_p2a = paste0(opt$outfile_tag, ".piechart_variants_in_civic_across_patients.pdf")
+outfile_p2a = paste0(opt$outfile_tag, ".2a.piechart_variants_in_civic_across_patients.pdf")
+# outfile_p2a = paste0(opt$outfile_tag, ".2a.piechart_variants_in_civic_across_patients.png")
 p2a = ggplot(df_civic_pie, aes(x="", y=value, fill=variant_type)) +
-  geom_bar(width = 1, stat = "identity", color = "black") +
+  geom_bar(width=1, stat="identity", color="black") +
   facet_grid(. ~ dataset) +
   coord_polar("y", start=0) +
   ylab(paste0("Total patients = ", nrow(df_civic_snv_fraction))) +
   theme_minimal() +
-  theme(axis.text.x=element_blank(),
-        axis.title.x = element_text(size=40, hjust = 0.5),
+  theme(axis.text.x = element_blank(),
+        axis.title.x = element_text(size=40, hjust=0.5),
         axis.title.y = element_blank(),
-        panel.grid=element_blank(),
-        legend.text=element_text(size=30),
-        strip.text = element_text(size = 35)) +
-  scale_fill_manual(values = c("grey", "#0072B2"), name="")
+        panel.grid = element_blank(),
+        legend.text = element_text(size=35),
+        strip.text = element_text(size=40)) +
+  scale_fill_manual(values=c("grey", "#0072B2"), name="")
 # plot(p2a)
 ggsave(outfile_p2a, p2a, width=10, height=8, units="in", dpi=1200)
 
@@ -591,19 +591,19 @@ tier_cols = c("fraction_tier_1" = "black", "fraction_tier_1b" = "black", "fracti
 
 # Combined version of box plot
 # Showing SNVs and CNVs as facets
-outfile_ps2 = paste0(opt$outfile_tag, ".s2.boxplot_fraction_variants_per_tier.png")
-# outfile_ps2 = paste0(opt$outfile_tag, ".boxplot_fraction_variants_per_tier.pdf")
+outfile_ps2 = paste0(opt$outfile_tag, ".s2.boxplot_fraction_variants_per_tier.pdf")
+# outfile_ps2 = paste0(opt$outfile_tag, ".s2.boxplot_fraction_variants_per_tier.png")
 ps2 = ggplot(df_tier_fraction, aes(x=variable, y=value)) +
   geom_boxplot(fill="grey", outlier.shape=NA, outlier.size=0, notch=FALSE, width=0.3) +
   geom_jitter(aes(color=variable), size=1, alpha=0.9, position=position_jitter(seed=123)) +
   facet_grid(dataset ~ .) +
   ylab("Percent of variants matched in CIViC") + 
   xlab("") +
-  theme(axis.text=element_text(size=14, color="black"),
-        axis.title=element_text(size=16, color="black")) +
+  theme(axis.text = element_text(size=22, color="black"),
+        axis.title = element_text(size=24, color="black")) +
   theme(legend.justification = c(1, 1),
         legend.position = "none",
-        strip.text=element_text(size=12)) +
+        strip.text = element_text(size=20)) +
   scale_x_discrete(breaks=c("fraction_tier_1", "fraction_tier_1b", "fraction_tier_2", "fraction_tier_3"), 
                    labels=c("Tier 1", "Tier 1b", "Tier 2", "Tier 3")) +
   scale_color_manual(name="Tier class", breaks=c("fraction_tier_1", "fraction_tier_1b", "fraction_tier_2", "fraction_tier_3"), 
@@ -652,26 +652,26 @@ df_tier_pie$label = percent(df_tier_pie$value/100, accuracy=0.1)
 df_tier_pie$tier = factor(df_tier_pie$tier, levels=c("Tier 1", "Tier 1b", "Tier 2", "Tier 3"))
 
 # Choose color scheme for plot
-tier_cols = c("Tier 1" = "red", "Tier 1b" = "#0072B2", "Tier 2" = "gold", "Tier 3" = "skyblue")
+tier_cols = c("Tier 1"="red", "Tier 1b"="#0072B2", "Tier 2"="gold", "Tier 3"="skyblue")
 
 
 # Pie chart
 # Text labels introduced post-generation
-outfile_p2b = paste0(opt$outfile_tag, ".2b.piechart_variants_per_tier_across_patients.png")
-# outfile_p2b = paste0(opt$outfile_tag, ".piechart_variants_per_tier_across_patients.pdf")
+outfile_p2b = paste0(opt$outfile_tag, ".2b.piechart_variants_per_tier_across_patients.pdf")
+# outfile_p2b = paste0(opt$outfile_tag, ".2b.piechart_variants_per_tier_across_patients.png")
 p2b = ggplot(df_tier_pie, aes(x="", y=value, fill=tier)) +
-  geom_bar(width = 1, stat = "identity", color = "black") +
+  geom_bar(width=1, stat="identity", color="black") +
   facet_grid(. ~ dataset) +
   coord_polar("y", start=0) +
   ylab(paste0("Total patients = ", nrow(df_civic_snv_fraction))) +
   theme_minimal() +
-  theme(axis.text.x=element_blank(),
-        axis.title.x = element_text(size=40, hjust = 0.5),
+  theme(axis.text.x = element_blank(),
+        axis.title.x = element_text(size=40, hjust=0.5),
         axis.title.y = element_blank(),
-        panel.grid=element_blank(),
-        legend.text=element_text(size=30),
-        strip.text = element_text(size = 35)) +
-  scale_fill_manual(values = tier_cols, name="")
+        panel.grid = element_blank(),
+        legend.text = element_text(size=35),
+        strip.text = element_text(size=40)) +
+  scale_fill_manual(values=tier_cols, name="")
 # plot(p2b)
 ggsave(outfile_p2b, p2b, width=10, height=8, units="in", dpi=1200)
 
@@ -709,8 +709,8 @@ tier3_colors = c("Including" = "grey", "Excluding" = "#0072B2")
 # Combined version of box plot
 # Showing Evidence types in X-axis (variant numbers grouped by tier3 exclusion/inclusion)
 # Showing SNVs and CNVs as facets in Y-axis
-outfile_ps3 = paste0(opt$outfile_tag, ".s3.boxplot_n_variants_per_evidence_type.png")
-# outfile_ps3 = paste0(opt$outfile_tag, ".boxplot_n_variants_per_evidence_type.pdf")
+outfile_ps3 = paste0(opt$outfile_tag, ".s3.boxplot_n_variants_per_evidence_type.pdf")
+# outfile_ps3 = paste0(opt$outfile_tag, ".s3.boxplot_n_variants_per_evidence_type.png")
 ps3 = ggplot(df_evidence, aes(x=evidence_type, y=value, fill=tier3_variants)) +
   geom_boxplot(outlier.shape=NA, outlier.size=0, notch=FALSE) +
   facet_grid(dataset ~ .) +
@@ -718,12 +718,12 @@ ps3 = ggplot(df_evidence, aes(x=evidence_type, y=value, fill=tier3_variants)) +
   # coord_cartesian(ylim = c(0, 15)) +    # version with correct scale for SNVs
   ylab("Number of variants") +
   xlab("") +
-  theme(axis.text=element_text(size=14, color="black"),
-        axis.title=element_text(size=16, color="black")) +
+  theme(axis.text = element_text(size=18, color="black"),
+        axis.title = element_text(size=24, color="black")) +
   theme(legend.justification = c(1, 1),
-        legend.text=element_text(size=13, color="black"),
-        legend.title=element_text(size=15, color="black"),
-        strip.text=element_text(size=12)) +
+        legend.text = element_text(size=20, color="black"),
+        legend.title = element_text(size=22, color="black"),
+        strip.text = element_text(size=20)) +
   scale_fill_manual(name="Tier3 variants", values=tier3_colors) +
   scale_color_manual(name="Tier3 variants", values=tier3_colors)
 # plot(ps3)
@@ -758,24 +758,24 @@ df_disease_fraction_outliers$is_outlier[5] = TRUE
 # Combined version of box plot
 # Showing ct classes in X-axis (disease numbers grouped by tier3 exclusion/inclusion)
 # Showing SNVs and CNVs as facets in Y-axis
-outfile_p3a = paste0(opt$outfile_tag, ".3a.boxplot_fraction_diseases_per_ct.png")
-# outfile_p3a = paste0(opt$outfile_tag, ".boxplot_fraction_diseases_per_ct.pdf")
+outfile_p3a = paste0(opt$outfile_tag, ".3a.boxplot_fraction_diseases_per_ct.pdf")
+# outfile_p3a = paste0(opt$outfile_tag, ".3a.boxplot_fraction_diseases_per_ct.png")
 p3a = ggplot(df_disease_fraction_outliers, aes(x=ct_class, y=value, fill=tier3_variants)) +
   geom_boxplot(outlier.shape=NA, outlier.size=0, notch=FALSE) +
   # geom_point(position=position_jitterdodge(jitter.width=0.65, jitter.height=0.65, seed=123),
   #            aes(color=tier3_variants), size=1, alpha=0.9) +
   geom_point(data=subset(df_disease_fraction_outliers, is_outlier==TRUE), 
-             position=position_jitterdodge(jitter.width=0.65, jitter.height=0.65, seed=123),
+             position=position_jitterdodge(jitter.width=0.50, jitter.height=0.50, seed=123),
              aes(color=tier3_variants), size=1, alpha=0.9) +
   facet_grid(dataset ~ .) +
   ylab("Percent of disease names") + 
   xlab("") +
+  theme(axis.text = element_text(size=28, color="black"),
+        axis.title = element_text(size=32, color="black"),
+        strip.text = element_text(size=24)) +
   theme(legend.justification = c(1, 1),
-        legend.text=element_text(size=13, color="black"),
-        legend.title=element_text(size=15, color="black")) +
-  theme(axis.text=element_text(size=14, color="black"),
-        axis.title=element_text(size=16, color="black"),
-        strip.text=element_text(size=12)) +
+        legend.text = element_text(size=26, color="black"),
+        legend.title = element_text(size=30, color="black")) +
   scale_fill_manual(name="Tier3 variants", values=tier3_colors) +
   scale_color_manual(name="Tier3 variants", values=tier3_colors)
 # plot(p3a)
@@ -823,23 +823,24 @@ disease_cols = c("ct" = "red", "gt" = "gold", "nct" = "skyblue")
 
 # Pie chart
 # Text labels introduced post-generation
-outfile_p3b = paste0(opt$outfile_tag, ".3b.piechart_diseases_per_ct_across_patients.png")
-# outfile_p3b = paste0(opt$outfile_tag, ".piechart_diseases_per_ct_across_patients.pdf")
+outfile_p3b = paste0(opt$outfile_tag, ".3b.piechart_diseases_per_ct_across_patients.pdf")
+# outfile_p3b = paste0(opt$outfile_tag, ".3b.piechart_diseases_per_ct_across_patients.png")
 p3b = ggplot(df_disease_pie, aes(x="", y=value, fill=ct_class)) +
-  geom_bar(width = 1, stat = "identity", color = "black") +
-  facet_grid(dataset ~ tier3_variants, switch = "y") +
+  geom_bar(width=1, stat="identity", color="black") +
+  facet_grid(tier3_variants ~ dataset, switch = "y") +
   coord_polar("y", start=0) +
   ylab(paste0("Total patients = ", nrow(df_civic_snv_fraction))) +
   theme_minimal() +
-  theme(axis.text.x=element_blank(),
-        axis.title.x = element_text(size=22, hjust = 0.5),
+  theme(axis.text.x = element_blank(),
+        axis.title.x = element_text(size=44, hjust=0.5),
         axis.title.y = element_blank(),
-        panel.grid=element_blank(),
-        legend.text=element_text(size=20),
-        strip.text.x = element_text(size = 20),
-        strip.text.y.left = element_text(size = 22, angle = 0),
+        panel.grid = element_blank(),
+        legend.text = element_text(size=40),
+        legend.title = element_text(size=30),
+        strip.text.x = element_text(size=40),
+        strip.text.y.left = element_text(size=44, angle=0),
         panel.spacing = unit(1, "lines")) +
-  scale_fill_manual(values = disease_cols, name="")
+  scale_fill_manual(name="Cancer specificity", values=disease_cols)
 # plot(p3b)
 ggsave(outfile_p3b, p3b, width=10, height=8, units="in", dpi=1200)
 
@@ -866,22 +867,22 @@ df_drug_fraction_outliers = get_outliers_per_group_and_dataset(df_drug_fraction,
 
 # Combined version of box plot
 # Showing SNVs and CNVs in X-axis (variant numbers grouped by tier3 exclusion/inclusion)
-outfile_p4a = paste0(opt$outfile_tag, ".4a.boxplot_fraction_variants_with_drug.png")
-# outfile_p4a = paste0(opt$outfile_tag, ".boxplot_fraction_variants_with_drug.pdf")
+outfile_p4a = paste0(opt$outfile_tag, ".4a.boxplot_fraction_variants_with_drug.pdf")
+# outfile_p4a = paste0(opt$outfile_tag, ".4a.boxplot_fraction_variants_with_drug.png")
 p4a = ggplot(df_drug_fraction_outliers, aes(x=dataset, y=value, fill=tier3_variants)) +
   geom_boxplot(outlier.shape=NA, outlier.size=0, notch=FALSE) +
   # geom_point(position=position_jitterdodge(jitter.width=0.65, jitter.height=0.65, seed=123), 
   #            aes(color=tier3_variants), size=1, alpha=0.9) +
   geom_point(data=subset(df_drug_fraction_outliers, is_outlier==TRUE), 
-             position=position_jitterdodge(jitter.width=0.65, jitter.height=0.65, seed=123),
+             position=position_jitterdodge(jitter.width=0.50, jitter.height=0.50, seed=123),
              aes(color=tier3_variants), size=1, alpha=0.9) +
-  ylab("Percent of variants with consensus drug support") + 
+  ylab("Percent of variants with consensus drug predictions") + 
   xlab("") +
+  theme(axis.text = element_text(size=28, color="black"),
+        axis.title = element_text(size=21, color="black")) +
   theme(legend.justification = c(1, 1),
-        legend.text=element_text(size=12, color="black"),
-        legend.title=element_text(size=15, color="black")) +
-  theme(axis.text=element_text(size=14, color="black"),
-        axis.title=element_text(size=15, color="black")) +
+        legend.text = element_text(size=24, color="black"),
+        legend.title = element_text(size=30, color="black")) +
   scale_fill_manual(name="Tier3 variants", values=tier3_colors) +
   scale_color_manual(name="Tier3 variants", values=tier3_colors)
 # plot(p4a)
@@ -922,25 +923,26 @@ df_drug_pie$label = percent(df_drug_pie$value/100, accuracy=0.1)
 
 # Pie chart
 # Text labels introduced post-generation
-outfile_ps4 = paste0(opt$outfile_tag, ".s4.piechart_variants_with_drug_across_patients.png")
-# outfile_ps4 = paste0(opt$outfile_tag, ".piechart_variants_with_drug_across_patients.pdf")
+outfile_ps4 = paste0(opt$outfile_tag, ".s4.piechart_variants_with_drug_across_patients.pdf")
+# outfile_ps4 = paste0(opt$outfile_tag, ".s4.piechart_variants_with_drug_across_patients.png")
 ps4 = ggplot(df_drug_pie, aes(x="", y=value, fill=variant_type)) +
   geom_bar(width = 1, stat = "identity", color = "black") +
-  facet_grid(dataset ~ tier3_variants, switch = "y") +
+  facet_grid(tier3_variants ~ dataset, switch = "y") +
   coord_polar("y", start=0) +
   ylab(paste0("Total patients = ", nrow(df_civic_snv_fraction))) +
   theme_minimal() +
-  theme(axis.text.x=element_blank(),
-        axis.title.x = element_text(size=22, hjust = 0.5),
+  theme(axis.text.x = element_blank(),
+        axis.title.x = element_text(size=22, hjust=0.5),
         axis.title.y = element_blank(),
-        panel.grid=element_blank(),
-        legend.text=element_text(size=20),
-        strip.text.x = element_text(size = 20),
-        strip.text.y.left = element_text(size = 22, angle = 0),
+        panel.grid = element_blank(),
+        legend.text = element_text(size=20),
+        strip.text.x = element_text(size=20),
+        strip.text.y.left = element_text(size=22, angle=0),
         panel.spacing = unit(1, "lines")) +
-  scale_fill_manual(values = c("grey", "#0072B2"), name="")
+  scale_fill_manual(values=c("grey", "#0072B2"), name="")
 # plot(ps4)
 ggsave(outfile_ps4, ps4, width=10, height=8, units="in", dpi=1200)
+
 
 
 ## S5) BOX PLOT DISTRIBUTION OF MEAN CONSENSUS DRUG SUPPORT PREDICTIONS AVAILABLE PER VARIANT
@@ -965,22 +967,24 @@ df_n_consensus_mean_outliers = get_outliers_per_group_and_dataset(df_n_consensus
 # Combined version of box plot
 # Showing SNVs and CNVs in X-axis (prediction numbers grouped by tier3 exclusion/inclusion)
 outfile_ps5 = paste0(opt$outfile_tag, ".s5.boxplot_mean_n_consensus_predictions_per_variant.pdf")
+# outfile_ps5 = paste0(opt$outfile_tag, ".s5.boxplot_mean_n_consensus_predictions_per_variant.png")
 ps5 = ggplot(df_n_consensus_mean_outliers, aes(x=dataset, y=value, fill=tier3_variants)) +
   geom_boxplot(outlier.shape=NA, outlier.size=0, notch=FALSE) +
   geom_point(data=subset(df_n_consensus_mean_outliers, is_outlier==TRUE), 
-             position=position_jitterdodge(jitter.width=0.2, jitter.height=0.2, seed=123),
+             position=position_jitterdodge(jitter.width=0.50, jitter.height=0.50, seed=123),
              aes(color=tier3_variants), size=1, alpha=0.9) +  
-  ylab("Mean number of consensus drug support predictions per variant") + 
+  ylab("Mean number of consensus predictions per variant") + 
   xlab("") +
+  theme(axis.text = element_text(size=22, color="black"),
+        axis.title = element_text(size=22, color="black")) +
   theme(legend.justification = c(1, 1),
-        legend.text=element_text(size=12, color="black"),
-        legend.title=element_text(size=15, color="black")) +
-  theme(axis.text=element_text(size=14, color="black"),
-        axis.title=element_text(size=15, color="black")) +
+        legend.text = element_text(size=20, color="black"),
+        legend.title = element_text(size=22, color="black")) +
   scale_fill_manual(name="Tier3 variants", values=tier3_colors) +
   scale_color_manual(name="Tier3 variants", values=tier3_colors)
 # plot(ps5)
 ggsave(outfile_ps5, ps5, width=10, height=8, units="in", dpi=1200)
+
 
 
 ## S6) BOX PLOT DISTRIBUTION OF CONSENSUS PREDICTIONS AVAILABLE PER VARIANT
@@ -1014,24 +1018,24 @@ df_mean_fraction_consensus_outliers$is_outlier[5] = TRUE
 
 # Combined version of box plot
 # Showing SNVs and CNVs as facets (prediction numbers grouped by tier3 exclusion/inclusion)
-outfile_ps6 = paste0(opt$outfile_tag, ".s6.boxplot_mean_fractions_consensus_predictions_per_variant.png")
-# outfile_ps6 = paste0(opt$outfile_tag, ".boxplot_mean_fractions_consensus_predictions_per_variant.pdf")
+outfile_ps6 = paste0(opt$outfile_tag, ".s6.boxplot_mean_fractions_consensus_predictions_per_variant.pdf")
+# outfile_ps6 = paste0(opt$outfile_tag, ".s6.boxplot_mean_fractions_consensus_predictions_per_variant.png")
 ps6 = ggplot(df_mean_fraction_consensus_outliers, aes(x=support_type, y=value, fill=tier3_variants)) +
   geom_boxplot(outlier.shape=NA, outlier.size=0, notch=FALSE) +
   # geom_point(position=position_jitterdodge(jitter.width=0.65, jitter.height=0.65, seed=123),
   #            aes(color=tier3_variants), size=1, alpha=0.9) +
   geom_point(data=subset(df_mean_fraction_consensus_outliers, is_outlier==TRUE), 
-             position=position_jitterdodge(jitter.width=0.65, jitter.height=0.65, seed=123),
+             position=position_jitterdodge(jitter.width=0.50, jitter.height=0.50, seed=123),
              aes(color=tier3_variants), size=1, alpha=0.9) +
   facet_grid(dataset ~ .) +
-  ylab("Mean percent of consensus drug predictions per variant") +
+  ylab("Mean percent of consensus predictions per variant") +
   xlab("") +
+  theme(axis.text = element_text(size=21, color="black"),
+        axis.title = element_text(size=23, color="black")) +
   theme(legend.justification = c(1, 1),
-        legend.text=element_text(size=12, color="black"),
-        legend.title=element_text(size=15, color="black"),
-        strip.text=element_text(size=12)) +
-  theme(axis.text=element_text(size=14, color="black"),
-        axis.title=element_text(size=15, color="black")) +
+        legend.text = element_text(size=20, color="black"),
+        legend.title = element_text(size=22, color="black"),
+        strip.text = element_text(size=20)) +
   scale_fill_manual(name="Tier3 variants", values=tier3_colors) +
   scale_color_manual(name="Tier3 variants", values=tier3_colors) +
   scale_x_discrete(breaks=c("support", "resistance", "conflict", "unknown"), labels=c("Support", "Resistance", "Conflict", "Unknown"))
@@ -1074,30 +1078,32 @@ df_overall_consensus_drugs_outliers$is_outlier[6] = TRUE
 
 # Combined version of box plot
 # Showing SNVs and CNVs as facets (drug numbers grouped by tier3 exclusion/inclusion)
-outfile_p4b = paste0(opt$outfile_tag, ".4b.boxplot_fraction_overall_consensus_drugs.png")
-# outfile_p4b = paste0(opt$outfile_tag, ".boxplot_fraction_overall_consensus_drugs.pdf")
+outfile_p4b = paste0(opt$outfile_tag, ".4b.boxplot_fraction_overall_consensus_drugs.pdf")
+# outfile_p4b = paste0(opt$outfile_tag, ".4b.boxplot_fraction_overall_consensus_drugs.png")
 p4b = ggplot(df_overall_consensus_drugs_outliers, aes(x=support_type, y=value, fill=tier3_variants)) +
   geom_boxplot(outlier.shape=NA, outlier.size=0, notch=FALSE) +
   # geom_point(position=position_jitterdodge(jitter.width=0.65, jitter.height=0.65, seed=123),
   #            aes(color=tier3_variants), size=1, alpha=0.9) +
   geom_point(data=subset(df_overall_consensus_drugs_outliers, is_outlier==TRUE), 
-             position=position_jitterdodge(jitter.width=0.65, jitter.height=0.65, seed=123),
+             position=position_jitterdodge(jitter.width=0.50, jitter.height=0.50, seed=123),
              aes(color=tier3_variants), size=1, alpha=0.9) +
   facet_grid(dataset ~ .) +
   ylab("Percent of overall consensus drugs") + 
   xlab("") +
+  theme(axis.text.x = element_text(size=28, color="black", angle=45, vjust=1, hjust=1),
+        axis.text.y = element_text(size=28, color="black"),
+        axis.title = element_text(size=25, color="black")) +
   theme(legend.justification = c(1, 1),
-        legend.text=element_text(size=12, color="black"),
-        legend.title=element_text(size=15, color="black"),
-        strip.text=element_text(size=12)) +
-  theme(axis.text=element_text(size=14, color="black"),
-        axis.title=element_text(size=15, color="black")) +
+        legend.text = element_text(size=24, color="black"),
+        legend.title = element_text(size=30, color="black"),
+        strip.text = element_text(size=24)) +
   scale_fill_manual(name="Tier3 variants", values=tier3_colors) +
   scale_color_manual(name="Tier3 variants", values=tier3_colors) +
   scale_x_discrete(breaks=c("support", "resistance", "conflict", "unknown", "mixed"),
                    labels=c("All-support", "All-resistance", "All-conflict", "All-unknown", "Mixed"))
 # plot(p4b)
 ggsave(outfile_p4b, p4b, width=10, height=8, units="in", dpi=1200)
+
 
 
 ########################################################################################################################
