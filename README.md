@@ -311,9 +311,9 @@ CIViC records are classified and selected/excluded based on cancer specificity a
 
 The above logic (hierarchy ct>gt>nct) is applied separately for each evidence type (i.e. `Predictive`, `Diagnostic`, `Prognostic` or `Predisposing`), which means that records of distinct evidence types can be associated to different sets of disease names, hence resulting in different cancer specificity classifications for the same variant.
 
-To ease the selection of appropriate terms for classifying the disease specificity of a particular cancer type or subtype of interest, we provide a helper file `civic_available_diseases_<DATE>.txt` in subfolder [data](https://github.com/ETH-NEXUS/civicutils/tree/master/civicutils/data) listing all disease names available in CIViC as of `<DATE>`. To update this file, run standalone script `get_available_diseases_in_civic.py` (which can be found in the `scripts` folder of the [TCGA-BLCA analysis](https://github.com/ETH-NEXUS/civicutils/tree/master/tcga_analysis)) as follows, replacing `<DATE>` with the new date:
+To ease the selection of appropriate terms for classifying the disease specificity of a particular cancer type or subtype of interest, we provide a helper file `civic_available_diseases_<DATE>.txt` in the [data subfolder](https://github.com/ETH-NEXUS/civicutils/tree/master/tcga_analysis/data) of the [TCGA-BLCA analysis](https://github.com/ETH-NEXUS/civicutils/tree/master/tcga_analysis), listing all disease names available in CIViC as of `<DATE>`. To update this file, run standalone script `get_available_diseases_in_civic.py` (which can be found in the [scripts subfolder](https://github.com/ETH-NEXUS/civicutils/tree/master/tcga_analysis/scripts) of the TCGA-BLCA analysis) as follows, replacing `<DATE>` with the new date:
 ```
-> python tcga_analysis/scripts/get_available_diseases_in_civic.py --outfile data/civic_available_diseases_<DATE>.txt
+> python tcga_analysis/scripts/get_available_diseases_in_civic.py --outfile tcga_analysis/data/civic_available_diseases_<DATE>.txt
 ```
 
 #### Filtering based on annotated cancer type specificity
