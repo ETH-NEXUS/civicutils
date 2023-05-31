@@ -31,7 +31,7 @@ More information can be found on the [CIViCpy documentation](https://docs.civicp
 
 ### Required input format
 
-Three different data types can be handled by the package: `SNV` (genomic single-nucleotide and insertion-deletion variants), `CNV` (genomic copy number alterations), and `EXPR` (differentially expressed genes). Corresponding functions for reading input data files are `read_in_snvs()`, `read_in_cnvs()` and `read_in_expr()`, respectively. Input files are required to have a tabular format with header and to contain data exclusively from one single data type.
+Three different data types can be handled by the package: `SNV` (genomic single-nucleotide and insertion-deletion variants), `CNV` (genomic copy number alterations), and `EXPR` (differentially expressed genes). Corresponding functions for reading input data files are `read_in_snvs()`, `read_in_cnvs()` and `read_in_expr()`, respectively. Input files are required to have a tabular format with header and to contain data exclusively from one single data type. Example input files for all three data types are provided in subfolder [data](https://github.com/ETH-NEXUS/civicutils/tree/master/civicutils/data).
 
 #### 1. SNVs/InDels (`SNV`)
 
@@ -147,9 +147,10 @@ var_map
                 └── <evidence_type>
                     └── <disease>                               # can be 'NULL'
                         └── <drug>                              # 'NULL' when no drugs are available
-                            └── <evidence>                      # Format: <EVIDENCE_DIRECTION>:<CLINICAL_SIGNIFICANCE>
+                            └── <evidence>                      # <EVIDENCE_DIRECTION>:<CLINICAL_SIGNIFICANCE>
                                 └── <level>
-                                    └── [evidence_item1, ...]   # Format: '<PUBMED_ID>:<EVIDENCE_STATUS>:<SOURCE_STATUS>:<VARIANT_ORIGIN>:<RATING>'
+                                    └── [evidence_item1, ...]   # <PUBMED_ID>:<EVIDENCE_STATUS>:<SOURCE_STATUS>:<VARIANT_ORIGIN>:<RATING>
+```
 
 Query returns the following information for each variant retrieved from CIViC:
 * Associated gene identifier
@@ -223,7 +224,7 @@ CIViCutils uses a tier-based rating system to assess the quality of the resultin
 * `tier_3`: gene was found in CIViC but no associated variant record could be matched. In this case, all CIViC variant records available for the gene and found to match the given data type are returned by the function (if any). If a `tier_3` was indicated but no matched variants are listed, then this is a consequence of no CIViC records being found for the provided data type and given gene (but indicates the existance of other CIViC records available for a different data type).
 * `tier_4`: gene was not found in CIViC. No hits are returned by the query.
 
-More details about the matching framework implemented in CIViCutils can be found [here](https://github.com/ETH-NEXUS/civicutils/blob/development/info_on_matching_framework.md).
+More details about the matching framework implemented in CIViCutils can be found [here](https://github.com/ETH-NEXUS/civicutils/blob/master/info_on_matching_framework.md).
 
 Note that the user can choose to perform filtering on the collected CIViC data before it is even supplied to `match_in_civic()` by providing a custom `var_map` that is used for the matching framework, e.g. if further filtering of the retrieved CIViC evidences needs to be applied so that undesired information is not considered downstream. We highly recommend this, specially to select only evidences tagged as `ACCEPTED` and avoid matching of submitted evidence that has not yet been expert-reviewed. In the case of genomic variants, it is also recommended to filter for the desired variant origin (e.g. `SOMATIC`, `GERMLINE`, etc.). Be aware that when filtering of CIViC evidence is performed prior to matching, then the returned matches and associated information might not reflect the exact state of the database, e.g. genes present in CIViC but specifically excluded from `var_map` by the user will be classified as `tier 4`. On the other hand, if `var_map` is not provided in the arguments of `match_in_civic()`, then per default the function directly retrieves from the database cache file all CIViC information available for the input genes, without applying any prior filtering.
 ```
@@ -311,10 +312,9 @@ CIViC records are classified and selected/excluded based on cancer specificity a
 
 The above logic (hierarchy ct>gt>nct) is applied separately for each evidence type (i.e. `Predictive`, `Diagnostic`, `Prognostic` or `Predisposing`), which means that records of distinct evidence types can be associated to different sets of disease names, hence resulting in different cancer specificity classifications for the same variant.
 
-*TODO*
-To ease the selection of appropriate terms for classifying the disease specificity of a particular cancer type or subtype of interest, we provide a helper file `civic_available_diseases_<DATE>.txt` in subfolder [data](https://github.com/ETH-NEXUS/civicutils/tree/development/civicutils/data) listing all disease names available in CIViC as of `<DATE>`. To update this file, run standalone script `get_available_diseases_in_civic.py` (which can be found in the `scripts` folder of the [TCGA-BLCA analysis](https://github.com/ETH-NEXUS/civicutils/tree/development/tcga_analysis/)) as follows, replacing `<DATE>` with the new date:
+To ease the selection of appropriate terms for classifying the disease specificity of a particular cancer type or subtype of interest, we provide a helper file `civic_available_diseases_<DATE>.txt` in subfolder [data](https://github.com/ETH-NEXUS/civicutils/tree/master/civicutils/data) listing all disease names available in CIViC as of `<DATE>`. To update this file, run standalone script `get_available_diseases_in_civic.py` (which can be found in the `scripts` folder of the [TCGA-BLCA analysis](https://github.com/ETH-NEXUS/civicutils/tree/master/tcga_analysis)) as follows, replacing `<DATE>` with the new date:
 ```
-> python tcga_analysis/script/get_available_diseases_in_civic.py --outfile civic_available_diseases_<DATE>.txt
+> python tcga_analysis/scripts/get_available_diseases_in_civic.py --outfile data/civic_available_diseases_<DATE>.txt
 ```
 
 #### Filtering based on annotated cancer type specificity
@@ -338,7 +338,7 @@ Available `Predictive` evidence retrieved from CIViC and matched to the input mo
 
 In addition, CIViCutils further interprets the evidence items to be aggregated (characterized by their combination of terms in the evidence direction and clinical significance) into a reduced set of concrete expressions relative to the direct therapeutic prediction; namely, `POSITIVE`, `NEGATIVE`, or `UNKNOWN`. To achieve this, the function makes use of a helper dictionary mapping CIViC evidence to drug responses, which is leveraged during the computation of the consensus predictions, and which can be customized by the user.
 
-Structure and default values of `drug_support` entry in config file [data.yml](https://github.com/ETH-NEXUS/civicutils/blob/development/civicutils/data/data.yml):
+Structure and default values of `drug_support` entry in config file [data.yml](https://github.com/ETH-NEXUS/civicutils/blob/master/civicutils/data/data.yml):
 ```
 drug_support:
     SUPPORTS:
