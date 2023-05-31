@@ -555,13 +555,11 @@ variant_mapping = query_civic(genes, identifier_type="entrez_symbol")
 # print("\nGenes with no CIViC data: {}".format(",".join(unmatched)))
 
 # Filter undesired evidences to avoid matching later on
-print("filter_civic")
 variant_mapping = filter_civic(variant_mapping, evidence_type_not_in=["FUNCTIONAL", "ONCOGENIC"], evidence_status_in=["ACCEPTED"], var_origin_not_in=["GERMLINE"], output_empty=False)
 
 
 # Match input SNV variants in CIViC, pick highest tier available per input gene+variant
 # Tier hierarchy: 1 > 1b > 2 > 3 > 4
-print("match_in_civic")
 (match_mapping, matched_ids, variant_mapping) = match_in_civic(var_data, data_type=data_type, identifier_type="entrez_symbol", select_tier="highest", var_map=variant_mapping)
 
 
@@ -569,12 +567,10 @@ print("match_in_civic")
 disease_name_not_in = []
 disease_name_in = ["bladder"]
 alt_disease_names = ["solid tumor"]
-print("annotate_ct")
 annot_mapping = annotate_ct(variant_mapping, disease_name_not_in, disease_name_in, alt_disease_names)
 
 # Filter CIViC evidences to pick only those for the highest cancer specificity available
 # ct hierarchy: ct > gt > nct
-print("filter_ct")
 annot_mapping = filter_ct(annot_mapping, select_ct="highest")
 
 # Get custom dictionary of support from data.yml (provided within the package)
@@ -582,13 +578,11 @@ annot_mapping = filter_ct(annot_mapping, select_ct="highest")
 support_dict = get_dict_support()
 
 # Process therapy support of the matched variants using the annotated CIViC evidences
-print("process_therapy_support")
 annot_match_mapping = process_therapy_support(match_mapping, annot_mapping, support_dict)
 
 # Write to output
 # Parse input file again, now checking (and prioritizing, if necessary) the available CIViC info per variant line
 # Report the CT classification of each disease, and write column with the overall therapy support of the match for each available CT class
-print("write_match_multiple_annotations")
 (exact_matches, syn_matches, pos_matches, no_matches, gene_not_found) = write_match_multiple_annotations(annot_match_mapping, annot_mapping, raw_mapping, args.infile, outfile, data_type=data_type, has_support=True, has_ct=True, write_ct=True, write_support=True, write_complete=True)
 
 outfile.close()
