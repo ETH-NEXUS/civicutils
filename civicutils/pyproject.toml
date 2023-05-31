@@ -1,0 +1,25 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "civicutils"
+version = "1.0.0"
+authors = [
+  { name="María Lourdes Rosano-Gonzalez", email="lourdes.rosanogonzalez@gmail.com" },
+  { name="Vipin T. Sreedharan", email="vipin.sreedharan@nexus.ethz.ch" },
+  { name="Antoine Hanns", email="hanns@nexus.ethz.ch" },
+  { name="Daniel J. Stekhoven", email="stekhoven@nexus.ethz.ch" },
+  { name="Franziska Singer", email="singer@nexus.ethz.ch" }
+]
+description = "Python package for querying, matching and downstream processing of CIViC information."
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU General Public License"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/ETH-NEXUS/civicutils"
+"Bug Tracker" = "https://github.com/ETH-NEXUS/civicutils/issues"
