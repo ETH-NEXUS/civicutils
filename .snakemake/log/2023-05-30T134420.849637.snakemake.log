@@ -1,0 +1,57 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 2
+Rules claiming more threads will be scaled down.
+Job stats:
+job                     count    min threads    max threads
+--------------------  -------  -------------  -------------
+all                         1              1              1
+civicQuery_cnv            412              1              1
+civicQuery_snv            412              1              1
+wes_seiler_tcga_2022        1              1              1
+total                     826              1              1
+
+Select jobs to execute...
+
+[Tue May 30 13:44:23 2023]
+rule civicQuery_cnv:
+    input: /cluster/work/nexus/antoine/Projects/2023_05_Molecular_Profil_CIViCutils/TCGA_Test/analysis/clinicalAnnotation/cnvs/FD-A3B4-01A_vs_FD-A3B4-10A.reformat.filtered.facets.overview.clinicalAnnotation.txt
+    output: /cluster/work/nexus/antoine/Projects/2023_05_Molecular_Profil_CIViCutils/TCGA_Test/analysis/civic/cnvs/FD-A3B4-01A_vs_FD-A3B4-10A.reformat.filtered.facets.overview.clinicalAnnotation.civic_cnv.txt
+    jobid: 579
+    benchmark: /cluster/work/nexus/antoine/Projects/2023_05_Molecular_Profil_CIViCutils/TCGA_Test/analysis/civic/cnvs/FD-A3B4-01A_vs_FD-A3B4-10A.reformat.filtered.facets.overview.clinicalAnnotation.civicQuery_cnv.benchmark
+    reason: Missing output files: /cluster/work/nexus/antoine/Projects/2023_05_Molecular_Profil_CIViCutils/TCGA_Test/analysis/civic/cnvs/FD-A3B4-01A_vs_FD-A3B4-10A.reformat.filtered.facets.overview.clinicalAnnotation.civic_cnv.txt
+    wildcards: sample=cnvs/FD-A3B4-01A_vs_FD-A3B4-10A.reformat.filtered.facets.overview.clinicalAnnotation
+    resources: tmpdir=/scratch/slurm-job.1398255
+
+
+[Tue May 30 13:44:24 2023]
+rule civicQuery_cnv:
+    input: /cluster/work/nexus/antoine/Projects/2023_05_Molecular_Profil_CIViCutils/TCGA_Test/analysis/clinicalAnnotation/cnvs/YC-A9TC-01A_vs_YC-A9TC-10A.reformat.filtered.facets.overview.clinicalAnnotation.txt
+    output: /cluster/work/nexus/antoine/Projects/2023_05_Molecular_Profil_CIViCutils/TCGA_Test/analysis/civic/cnvs/YC-A9TC-01A_vs_YC-A9TC-10A.reformat.filtered.facets.overview.clinicalAnnotation.civic_cnv.txt
+    jobid: 791
+    benchmark: /cluster/work/nexus/antoine/Projects/2023_05_Molecular_Profil_CIViCutils/TCGA_Test/analysis/civic/cnvs/YC-A9TC-01A_vs_YC-A9TC-10A.reformat.filtered.facets.overview.clinicalAnnotation.civicQuery_cnv.benchmark
+    reason: Missing output files: /cluster/work/nexus/antoine/Projects/2023_05_Molecular_Profil_CIViCutils/TCGA_Test/analysis/civic/cnvs/YC-A9TC-01A_vs_YC-A9TC-10A.reformat.filtered.facets.overview.clinicalAnnotation.civic_cnv.txt
+    wildcards: sample=cnvs/YC-A9TC-01A_vs_YC-A9TC-10A.reformat.filtered.facets.overview.clinicalAnnotation
+    resources: tmpdir=/scratch/slurm-job.1398255
+
+[Tue May 30 13:44:24 2023]
+Error in rule civicQuery_cnv:
+    jobid: 579
+    input: /cluster/work/nexus/antoine/Projects/2023_05_Molecular_Profil_CIViCutils/TCGA_Test/analysis/clinicalAnnotation/cnvs/FD-A3B4-01A_vs_FD-A3B4-10A.reformat.filtered.facets.overview.clinicalAnnotation.txt
+    output: /cluster/work/nexus/antoine/Projects/2023_05_Molecular_Profil_CIViCutils/TCGA_Test/analysis/civic/cnvs/FD-A3B4-01A_vs_FD-A3B4-10A.reformat.filtered.facets.overview.clinicalAnnotation.civic_cnv.txt
+    shell:
+        module load python_cpu/3.7.4; export PYTHONPATH=/cluster/customapps/nexus/sharedutils/pylibs/lib64/python3.7/site-packages/:$PYTHONPATH; export CIVICPY_CACHE_FILE=/cluster/customapps/biomed/nexus/sharedutils/db_cache/civicDB/cache.pkl; set -u ; python /cluster/work/nexus/antoine/Projects/2023_05_Molecular_Profil_CIViCutils/civicutils/tcga_analysis/scripts/Query_CIViCutils.py  --infile /cluster/work/nexus/antoine/Projects/2023_05_Molecular_Profil_CIViCutils/TCGA_Test/analysis/clinicalAnnotation/cnvs/FD-A3B4-01A_vs_FD-A3B4-10A.reformat.filtered.facets.overview.clinicalAnnotation.txt --outfile /cluster/work/nexus/antoine/Projects/2023_05_Molecular_Profil_CIViCutils/TCGA_Test/analysis/civic/cnvs/FD-A3B4-01A_vs_FD-A3B4-10A.reformat.filtered.facets.overview.clinicalAnnotation.civic_cnv.txt --cancer_type_list "bladder" --black_list "" --high_level_list "solid tumor" --colname_gene Genes --colname_data CNV_category --data_type cnv
+        (one of the commands exited with non-zero exit code; note that snakemake uses bash strict mode!)
+
+[Tue May 30 13:44:24 2023]
+Error in rule civicQuery_cnv:
+    jobid: 791
+    input: /cluster/work/nexus/antoine/Projects/2023_05_Molecular_Profil_CIViCutils/TCGA_Test/analysis/clinicalAnnotation/cnvs/YC-A9TC-01A_vs_YC-A9TC-10A.reformat.filtered.facets.overview.clinicalAnnotation.txt
+    output: /cluster/work/nexus/antoine/Projects/2023_05_Molecular_Profil_CIViCutils/TCGA_Test/analysis/civic/cnvs/YC-A9TC-01A_vs_YC-A9TC-10A.reformat.filtered.facets.overview.clinicalAnnotation.civic_cnv.txt
+    shell:
+        module load python_cpu/3.7.4; export PYTHONPATH=/cluster/customapps/nexus/sharedutils/pylibs/lib64/python3.7/site-packages/:$PYTHONPATH; export CIVICPY_CACHE_FILE=/cluster/customapps/biomed/nexus/sharedutils/db_cache/civicDB/cache.pkl; set -u ; python /cluster/work/nexus/antoine/Projects/2023_05_Molecular_Profil_CIViCutils/civicutils/tcga_analysis/scripts/Query_CIViCutils.py  --infile /cluster/work/nexus/antoine/Projects/2023_05_Molecular_Profil_CIViCutils/TCGA_Test/analysis/clinicalAnnotation/cnvs/YC-A9TC-01A_vs_YC-A9TC-10A.reformat.filtered.facets.overview.clinicalAnnotation.txt --outfile /cluster/work/nexus/antoine/Projects/2023_05_Molecular_Profil_CIViCutils/TCGA_Test/analysis/civic/cnvs/YC-A9TC-01A_vs_YC-A9TC-10A.reformat.filtered.facets.overview.clinicalAnnotation.civic_cnv.txt --cancer_type_list "bladder" --black_list "" --high_level_list "solid tumor" --colname_gene Genes --colname_data CNV_category --data_type cnv
+        (one of the commands exited with non-zero exit code; note that snakemake uses bash strict mode!)
+
+Shutting down, this might take some time.
+Exiting because a job execution failed. Look above for error message
+Complete log: .snakemake/log/2023-05-30T134420.849637.snakemake.log

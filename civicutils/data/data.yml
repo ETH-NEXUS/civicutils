@@ -51,7 +51,7 @@ sorted_cts:
     gt
     nct
 
-therapy_support:
+drug_support:
     SUPPORTS:
         SENSITIVITYRESPONSE: POSITIVE
         RESISTANCE: NEGATIVE

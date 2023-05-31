@@ -91,7 +91,7 @@ def reformat_civic(results, identifier_type="entrez_symbol"):
     # Check that id type corresponds to one of the allowed options
     check_identifier_type(identifier_type)
 
-    Returned nested dictionary
+    # Returned nested dictionary
     var_map = {}
 
     # Iterate individual gene records to retrieve associated variants and evidence information
@@ -209,51 +209,51 @@ def reformat_civic(results, identifier_type="entrez_symbol"):
                         # Combine the direction and significance of the evidence in one term
                         evidence = evidence_direction + ':' + clinical_significance
 
-                        therapies = []
-                        evidence_therapies = evidence_record.therapies
-                        for evidence_therapy in evidence_therapies:
-                            therapy_name = evidence_therapy.name.strip().upper()
-                            if therapy_name not in therapies:
-                                therapies.append(therapy_name)
+                        drugs = []
+                        evidence_drugs = evidence_record.therapies
+                        for evidence_drug in evidence_drugs:
+                            drug_name = evidence_drug.name.strip().upper()
+                            if drug_name not in drugs:
+                                drugs.append(drug_name)
 
-                        # When more than 1 therapy are listed for the same evidence item, 'therapy_interaction_type' is not null and defines the nature of this multiple therapy entry
-                        therapy_interaction = evidence_record.therapy_interaction_type
-                        if therapy_interaction is not None:
-                            therapy_interaction = therapy_interaction.strip().upper()
-                            # 'Substitutes' indicates that therapies can be considered individually
-                            if therapy_interaction != "SUBSTITUTES":
-                                # Remaining terms ('Sequential' and 'Combination') indicate that therapies should be considered together, so join their names into a single tag
-                                # Sort therapies alphabetically to ensure that their order in the combination treatment is always the same
-                                therapies.sort()
-                                therapies = ["+".join(therapies)]
+                        # When more than 1 drug are listed for the same evidence item, 'drug_interaction_type' is not null and defines the nature of this multiple drug entry
+                        drug_interaction = evidence_record.therapy_interaction_type
+                        if drug_interaction is not None:
+                            drug_interaction = drug_interaction.strip().upper()
+                            # 'Substitutes' indicates that drugs can be considered individually
+                            if drug_interaction != "SUBSTITUTES":
+                                # Remaining terms ('Sequential' and 'Combination') indicate that drugs should be considered together, so join their names into a single tag
+                                # Sort drugs alphabetically to ensure that their order in the combination treatment is always the same
+                                drugs.sort()
+                                drugs = ["+".join(drugs)]
 
-                        if not therapies:
-                            # Only non-Predictive evidences and Predictive ones without therapies will have this dummy level
+                        if not drugs:
+                            # Only non-Predictive evidences and Predictive ones without drugs will have this dummy level
                             # Introduced for consistency purposes within the varMap structure
-                            therapies = ["NULL"]
+                            drugs = ["NULL"]
 
-                        # sanity checks that only 'PREDICTIVE' evidences have therapies associated
-                        # submitted evidence items can fulfill having 'PREDICTIVE' evidence type and no therapies ('NULL')
-                        if (evidence_type != "PREDICTIVE") and (therapies != ["NULL"]):
-                            raise ValueError("Only evidences of type 'PREDICTIVE' can have therapies associated!")
+                        # sanity checks that only 'PREDICTIVE' evidences have drugs associated
+                        # submitted evidence items can fulfill having 'PREDICTIVE' evidence type and no drugs ('NULL')
+                        if (evidence_type != "PREDICTIVE") and (drugs != ["NULL"]):
+                            raise ValueError("Only evidences of type 'PREDICTIVE' can have drugs associated!")
 
-                # Iterate through therapies to add evidences associated to them
-                #   For non-Predictive evidences or Predictive with empty therapies, therapies=['NULL']
-                #   For Predictive and interaction=None, len(therapies) = 1
-                #   For Predictive and interaction='Substitutes', len(therapies)>1
-                #   For Predictive and interaction!='Substitutes', len(therapies)=1 (combiantion of several using '+')
-                for therapy in therapies:
-                    if therapy not in var_map[gene_key][variant_id][molecular_profile_id]['evidence_items'][evidence_type][disease].keys():
-                        var_map[gene_key][variant_id][molecular_profile_id]['evidence_items'][evidence_type][disease][therapy] = {}
-                    if evidence not in var_map[gene_key][variant_id][molecular_profile_id]['evidence_items'][evidence_type][disease][therapy].keys():
-                        var_map[gene_key][variant_id][molecular_profile_id]['evidence_items'][evidence_type][disease][therapy][evidence] = {}
-                    if evidence_level not in var_map[gene_key][variant_id][molecular_profile_id]['evidence_items'][evidence_type][disease][therapy][evidence].keys():
-                        var_map[gene_key][variant_id][molecular_profile_id]['evidence_items'][evidence_type][disease][therapy][evidence][evidence_level] = []
+                # Iterate through drugs to add evidences associated to them
+                #   For non-Predictive evidences or Predictive with empty drugs, drugs=['NULL']
+                #   For Predictive and interaction=None, len(drugs) = 1
+                #   For Predictive and interaction='Substitutes', len(drugs)>1
+                #   For Predictive and interaction!='Substitutes', len(drugs)=1 (combiantion of several using '+')
+                for drug in drugs:
+                    if drug not in var_map[gene_key][variant_id][molecular_profile_id]['evidence_items'][evidence_type][disease].keys():
+                        var_map[gene_key][variant_id][molecular_profile_id]['evidence_items'][evidence_type][disease][drug] = {}
+                    if evidence not in var_map[gene_key][variant_id][molecular_profile_id]['evidence_items'][evidence_type][disease][drug].keys():
+                        var_map[gene_key][variant_id][molecular_profile_id]['evidence_items'][evidence_type][disease][drug][evidence] = {}
+                    if evidence_level not in var_map[gene_key][variant_id][molecular_profile_id]['evidence_items'][evidence_type][disease][drug][evidence].keys():
+                        var_map[gene_key][variant_id][molecular_profile_id]['evidence_items'][evidence_type][disease][drug][evidence][evidence_level] = []
 
                     # Group all publications associated to the same level
                     # Keep track of associated info: source type, source id, evidence status, publication status, variant origin, evidence rating
                     # Format: 'TYPE_ID:EVIDENCESTATUS:SOURCESTATUS:VARORIGIN:RATING'
-                    var_map[gene_key][variant_id][molecular_profile_id]['evidence_items'][evidence_type][disease][therapy][evidence][evidence_level].append(source_type + "_" + str(evidence_id) + ":" + evidence_status + ":" + source_status + ":" + variant_origin + ":" + str(evidence_rating))
+                    var_map[gene_key][variant_id][molecular_profile_id]['evidence_items'][evidence_type][disease][drug][evidence][evidence_level].append(source_type + "_" + str(evidence_id) + ":" + evidence_status + ":" + source_status + ":" + variant_origin + ":" + str(evidence_rating))
 
     return var_map
 

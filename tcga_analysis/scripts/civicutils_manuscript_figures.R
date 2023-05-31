@@ -470,13 +470,6 @@ option_list = list(
 opt_parser = OptionParser(option_list = option_list)
 opt = parse_args(opt_parser)
 
-opt = list(
-  infile_snv = "/Users/lourdes/Documents/CIVIC/tests/new_data/test_complete_tcga_blca.snvs.version1.tsv",
-  # infile_snv = "/Users/lourdes/Documents/CIVIC/tests/new_data/test_complete_tcga_blca.snvs.tsv",
-  infile_cnv = "/Users/lourdes/Documents/CIVIC/tests/new_data/test_complete_tcga_blca.cnvs.version1.tsv",
-  # infile_cnv = "/Users/lourdes/Documents/CIVIC/tests/new_data/test_complete_tcga_blca.cnvs.tsv",
-  outfile_tag = "/Users/lourdes/Documents/CIVIC/tests/civicutils"
-)
 
 data_snv = read.table(opt$infile_snv, header=TRUE, sep="\t", check.names = FALSE)
 data_cnv = read.table(opt$infile_cnv, header=TRUE, sep="\t", check.names = FALSE)
@@ -498,7 +491,7 @@ if (!identical(samples_names_snv, samples_names_cnv)){
 
 
 
-## 1A) BOX PLOT NUMBER OF VARIANTS MATCHED IN CIVIC
+## S1) BOX PLOT NUMBER OF VARIANTS MATCHED IN CIVIC
 
 # Use fraction of total variants having CIViCutils results
 # Sanity check that required input columns can be found
@@ -507,15 +500,15 @@ df_civic_cnv_fraction = prepare_civic_fraction_data_for_plotting(data_cnv, input
 
 # Combine SNV and CNV datasets
 # Sanity check that required input columns can be found
-plotting_columns_p1a = c("sample_name", "fraction", "sample_order")
-df_civic_fraction =  combine_snv_and_cnv_data_for_plotting(df_civic_snv_fraction, df_civic_cnv_fraction, plotting_columns_p1a)
+plotting_columns_ps1 = c("sample_name", "fraction", "sample_order")
+df_civic_fraction =  combine_snv_and_cnv_data_for_plotting(df_civic_snv_fraction, df_civic_cnv_fraction, plotting_columns_ps1)
 
 
 # Combined version of box plot
 # Showing SNVs and CNVs as facets
-outfile_p1a = paste0(opt$outfile_tag, ".boxplot_fraction_variants_in_civic.png")
-# outfile_p1a = paste0(opt$outfile_tag, ".boxplot_fraction_variants_in_civic.pdf")
-p1a = ggplot(df_civic_fraction, aes(x=dataset, y=fraction, fill=dataset)) +
+outfile_ps1 = paste0(opt$outfile_tag, ".s1.boxplot_fraction_variants_in_civic.png")
+# outfile_ps1 = paste0(opt$outfile_tag, ".boxplot_fraction_variants_in_civic.pdf")
+ps1 = ggplot(df_civic_fraction, aes(x=dataset, y=fraction, fill=dataset)) +
   geom_boxplot(outlier.shape=NA, outlier.size=0, notch=FALSE, width=0.4) +
   # geom_jitter(aes(color=dataset), size=1, alpha=0.9, position=position_jitter(seed=123)) +
   # position=position_jitterdodge(jitter.width=0.65, jitter.height=0.65, seed=123)
@@ -526,11 +519,11 @@ p1a = ggplot(df_civic_fraction, aes(x=dataset, y=fraction, fill=dataset)) +
   theme(legend.position="none") +
   scale_fill_manual(values=c("grey","grey")) +
   scale_color_manual(values=c("black","black"))
-# plot(p1a)
-# ggsave(outfile_p1a, p1a, width=10, height=8, units="in", dpi=1200)
+# plot(ps1)
+ggsave(outfile_ps1, ps1, width=10, height=8, units="in", dpi=1200)
 
 
-## 1B) PIE CHART TOTAL NUMBER OF VARIANTS MATCHED IN CIVIC ACROSS PATIENTS
+## 2A) PIE CHART TOTAL NUMBER OF VARIANTS MATCHED IN CIVIC ACROSS PATIENTS
 
 # Use absolute variant numbers
 # Sanity check that required input columns can be found
@@ -561,9 +554,9 @@ df_civic_pie$label = percent(df_civic_pie$value/100, accuracy=0.1)
 
 # Pie chart
 # Text labels introduced post-generation
-outfile_p1b = paste0(opt$outfile_tag, ".piechart_variants_in_civic_across_patients.png")
-# outfile_p1b = paste0(opt$outfile_tag, ".piechart_variants_in_civic_across_patients.pdf")
-p1b = ggplot(df_civic_pie, aes(x="", y=value, fill=variant_type)) +
+outfile_p2a = paste0(opt$outfile_tag, ".2a.piechart_variants_in_civic_across_patients.png")
+# outfile_p2a = paste0(opt$outfile_tag, ".piechart_variants_in_civic_across_patients.pdf")
+p2a = ggplot(df_civic_pie, aes(x="", y=value, fill=variant_type)) +
   geom_bar(width = 1, stat = "identity", color = "black") +
   facet_grid(. ~ dataset) +
   coord_polar("y", start=0) +
@@ -576,12 +569,12 @@ p1b = ggplot(df_civic_pie, aes(x="", y=value, fill=variant_type)) +
         legend.text=element_text(size=30),
         strip.text = element_text(size = 35)) +
   scale_fill_manual(values = c("grey", "#0072B2"), name="")
-# plot(p1b)
-# ggsave(outfile_p1b, p1b, width=10, height=8, units="in", dpi=1200)
+# plot(p2a)
+ggsave(outfile_p2a, p2a, width=10, height=8, units="in", dpi=1200)
 
 
 
-## 2A) BOX PLOT DISTRIBUTION OF TIER CLASSIFICATION (only for variants matched in CIVIC)
+## S2) BOX PLOT DISTRIBUTION OF TIER CLASSIFICATION (only for variants matched in CIVIC)
 
 # Use fraction of total variants having CIViCutils results
 df_tier_snv_fraction = prepare_tier_fraction_data_for_plotting(data_snv, input_colnames)
@@ -589,8 +582,8 @@ df_tier_cnv_fraction = prepare_tier_fraction_data_for_plotting(data_cnv, input_c
 
 # Combine SNV and CNV datasets
 # Sanity check that required input columns can be found
-plotting_columns_p2a = c("sample_name", "variable", "value", "label_ypos", "sample_order", "tier_order")
-df_tier_fraction =  combine_snv_and_cnv_data_for_plotting(df_tier_snv_fraction, df_tier_cnv_fraction, plotting_columns_p2a)
+plotting_columns_ps2 = c("sample_name", "variable", "value", "label_ypos", "sample_order", "tier_order")
+df_tier_fraction =  combine_snv_and_cnv_data_for_plotting(df_tier_snv_fraction, df_tier_cnv_fraction, plotting_columns_ps2)
 
 # Choose color scheme for plot
 tier_cols = c("fraction_tier_1" = "black", "fraction_tier_1b" = "black", "fraction_tier_2" = "black", "fraction_tier_3" = "black")
@@ -598,9 +591,9 @@ tier_cols = c("fraction_tier_1" = "black", "fraction_tier_1b" = "black", "fracti
 
 # Combined version of box plot
 # Showing SNVs and CNVs as facets
-outfile_p2a = paste0(opt$outfile_tag, ".boxplot_fraction_variants_per_tier.png")
-# outfile_p2a = paste0(opt$outfile_tag, ".boxplot_fraction_variants_per_tier.pdf")
-p2a = ggplot(df_tier_fraction, aes(x=variable, y=value)) +
+outfile_ps2 = paste0(opt$outfile_tag, ".s2.boxplot_fraction_variants_per_tier.png")
+# outfile_ps2 = paste0(opt$outfile_tag, ".boxplot_fraction_variants_per_tier.pdf")
+ps2 = ggplot(df_tier_fraction, aes(x=variable, y=value)) +
   geom_boxplot(fill="grey", outlier.shape=NA, outlier.size=0, notch=FALSE, width=0.3) +
   geom_jitter(aes(color=variable), size=1, alpha=0.9, position=position_jitter(seed=123)) +
   facet_grid(dataset ~ .) +
@@ -615,8 +608,8 @@ p2a = ggplot(df_tier_fraction, aes(x=variable, y=value)) +
                    labels=c("Tier 1", "Tier 1b", "Tier 2", "Tier 3")) +
   scale_color_manual(name="Tier class", breaks=c("fraction_tier_1", "fraction_tier_1b", "fraction_tier_2", "fraction_tier_3"), 
                      labels=c("Tier 1", "Tier 1b", "Tier 2", "Tier 3"), values=tier_cols)
-# plot(p2a)
-# ggsave(outfile_p2a, p2a, width=10, height=8, units="in", dpi=1200)
+# plot(ps2)
+ggsave(outfile_ps2, ps2, width=10, height=8, units="in", dpi=1200)
 
 
 
@@ -664,7 +657,7 @@ tier_cols = c("Tier 1" = "red", "Tier 1b" = "#0072B2", "Tier 2" = "gold", "Tier 
 
 # Pie chart
 # Text labels introduced post-generation
-outfile_p2b = paste0(opt$outfile_tag, ".piechart_variants_per_tier_across_patients.png")
+outfile_p2b = paste0(opt$outfile_tag, ".2b.piechart_variants_per_tier_across_patients.png")
 # outfile_p2b = paste0(opt$outfile_tag, ".piechart_variants_per_tier_across_patients.pdf")
 p2b = ggplot(df_tier_pie, aes(x="", y=value, fill=tier)) +
   geom_bar(width = 1, stat = "identity", color = "black") +
@@ -680,11 +673,11 @@ p2b = ggplot(df_tier_pie, aes(x="", y=value, fill=tier)) +
         strip.text = element_text(size = 35)) +
   scale_fill_manual(values = tier_cols, name="")
 # plot(p2b)
-# ggsave(outfile_p2b, p2b, width=10, height=8, units="in", dpi=1200)
+ggsave(outfile_p2b, p2b, width=10, height=8, units="in", dpi=1200)
 
 
 
-## 3) BOX PLOT DISTRIBUTION OF EVIDENCE TYPES (only for variants matched in CIVIC)
+## S3) BOX PLOT DISTRIBUTION OF EVIDENCE TYPES (only for variants matched in CIVIC)
 
 # Use absolute variant numbers
 # Note: critical in this case to avoid interpretation bias (as the same variant can be accounted for across several evidence types)
@@ -716,9 +709,9 @@ tier3_colors = c("Including" = "grey", "Excluding" = "#0072B2")
 # Combined version of box plot
 # Showing Evidence types in X-axis (variant numbers grouped by tier3 exclusion/inclusion)
 # Showing SNVs and CNVs as facets in Y-axis
-outfile_p3 = paste0(opt$outfile_tag, ".boxplot_n_variants_per_evidence_type.png")
-# outfile_p3 = paste0(opt$outfile_tag, ".boxplot_n_variants_per_evidence_type.pdf")
-p3 = ggplot(df_evidence, aes(x=evidence_type, y=value, fill=tier3_variants)) +
+outfile_ps3 = paste0(opt$outfile_tag, ".s3.boxplot_n_variants_per_evidence_type.png")
+# outfile_ps3 = paste0(opt$outfile_tag, ".boxplot_n_variants_per_evidence_type.pdf")
+ps3 = ggplot(df_evidence, aes(x=evidence_type, y=value, fill=tier3_variants)) +
   geom_boxplot(outlier.shape=NA, outlier.size=0, notch=FALSE) +
   facet_grid(dataset ~ .) +
   # coord_cartesian(ylim = c(0, 40)) +    # version with correct scale for CNVs
@@ -733,12 +726,12 @@ p3 = ggplot(df_evidence, aes(x=evidence_type, y=value, fill=tier3_variants)) +
         strip.text=element_text(size=12)) +
   scale_fill_manual(name="Tier3 variants", values=tier3_colors) +
   scale_color_manual(name="Tier3 variants", values=tier3_colors)
-# plot(p3)
-# ggsave(outfile_p3, p3, width=10, height=8, units="in", dpi=1200)
+# plot(ps3)
+ggsave(outfile_ps3, ps3, width=10, height=8, units="in", dpi=1200)
 
 
 
-## 4A) BOX PLOT DISEASE DISTRIBUTION OF CT CLASSIFICATION
+## 3A) BOX PLOT DISEASE DISTRIBUTION OF CT CLASSIFICATION
 
 # Use fraction of total diseases across CIViCutils results
 df_disease_snv_fraction = prepare_disease_fraction_data_for_plotting(data_snv, input_colnames)
@@ -765,9 +758,9 @@ df_disease_fraction_outliers$is_outlier[5] = TRUE
 # Combined version of box plot
 # Showing ct classes in X-axis (disease numbers grouped by tier3 exclusion/inclusion)
 # Showing SNVs and CNVs as facets in Y-axis
-outfile_p4a = paste0(opt$outfile_tag, ".boxplot_fraction_diseases_per_ct.png")
-# outfile_p4a = paste0(opt$outfile_tag, ".boxplot_fraction_diseases_per_ct.pdf")
-p4a = ggplot(df_disease_fraction_outliers, aes(x=ct_class, y=value, fill=tier3_variants)) +
+outfile_p3a = paste0(opt$outfile_tag, ".3a.boxplot_fraction_diseases_per_ct.png")
+# outfile_p3a = paste0(opt$outfile_tag, ".boxplot_fraction_diseases_per_ct.pdf")
+p3a = ggplot(df_disease_fraction_outliers, aes(x=ct_class, y=value, fill=tier3_variants)) +
   geom_boxplot(outlier.shape=NA, outlier.size=0, notch=FALSE) +
   # geom_point(position=position_jitterdodge(jitter.width=0.65, jitter.height=0.65, seed=123),
   #            aes(color=tier3_variants), size=1, alpha=0.9) +
@@ -785,12 +778,12 @@ p4a = ggplot(df_disease_fraction_outliers, aes(x=ct_class, y=value, fill=tier3_v
         strip.text=element_text(size=12)) +
   scale_fill_manual(name="Tier3 variants", values=tier3_colors) +
   scale_color_manual(name="Tier3 variants", values=tier3_colors)
-# plot(p4a)
-# ggsave(outfile_p4a, p4a, width=10, height=8, units="in", dpi=1200)
+# plot(p3a)
+ggsave(outfile_p3a, p3a, width=10, height=8, units="in", dpi=1200)
 
 
 
-## 4B) PIE CHART TOTAL DISTRIBUTION OF CT CLASSES ACROSS PATIENTS
+## 3B) PIE CHART TOTAL DISTRIBUTION OF CT CLASSES ACROSS PATIENTS
 
 # Use absolute disease numbers
 # Sanity check that required input columns can be found
@@ -830,9 +823,9 @@ disease_cols = c("ct" = "red", "gt" = "gold", "nct" = "skyblue")
 
 # Pie chart
 # Text labels introduced post-generation
-outfile_p4b = paste0(opt$outfile_tag, ".piechart_diseases_per_ct_across_patients.png")
-# outfile_p4b = paste0(opt$outfile_tag, ".piechart_diseases_per_ct_across_patients.pdf")
-p4b = ggplot(df_disease_pie, aes(x="", y=value, fill=ct_class)) +
+outfile_p3b = paste0(opt$outfile_tag, ".3b.piechart_diseases_per_ct_across_patients.png")
+# outfile_p3b = paste0(opt$outfile_tag, ".piechart_diseases_per_ct_across_patients.pdf")
+p3b = ggplot(df_disease_pie, aes(x="", y=value, fill=ct_class)) +
   geom_bar(width = 1, stat = "identity", color = "black") +
   facet_grid(dataset ~ tier3_variants, switch = "y") +
   coord_polar("y", start=0) +
@@ -847,12 +840,12 @@ p4b = ggplot(df_disease_pie, aes(x="", y=value, fill=ct_class)) +
         strip.text.y.left = element_text(size = 22, angle = 0),
         panel.spacing = unit(1, "lines")) +
   scale_fill_manual(values = disease_cols, name="")
-# plot(p4b)
-# ggsave(outfile_p4b, p4b, width=10, height=8, units="in", dpi=1200)
+# plot(p3b)
+ggsave(outfile_p3b, p3b, width=10, height=8, units="in", dpi=1200)
 
 
 
-## 5A) BOX PLOT DISTRIBUTION OF CONSENSUS DRUG SUPPORT
+## 4A) BOX PLOT DISTRIBUTION OF CONSENSUS DRUG SUPPORT
 
 # Use fraction of CIViC variants having consensus drug support info available
 df_drug_snv_fraction = prepare_drug_fraction_data_for_plotting(data_snv, input_colnames)
@@ -873,9 +866,9 @@ df_drug_fraction_outliers = get_outliers_per_group_and_dataset(df_drug_fraction,
 
 # Combined version of box plot
 # Showing SNVs and CNVs in X-axis (variant numbers grouped by tier3 exclusion/inclusion)
-outfile_p5a = paste0(opt$outfile_tag, ".boxplot_fraction_variants_with_drug.png")
-# outfile_p5a = paste0(opt$outfile_tag, ".boxplot_fraction_variants_with_drug.pdf")
-p5a = ggplot(df_drug_fraction_outliers, aes(x=dataset, y=value, fill=tier3_variants)) +
+outfile_p4a = paste0(opt$outfile_tag, ".4a.boxplot_fraction_variants_with_drug.png")
+# outfile_p4a = paste0(opt$outfile_tag, ".boxplot_fraction_variants_with_drug.pdf")
+p4a = ggplot(df_drug_fraction_outliers, aes(x=dataset, y=value, fill=tier3_variants)) +
   geom_boxplot(outlier.shape=NA, outlier.size=0, notch=FALSE) +
   # geom_point(position=position_jitterdodge(jitter.width=0.65, jitter.height=0.65, seed=123), 
   #            aes(color=tier3_variants), size=1, alpha=0.9) +
@@ -891,12 +884,12 @@ p5a = ggplot(df_drug_fraction_outliers, aes(x=dataset, y=value, fill=tier3_varia
         axis.title=element_text(size=15, color="black")) +
   scale_fill_manual(name="Tier3 variants", values=tier3_colors) +
   scale_color_manual(name="Tier3 variants", values=tier3_colors)
-# plot(p5a)
-# ggsave(outfile_p5a, p5a, width=10, height=8, units="in", dpi=1200)
+# plot(p4a)
+ggsave(outfile_p4a, p4a, width=10, height=8, units="in", dpi=1200)
 
 
 
-## 5B) PIE CHART TOTAL NUMBER OF VARIANTS WITH CONSENSUS DRUG SUPPORT ACROSS PATIENTS
+## S4) PIE CHART TOTAL NUMBER OF VARIANTS WITH CONSENSUS DRUG SUPPORT ACROSS PATIENTS
 
 # Use absolute variant numbers
 # Sanity check that required input columns can be found
@@ -929,9 +922,9 @@ df_drug_pie$label = percent(df_drug_pie$value/100, accuracy=0.1)
 
 # Pie chart
 # Text labels introduced post-generation
-outfile_p5b = paste0(opt$outfile_tag, ".piechart_variants_with_drug_across_patients.png")
-# outfile_p5b = paste0(opt$outfile_tag, ".piechart_variants_with_drug_across_patients.pdf")
-p5b = ggplot(df_drug_pie, aes(x="", y=value, fill=variant_type)) +
+outfile_ps4 = paste0(opt$outfile_tag, ".s4.piechart_variants_with_drug_across_patients.png")
+# outfile_ps4 = paste0(opt$outfile_tag, ".piechart_variants_with_drug_across_patients.pdf")
+ps4 = ggplot(df_drug_pie, aes(x="", y=value, fill=variant_type)) +
   geom_bar(width = 1, stat = "identity", color = "black") +
   facet_grid(dataset ~ tier3_variants, switch = "y") +
   coord_polar("y", start=0) +
@@ -946,12 +939,51 @@ p5b = ggplot(df_drug_pie, aes(x="", y=value, fill=variant_type)) +
         strip.text.y.left = element_text(size = 22, angle = 0),
         panel.spacing = unit(1, "lines")) +
   scale_fill_manual(values = c("grey", "#0072B2"), name="")
-# plot(p5b)
-# ggsave(outfile_p5b, p5b, width=10, height=8, units="in", dpi=1200)
+# plot(ps4)
+ggsave(outfile_ps4, ps4, width=10, height=8, units="in", dpi=1200)
 
 
+## S5) BOX PLOT DISTRIBUTION OF MEAN CONSENSUS DRUG SUPPORT PREDICTIONS AVAILABLE PER VARIANT
 
-## 6A) BOX PLOT DISTRIBUTION OF CONSENSUS PREDICTIONS AVAILABLE PER VARIANT
+# Use mean number of consensus predictions available per CIViC variant
+df_n_consensus_snv_mean = prepare_mean_n_consensus_data_for_plotting(data_snv, input_colnames)
+df_n_consensus_cnv_mean = prepare_mean_n_consensus_data_for_plotting(data_cnv, input_colnames)
+
+# Combine SNV and CNV datasets
+# Sanity check that required input columns can be found
+df_n_consensus_mean =  combine_snv_and_cnv_data_for_plotting(df_n_consensus_snv_mean, df_n_consensus_cnv_mean, plotting_columns)
+
+# Extract relevant features from the variable names in preparation for plotting
+df_n_consensus_mean$tier3_variants = ifelse(grepl("_no_tier3", df_n_consensus_mean$variable), "Excluding", "Including")
+df_n_consensus_mean$tier3_variants = factor(df_n_consensus_mean$tier3_variants, levels=c("Including", "Excluding"))
+
+# Retrieve subset of outlier points for each group being plotted
+n_consensus_mean_categories = names(table(df_n_consensus_mean$variable))
+df_n_consensus_mean_outliers = get_outliers_per_group_and_dataset(df_n_consensus_mean, n_consensus_mean_categories)
+
+
+# Combined version of box plot
+# Showing SNVs and CNVs in X-axis (prediction numbers grouped by tier3 exclusion/inclusion)
+outfile_ps5 = paste0(opt$outfile_tag, ".s5.boxplot_mean_n_consensus_predictions_per_variant.pdf")
+ps5 = ggplot(df_n_consensus_mean_outliers, aes(x=dataset, y=value, fill=tier3_variants)) +
+  geom_boxplot(outlier.shape=NA, outlier.size=0, notch=FALSE) +
+  geom_point(data=subset(df_n_consensus_mean_outliers, is_outlier==TRUE), 
+             position=position_jitterdodge(jitter.width=0.2, jitter.height=0.2, seed=123),
+             aes(color=tier3_variants), size=1, alpha=0.9) +  
+  ylab("Mean number of consensus drug support predictions per variant") + 
+  xlab("") +
+  theme(legend.justification = c(1, 1),
+        legend.text=element_text(size=12, color="black"),
+        legend.title=element_text(size=15, color="black")) +
+  theme(axis.text=element_text(size=14, color="black"),
+        axis.title=element_text(size=15, color="black")) +
+  scale_fill_manual(name="Tier3 variants", values=tier3_colors) +
+  scale_color_manual(name="Tier3 variants", values=tier3_colors)
+# plot(ps5)
+ggsave(outfile_ps5, ps5, width=10, height=8, units="in", dpi=1200)
+
+
+## S6) BOX PLOT DISTRIBUTION OF CONSENSUS PREDICTIONS AVAILABLE PER VARIANT
 
 # Use mean fraction of total consensus drug predictions per CIViC variant
 # Sanity check that required input columns can be found
@@ -982,9 +1014,9 @@ df_mean_fraction_consensus_outliers$is_outlier[5] = TRUE
 
 # Combined version of box plot
 # Showing SNVs and CNVs as facets (prediction numbers grouped by tier3 exclusion/inclusion)
-outfile_p6a = paste0(opt$outfile_tag, ".boxplot_mean_fractions_consensus_predictions_per_variant.png")
-# outfile_p6a = paste0(opt$outfile_tag, ".boxplot_mean_fractions_consensus_predictions_per_variant.pdf")
-p6a = ggplot(df_mean_fraction_consensus_outliers, aes(x=support_type, y=value, fill=tier3_variants)) +
+outfile_ps6 = paste0(opt$outfile_tag, ".s6.boxplot_mean_fractions_consensus_predictions_per_variant.png")
+# outfile_ps6 = paste0(opt$outfile_tag, ".boxplot_mean_fractions_consensus_predictions_per_variant.pdf")
+ps6 = ggplot(df_mean_fraction_consensus_outliers, aes(x=support_type, y=value, fill=tier3_variants)) +
   geom_boxplot(outlier.shape=NA, outlier.size=0, notch=FALSE) +
   # geom_point(position=position_jitterdodge(jitter.width=0.65, jitter.height=0.65, seed=123),
   #            aes(color=tier3_variants), size=1, alpha=0.9) +
@@ -1003,12 +1035,12 @@ p6a = ggplot(df_mean_fraction_consensus_outliers, aes(x=support_type, y=value, f
   scale_fill_manual(name="Tier3 variants", values=tier3_colors) +
   scale_color_manual(name="Tier3 variants", values=tier3_colors) +
   scale_x_discrete(breaks=c("support", "resistance", "conflict", "unknown"), labels=c("Support", "Resistance", "Conflict", "Unknown"))
-# plot(p6a)
-# ggsave(outfile_p6a, p6a, width=10, height=8, units="in", dpi=1200)
+# plot(ps6)
+ggsave(outfile_ps6, ps6, width=10, height=8, units="in", dpi=1200)
 
 
 
-## 6B) BOX PLOT DISTRIBUTION PERCENT OF PREDICTED CONSENSUS DRUGS OVERALL
+## 4B) BOX PLOT DISTRIBUTION PERCENT OF PREDICTED CONSENSUS DRUGS OVERALL
 
 # Use fractions of predicted consensus drugs overall
 # Sanity check that required input columns can be found
@@ -1042,9 +1074,9 @@ df_overall_consensus_drugs_outliers$is_outlier[6] = TRUE
 
 # Combined version of box plot
 # Showing SNVs and CNVs as facets (drug numbers grouped by tier3 exclusion/inclusion)
-outfile_p6b = paste0(opt$outfile_tag, ".boxplot_fraction_overall_consensus_drugs.png")
-# outfile_p6b = paste0(opt$outfile_tag, ".boxplot_fraction_overall_consensus_drugs.pdf")
-p6b = ggplot(df_overall_consensus_drugs_outliers, aes(x=support_type, y=value, fill=tier3_variants)) +
+outfile_p4b = paste0(opt$outfile_tag, ".4b.boxplot_fraction_overall_consensus_drugs.png")
+# outfile_p4b = paste0(opt$outfile_tag, ".boxplot_fraction_overall_consensus_drugs.pdf")
+p4b = ggplot(df_overall_consensus_drugs_outliers, aes(x=support_type, y=value, fill=tier3_variants)) +
   geom_boxplot(outlier.shape=NA, outlier.size=0, notch=FALSE) +
   # geom_point(position=position_jitterdodge(jitter.width=0.65, jitter.height=0.65, seed=123),
   #            aes(color=tier3_variants), size=1, alpha=0.9) +
@@ -1064,12 +1096,17 @@ p6b = ggplot(df_overall_consensus_drugs_outliers, aes(x=support_type, y=value, f
   scale_color_manual(name="Tier3 variants", values=tier3_colors) +
   scale_x_discrete(breaks=c("support", "resistance", "conflict", "unknown", "mixed"),
                    labels=c("All-support", "All-resistance", "All-conflict", "All-unknown", "Mixed"))
-# plot(p6b)
-# ggsave(outfile_p6b, p6b, width=10, height=8, units="in", dpi=1200)
+# plot(p4b)
+ggsave(outfile_p4b, p4b, width=10, height=8, units="in", dpi=1200)
 
 
+########################################################################################################################
 
-## 7A) DISTRIBUTION OF OVERALL CONSENSUS DRUG PREDICTIONS FOR CLASS "CT"
+
+# NOT PART OF THE MANUSCRIPT
+
+
+## S7A) DISTRIBUTION OF OVERALL CONSENSUS DRUG PREDICTIONS FOR CLASS "CT"
 
 # Use fractions of predicted consensus drugs for class "ct" overall
 # Sanity check that required input columns can be found
@@ -1117,7 +1154,7 @@ consensus_cols = c("support" = "limegreen", "resistance" = "red", "conflict" = "
 # Showing SNVs and CNVs as facets (sorting of sample based on CNV dataset)
 outfile_overall_consensus_drugs_fraction_ct_bar = paste0(opt$outfile_tag, ".barplot_fraction_overall_consensus_drugs_ct.pdf")
 # outfile_overall_consensus_drugs_fraction_ct_bar = paste0(opt$outfile_tag, ".barplot_fraction_overall_consensus_drugs_ct_no_tier3.pdf")
-p7a = ggplot(df_overall_consensus_drugs_ct, aes(x=sample_order, y=value, fill=support_type)) +
+ps7a = ggplot(df_overall_consensus_drugs_ct, aes(x=sample_order, y=value, fill=support_type)) +
   geom_bar(stat='identity', position = "stack", width=1) +
   facet_grid(dataset ~ .) +
   ylab("Percent of overall consensus drugs") + 
@@ -1132,12 +1169,12 @@ p7a = ggplot(df_overall_consensus_drugs_ct, aes(x=sample_order, y=value, fill=su
         strip.text=element_text(size=12)) +
   scale_fill_manual(name="Type of prediction", breaks=c("support", "resistance", "conflict", "unknown", "mixed"),
                     labels=c("All-support", "All-resistance", "All-conflict", "All-unknown", "Mixed"), values=consensus_cols)
-# plot(p7a)
-# ggsave(outfile_overall_consensus_drugs_fraction_ct_bar, p7a, width=10, height=8, units="in", dpi=1200)
+# plot(ps7a)
+ggsave(outfile_overall_consensus_drugs_fraction_ct_bar, ps7a, width=10, height=8, units="in", dpi=1200)
 
 
 
-## 7B) DISTRIBUTION OF OVERALL CONSENSUS DRUG PREDICTIONS FOR CLASS "GT"
+## S7B) DISTRIBUTION OF OVERALL CONSENSUS DRUG PREDICTIONS FOR CLASS "GT"
 
 # Use fractions of predicted consensus drugs for class "gt" overall
 # Sanity check that required input columns can be found
@@ -1178,7 +1215,7 @@ df_overall_consensus_drugs_gt$support_type = factor(df_overall_consensus_drugs_g
 # Showing SNVs and CNVs as facets (sorting of sample based on CNV dataset)
 outfile_overall_consensus_drugs_fraction_gt_bar = paste0(opt$outfile_tag, ".barplot_fraction_overall_consensus_drugs_gt.pdf")
 # outfile_overall_consensus_drugs_fraction_gt_bar = paste0(opt$outfile_tag, ".barplot_fraction_overall_consensus_drugs_gt_no_tier3.pdf")
-p7b = ggplot(df_overall_consensus_drugs_gt, aes(x=sample_order, y=value, fill=support_type)) +
+ps7b = ggplot(df_overall_consensus_drugs_gt, aes(x=sample_order, y=value, fill=support_type)) +
   geom_bar(stat='identity', position = "stack", width=1) +
   facet_grid(dataset ~ .) +
   ylab("Percent of overall consensus drugs") + 
@@ -1193,12 +1230,12 @@ p7b = ggplot(df_overall_consensus_drugs_gt, aes(x=sample_order, y=value, fill=su
         strip.text=element_text(size=12)) +
   scale_fill_manual(name="Type of prediction", breaks=c("support", "resistance", "conflict", "unknown", "mixed"),
                     labels=c("All-support", "All-resistance", "All-conflict", "All-unknown", "Mixed"), values=consensus_cols)
-# plot(p7b)
-# ggsave(outfile_overall_consensus_drugs_fraction_gt_bar, p7b, width=10, height=8, units="in", dpi=1200)
+# plot(ps7b)
+ggsave(outfile_overall_consensus_drugs_fraction_gt_bar, ps7b, width=10, height=8, units="in", dpi=1200)
 
 
 
-## 7C) DISTRIBUTION OF OVERALL CONSENSUS DRUG PREDICTIONS FOR CLASS "NCT"
+## S7C) DISTRIBUTION OF OVERALL CONSENSUS DRUG PREDICTIONS FOR CLASS "NCT"
 
 # Use fractions of predicted consensus drugs for class "nct" overall
 # Sanity check that required input columns can be found
@@ -1239,7 +1276,7 @@ df_overall_consensus_drugs_nct$support_type = factor(df_overall_consensus_drugs_
 # Showing SNVs and CNVs as facets (sorting of sample based on SNV dataset)
 outfile_overall_consensus_drugs_fraction_nct_bar = paste0(opt$outfile_tag, ".barplot_fraction_overall_consensus_drugs_nct.pdf")
 # outfile_overall_consensus_drugs_fraction_nct_bar = paste0(opt$outfile_tag, ".barplot_fraction_overall_consensus_drugs_nct_no_tier3.pdf")
-p7c = ggplot(df_overall_consensus_drugs_nct, aes(x=sample_order, y=value, fill=support_type)) +
+ps7c = ggplot(df_overall_consensus_drugs_nct, aes(x=sample_order, y=value, fill=support_type)) +
   geom_bar(stat='identity', position = "stack", width=1) +
   facet_grid(dataset ~ .) +
   ylab("Percent of overall consensus drugs") + 
@@ -1254,48 +1291,5 @@ p7c = ggplot(df_overall_consensus_drugs_nct, aes(x=sample_order, y=value, fill=s
         strip.text=element_text(size=12)) +
   scale_fill_manual(name="Type of prediction", breaks=c("support", "resistance", "conflict", "unknown", "mixed"),
                     labels=c("All-support", "All-resistance", "All-conflict", "All-unknown", "Mixed"), values=consensus_cols)
-# plot(p7c)
-# ggsave(outfile_overall_consensus_drugs_fraction_nct_bar, p7c, width=10, height=8, units="in", dpi=1200)
-
-
-## SUPPLEMENTS
-
-
-## BOX PLOT DISTRIBUTION OF MEAN CONSENSUS DRUG SUPPORT PREDICTIONS AVAILABLE PER VARIANT
-
-# Use mean number of consensus predictions available per CIViC variant
-df_n_consensus_snv_mean = prepare_mean_n_consensus_data_for_plotting(data_snv, input_colnames)
-df_n_consensus_cnv_mean = prepare_mean_n_consensus_data_for_plotting(data_cnv, input_colnames)
-
-# Combine SNV and CNV datasets
-# Sanity check that required input columns can be found
-df_n_consensus_mean =  combine_snv_and_cnv_data_for_plotting(df_n_consensus_snv_mean, df_n_consensus_cnv_mean, plotting_columns)
-
-# Extract relevant features from the variable names in preparation for plotting
-df_n_consensus_mean$tier3_variants = ifelse(grepl("_no_tier3", df_n_consensus_mean$variable), "Excluding", "Including")
-df_n_consensus_mean$tier3_variants = factor(df_n_consensus_mean$tier3_variants, levels=c("Including", "Excluding"))
-
-# Retrieve subset of outlier points for each group being plotted
-n_consensus_mean_categories = names(table(df_n_consensus_mean$variable))
-df_n_consensus_mean_outliers = get_outliers_per_group_and_dataset(df_n_consensus_mean, n_consensus_mean_categories)
-
-
-# Combined version of box plot
-# Showing SNVs and CNVs in X-axis (prediction numbers grouped by tier3 exclusion/inclusion)
-outfile_p6a_s = paste0(opt$outfile_tag, ".boxplot_mean_n_consensus_predictions_per_variant.pdf")
-p6a_s = ggplot(df_n_consensus_mean_outliers, aes(x=dataset, y=value, fill=tier3_variants)) +
-  geom_boxplot(outlier.shape=NA, outlier.size=0, notch=FALSE) +
-  geom_point(data=subset(df_n_consensus_mean_outliers, is_outlier==TRUE), 
-             position=position_jitterdodge(jitter.width=0.2, jitter.height=0.2, seed=123),
-             aes(color=tier3_variants), size=1, alpha=0.9) +  
-  ylab("Mean number of consensus drug support predictions per variant") + 
-  xlab("") +
-  theme(legend.justification = c(1, 1),
-        legend.text=element_text(size=12, color="black"),
-        legend.title=element_text(size=15, color="black")) +
-  theme(axis.text=element_text(size=14, color="black"),
-        axis.title=element_text(size=15, color="black")) +
-  scale_fill_manual(name="Tier3 variants", values=tier3_colors) +
-  scale_color_manual(name="Tier3 variants", values=tier3_colors)
-# plot(p6a_s)
-# ggsave(outfile_p6a_s, p6a_s, width=10, height=8, units="in", dpi=1200)
+# plot(ps7c)
+ggsave(outfile_overall_consensus_drugs_fraction_nct_bar, ps7c, width=10, height=8, units="in", dpi=1200)

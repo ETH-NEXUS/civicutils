@@ -1,4 +1,5 @@
-srun --cpus-per-task 2 --mem-per-cpu 4000 --time 02:00:00 --pty bash
+srun --cpus-per-task 2 --mem-per-cpu 4000 --time 04:00:00 --pty bash
+export CIVICPY_CACHE_FILE=/cluster/customapps/biomed/nexus/sharedutils/db_cache/civicDB/cache.pkl
 # run an interactive node
 python
  # activate python 3.8.10
@@ -10,21 +11,21 @@ civic.load_cache("/cluster/customapps/biomed/nexus/sharedutils/db_cache/civicDB/
 import sys
 import os
 
-# sys.path.append("/cluster/work/nexus/antoine/Projects/2023_05_Molecular_Profil_CIViCutils/civicutils/civicutils")
-sys.path.append("/Users/hanns/Documents/Work/2023_05_CIViCutils_packages/civicutils/civicutils")
+sys.path.append("/cluster/work/nexus/antoine/Projects/2023_05_Molecular_Profil_CIViCutils/civicutils/civicutils")
+# sys.path.append("/Users/hanns/Documents/Work/2023_05_CIViCutils_packages/civicutils/civicutils")
 
 # Import relevant functions
-from read_and_write import readInSnvs,get_dict_support,write_match
+from read_and_write import read_in_snvs,get_dict_support,write_match, write_header_line, write_evidences
 from query import query_civic
 from filtering import filter_civic
 from match import match_in_civic,annotate_ct,filter_ct,process_therapy_support
 
 
 # Read in file of input SNV variants
-# (rawData,snvData,extraHeader) = readInSnvs("/cluster/work/nexus/antoine/Projects/2023_05_Molecular_Profil_CIViCutils/civicutils/civicutils/data/example_snv.txt")
+(raw_data, snv_data, extra_header) = read_in_snvs("/cluster/work/nexus/antoine/Projects/2023_05_Molecular_Profil_CIViCutils/civicutils/civicutils/data/example_snv.txt")
 
-(rawData,snvData,extraHeader) = readInSnvs("/Users/hanns/Documents/Work/2023_05_CIViCutils_packages/civicutils/civicutils/data/example_snv.txt")
-(rawData,snvData,extraHeader) = readInSnvs("/Users/hanns/Documents/Work/seiler_civicquery_Nov2021/seiler_civic_input.tsv")
+(rawData,snvData,extraHeader) = read_in_snvs("/Users/hanns/Documents/Work/2023_05_CIViCutils_packages/civicutils/civicutils/data/example_snv.txt")
+(rawData,snvData,extraHeader) = read_in_snvs("/Users/hanns/Documents/Work/seiler_civicquery_Nov2021/seiler_civic_input.tsv")
 
 
 # Query input genes in CIVIC
@@ -657,5 +658,97 @@ annotMatch = process_therapy_support(matchMap,annotMap,supportDict)
 
 # Write to output
 # Do not report the CT classification of each disease, and write column with the overall drug support of the match for each available CT class
-write_match(annotMatch, annotMap, rawData, extraHeader, dataType="EXPR", outfile="/Users/hanns/Documents/Work/2023_05_CIViCutils_packages/try_example_expr.tsv", hasSupport=True, hasCt=True, writeCt=False, writeSupport=True, writeComplete=False)
+write_match(annot_match, annot_map, raw_data, extra_header, data_type="SNV", outfile="/cluster/work/nexus/antoine/Projects/2023_05_Molecular_Profil_CIViCutils/try_example_snv.tsv", has_support=True, has_ct=True, write_ct=False, write_support=True, write_complete=False)
+
+match_map =annot_match
+var_map =annot_map
+raw_map =raw_data
+header =extra_header
+data_type="SNV"
+outfile="/cluster/work/nexus/antoine/Projects/2023_05_Molecular_Profil_CIViCutils/try_example_snv.tsv"
+has_support=True
+has_ct=True
+write_ct=False
+write_support=True
+write_complete=False
+
+sorted_evidence_types = ['PREDICTIVE', 'DIAGNOSTIC', 'PROGNOSTIC', 'PREDISPOSING']
+evidence_type = "PREDICTIVE"
+special_cases = ["NON_SNV_MATCH_ONLY","NON_CNV_MATCH_ONLY","NON_EXPR_MATCH_ONLY"]
+sorted_cts = ["ct","gt","nct"]
+varmap_entries_variant = ['name','hgvs','types']
+    
+from utils import check_match_before_writing,check_keys,check_keys_not,check_data_type,check_dict_entry
+check_match_before_writing(match_map, var_map, raw_map, has_support, has_ct, write_ct, write_support, write_complete)
+check_data_type(data_type)
+outfile = open(outfile,'w')
+
+(out_header, clean_header, write_impact, write_exon) = write_header_line(data_type, header, write_support) 
+outfile.write(out_header + "\n")
+
+n_line="0"
+line_list = raw_map[n_line]
+extra_line = []
+
+gene = line_list[0]
+c_var = line_list[1]
+p_var = line_list[2]
+impact = line_list[3]
+exon = line_list[4]
+comb_id = c_var + "|" + p_var + "|" + impact + "|" + exon + "|" + str(n_line)
+
+main_line = gene + "\t" + c_var + "\t" + p_var
+
+tier = "tier_3"
+
+gene_scores = []
+gene_var_types = []
+therapy_support = []
+result_map = {}
+write_line = False
+all_variants = []
+therapySupport = match_map[gene][comb_id][tier]["therapy_support"]
+for tmp_var in match_map[gene][comb_id][tier]["matched"]:
+        all_variants.append(tmp_var)
+
+if write_support:
+        for i in therapySupport:
+                therapy_support.append(i.upper())
+
+var_id = all_variants[0]
+variant = var_map[gene][var_id]["name"]
+
+gene_var_types.append(gene + ":" + variant + ":" + ",".join(var_map[gene][var_id]["types"]))
+molecular_profile_ids = set(list(var_map[gene][var_id].keys())) ^ set(varmap_entries_variant)
+molecular_profil_id = "1590"
+gene_scores.append(gene + ':' + variant + ':' + molecular_profil_id + ':' + str(var_map[gene][var_id][molecular_profil_id]['civic_score']))
+
+for evidence_type in sorted_evidence_types:
+        if evidence_type in var_map[gene][var_id][molecular_profil_id]["evidence_items"].keys():
+                if evidence_type not in result_map.keys():
+                        result_map[evidence_type] = []
+                        write_therapy = False
+                if evidence_type == evidence_type:
+                        write_therapy=True
+                if has_ct:
+                        check_keys(list(var_map[gene][var_id][molecular_profil_id]["evidence_items"][evidence_type].keys()),"var_map",sorted_cts,matches_all=True)
+                        for ct in var_map[gene][var_id][molecular_profil_id]["evidence_items"][evidence_type].keys():
+                                if write_ct:
+                                        results = write_evidences(var_map[gene][var_id][molecular_profil_id]["evidence_items"][evidence_type][ct], write_therapy=write_therapy, write_ct=ct, write_complete=write_complete)
+                                else:
+                                        results = write_evidences(var_map[gene][var_id][molecular_profil_id]["evidence_items"][evidence_type][ct], write_therapy=write_therapy, write_ct=None, write_complete=write_complete)
+                                for x in results:
+                                        result_map[evidence_type].append(gene + ":" + variant + ":" + molecular_profil_id + ':' + x)
+                else:
+                        check_keys_not(list(var_map[gene][var_id][molecular_profil_id]["evidence_items"][evidence_type].keys()), "var_map", sorted_cts)
+                        if write_ct:
+                                raise ValueError("Option 'write_ct' cannot be selected when 'has_ct'=False!")
+                        results = write_evidences(var_map[gene][var_id][molecular_profil_id]["evidence_items"][evidence_type], write_therapy=write_therapy, write_ct=None, write_complete=write_complete)
+                        for x in results:
+                                result_map[evidence_type].append(gene + ":" + variant + ":" + molecular_profil_id + ':' + x)
+
+
+
+
+
 
