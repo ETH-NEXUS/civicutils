@@ -12,9 +12,11 @@ authors = [
   { name="Daniel J. Stekhoven", email="stekhoven@nexus.ethz.ch" },
   { name="Franziska Singer", email="singer@nexus.ethz.ch" }
 ]
+keywords = ["in-silico drug prediction", "variant prioritization", "clinical relevance", "CIViC database", "API query"]
 description = "Python package for querying, matching and downstream processing of CIViC information."
 readme = "README.md"
 requires-python = ">=3.7"
+dependencies = ["civicpy>=3.0.0"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
