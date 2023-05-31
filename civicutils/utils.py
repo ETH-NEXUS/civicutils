@@ -215,7 +215,7 @@ def check_keys(in_keys, dict_name, key_list, matches_all=True):
     in2 = set(key_list)
     if matches_all:
         if (in1 != in2):
-            raise ValueError("Dictionary '%s' does not contain all of the following keys: %s" %(dict_name,key_list))
+            raise ValueError("Dictionary '%s' does not contain all of the following keys: %s" %(dict_name, key_list))
     else:
         not_found = False
         for x in in2:
@@ -290,7 +290,7 @@ def check_string_filter_arguments(in_field, field_name, in_list, list_name):
     check_empty_input(in_field, field_name, is_required=True)
     # Use uppercase and remove leading/trailing spaces, for consistency of strings
     new_field = in_field.strip().upper()
-    new_list = uppercase_list(in_list,list_name)
+    new_list = uppercase_list(in_list, list_name)
 
     return (new_field, new_list)
 
@@ -339,7 +339,7 @@ def check_tier_selection(select_tier, all_tiers):
     :param all_tiers:		Sorted list of all available tiers (order must correspond to priority hierarchy).
     :return:			Processed list or string of tier selection.
     """
-    # Check provided argument "all_tiers"
+    # Check provided argument
     check_argument(all_tiers, "all_tiers")
     check_is_list(all_tiers, "all_tiers")
 
@@ -350,7 +350,7 @@ def check_tier_selection(select_tier, all_tiers):
         raise ValueError("Please provide a non-empty tier selection!")
     elif isinstance(select_tier, str):
         # Check a valid value was provided for select_tier
-        if select_tier not in ["all","highest"]:
+        if select_tier not in ["all", "highest"]:
             raise ValueError("Unknown tier option provided: '%s'. Possible options are: 'all' (to return all tiers) or 'highest' (to return only match for the highest tier)." %(select_tier))
         new_selection = select_tier
     elif isinstance(select_tier, list):
@@ -405,7 +405,7 @@ def translate_aa(aminoacid):
     :return:              Translated 3-letter aminoacid code.
     """
     from read_and_write import get_dict_aminoacids
-    # Import the dictionary of aminoacid codes provided in the data.yml file
+    # Import the dictionary of aminoacid codes provided in the config "data.yml" file
     dict_codes = get_dict_aminoacids()
     aa_new = None
     check_empty_input(aminoacid, "aminoacid", is_required=True)
@@ -429,7 +429,7 @@ def check_match_before_writing(match_map, var_map, raw_map, has_support=True, ha
     :return:                 None
     """
     sorted_tiers = ["tier_1", "tier_1b", "tier_2", "tier_3", "tier_4"]
-    var_map_entries_variant = ['name','hgvs','types']
+    var_map_entries_variant = ["name", "hgvs", "types"]
     special_cases = ["NON_SNV_MATCH_ONLY", "NON_CNV_MATCH_ONLY", "NON_EXPR_MATCH_ONLY"]
 
     check_arguments([match_map, raw_map], ["match_map", "raw_map"])
@@ -484,9 +484,8 @@ def check_match_before_writing(match_map, var_map, raw_map, has_support=True, ha
                                 matched.append(tmp_var)
             if matched:
                 check_dict_entry(var_map, "var_map", gene, "gene")
-            for varId in matched:
-                check_dict_entry(var_map[gene], "var_map", varId, "variant")
-                check_keys(list(var_map[gene][varId].keys()), "var_map", var_map_entries_variant, matches_all=False)
+            for var_id in matched:
+                check_dict_entry(var_map[gene], "var_map", var_id, "variant")
+                check_keys(list(var_map[gene][var_id].keys()), "var_map", var_map_entries_variant, matches_all=False)
 
     return None
-

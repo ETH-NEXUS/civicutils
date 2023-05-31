@@ -1,30 +1,30 @@
 #!/usr/bin/env python
 
-'''
+"""
 Use CIViCutils to query and process CIViC variant information
 Requires newer format of variant annotations, i.e.: GENE:variant|variant;GENE:variant;...
 Version queries offline cache provided in civicpy module
 
 Lourdes Rosano, Feb 2022
-'''
+"""
 
 import sys
 import argparse
 
 ## Load relevant functions from CIViCutils package
 
-sys.path.append("/cluster/work/nexus/antoine/Projects/2023_05_Molecular_Profil_CIViCutils/civicutils/civicutils")
+sys.path.append("/path/to/civicutils")
 
 from read_and_write import get_dict_support, write_evidences, write_output_line
 from query import query_civic
 from filtering import filter_civic
-from match import match_in_civic, annotate_ct, filter_ct, process_therapy_support, reprocess_therapy_support_across_selected_variants
+from match import match_in_civic, annotate_ct, filter_ct, process_drug_support, reprocess_drug_support_across_selected_variants
 from utils import check_match_before_writing, check_keys, check_keys_not, check_data_type, check_dict_entry
 
 
-'''
+"""
 Functions
-'''
+"""
 
 # Given the header, find the input columns containing genes and variants/cnvs values (use provided arguments directly)
 # For SNVs, also retrieve the input columns containing variant impacts and exons
@@ -221,28 +221,28 @@ def check_tier_and_matches(gene, combined_id, match_mapping, has_support=True):
     return (selected_tier, all_variants)
 
 
-# Write header to output table (add extra column when consensus therapy support is provided)
-# NOTE: for now, always write column for consensus therapy support
+# Write header to output table (add extra column when consensus drug support is provided)
+# NOTE: for now, always write column for consensus drug support
 def write_header(outfile, write_support=True):
     sorted_evidence_types = ["PREDICTIVE", "DIAGNOSTIC", "PROGNOSTIC", "PREDISPOSING"]
     if write_support:
-        out_header = "%s\tCIViC_Tier\tCIViC_Score\tCIViC_VariantType\tCIViC_therapy_Support\t%s" %(header, "\t".join(["CIViC_" + x for x in sorted_evidence_types]))
+        out_header = "%s\tCIViC_Tier\tCIViC_Score\tCIViC_VariantType\tCIViC_Drug_Support\t%s" %(header, "\t".join(["CIViC_" + x for x in sorted_evidence_types]))
     else:
         out_header = "%s\tCIViC_Tier\tCIViC_Score\tCIViC_VariantType\t%s" %(header, "\t".join(["CIViC_" + x for x in sorted_evidence_types]))
     outfile.write(out_header + "\n")
     return None
 
 
-# Write header to output table (add extra column when consensus therapy support is provided)
+# Write header to output table (add extra column when consensus drug support is provided)
 def write_match_multiple_annotations(match_mapping, variant_mapping, raw_mapping, input_file, outfile, data_type="SNV", has_support=True, has_ct=True, write_ct=False, write_support=True, write_complete=False):
     # NOTE: uppercase is critical for matching!
     sorted_evidence_types = ["PREDICTIVE", "DIAGNOSTIC", "PROGNOSTIC", "PREDISPOSING"]
-    # Define the evidence type which contain CIViC therapy predictions
-    therapy_evidence_type = "PREDICTIVE"
+    # Define the evidence type which contain CIViC drug predictions
+    drug_evidence_type = "PREDICTIVE"
     special_cases = ["NON_SNV_MATCH_ONLY", "NON_CNV_MATCH_ONLY", "NON_EXPR_MATCH_ONLY"]
     sorted_cts = ["ct", "gt", "nct"]
     sorted_tiers = ["tier_1", "tier_1b", "tier_2", "tier_3", "tier_4"]
-    varmap_entries_variant = ['name','hgvs','types']
+    varmap_entries_variant = ["name", "hgvs", "types"]
 
     # Use CIViCutils functionality to sanity check that all expected data and formats are correct
     check_match_before_writing(match_mapping, variant_mapping, raw_mapping, has_support, has_ct, write_ct, write_support, write_complete)
@@ -383,7 +383,7 @@ def write_match_multiple_annotations(match_mapping, variant_mapping, raw_mapping
         ## At this point, the genes and variant annotations which will be reported for the current variant line have already been parsed and selected
         gene_scores = []
         gene_var_types = []
-        therapy_support = []
+        drug_support = []
         result_mapping = {}
         for gene in genes_and_variants_to_write.keys():
             # Expectation is that there is only 1 variant available per gene
@@ -393,10 +393,10 @@ def write_match_multiple_annotations(match_mapping, variant_mapping, raw_mapping
                     if all_civic_variants:
                         raise ValueError("Unexpectedly found matched variants for a line classified as 'tier_4': %s" %(all_civic_variants))
                 elif has_support:
-                    therapySupport = match_mapping[gene][variant_annotation][tier_to_write]["therapy_support"]
+                    this_drug_support = match_mapping[gene][variant_annotation][tier_to_write]["drug_support"]
                     if write_support:
-                        for i in therapySupport:
-                            therapy_support.append(i.upper())
+                        for i in this_drug_support:
+                            drug_support.append(i.upper())
                 for variant_id in all_civic_variants:
                     # NOTE: check for special case when tier3 but no matching variant returned for the given data type
                     # This is a dummy tag and not an actual variant record from CIViC, so skip checking in variant_mapping
@@ -412,40 +412,40 @@ def write_match_multiple_annotations(match_mapping, variant_mapping, raw_mapping
                     gene_var_types.append(gene + ":" + civic_variant + ":" + ",".join(variant_mapping[gene][variant_id]["types"]))
                     molecular_profile_ids = set(list(variant_mapping[gene][variant_id].keys())) ^ set(varmap_entries_variant)
                     for molecular_profil_id in molecular_profile_ids:
-                        gene_scores.append(gene + ":" + civic_variant + ':' + molecular_profil_id + ":" + str(variant_mapping[gene][variant_id][molecular_profil_id]["civic_score"]))                        
+                        gene_scores.append(gene + ":" + civic_variant + ":" + molecular_profil_id + ":" + str(variant_mapping[gene][variant_id][molecular_profil_id]["civic_score"]))                        
                         for evidence_type in sorted_evidence_types:
                             if evidence_type in variant_mapping[gene][variant_id][molecular_profil_id]["evidence_items"].keys():
                                 if evidence_type not in result_mapping.keys():
                                     result_mapping[evidence_type] = []
-                                write_therapy = False
-                                # Check whether current evidence column name corresponds to the one defined at the beginning of the function (i.e. indicates therapy prediction evidence)
-                                if evidence_type == therapy_evidence_type:
-                                    write_therapy=True
+                                write_drug = False
+                                # Check whether current evidence column name corresponds to the one defined at the beginning of the function (i.e. indicates drug prediction evidence)
+                                if evidence_type == drug_evidence_type:
+                                    write_drug=True
                                 if has_ct:
                                     check_keys(list(variant_mapping[gene][variant_id][molecular_profil_id]["evidence_items"][evidence_type].keys()), "variant_mapping", sorted_cts, matches_all=True)
                                     for ct in variant_mapping[gene][variant_id][molecular_profil_id]["evidence_items"][evidence_type].keys():
                                         if write_ct:
-                                            results = write_evidences(variant_mapping[gene][variant_id][molecular_profil_id]["evidence_items"][evidence_type][ct], write_therapy=write_therapy, write_ct=ct, write_complete=write_complete)
+                                            results = write_evidences(variant_mapping[gene][variant_id][molecular_profil_id]["evidence_items"][evidence_type][ct], write_drug=write_drug, write_ct=ct, write_complete=write_complete)
                                         else:
-                                            results = write_evidences(variant_mapping[gene][variant_id][molecular_profil_id]["evidence_items"][evidence_type][ct], write_therapy=write_therapy, write_ct=None, write_complete=write_complete)
+                                            results = write_evidences(variant_mapping[gene][variant_id][molecular_profil_id]["evidence_items"][evidence_type][ct], write_drug=write_drug, write_ct=None, write_complete=write_complete)
                                         for x in results:
                                             result_mapping[evidence_type].append(gene + ":" + civic_variant + ":" + x)
                                 else:
                                     check_keys_not(list(variant_mapping[gene][variant_id][molecular_profil_id]["evidence_items"][evidence_type].keys()), "variant_mapping", sorted_cts)
                                     if write_ct:
                                         raise ValueError("Option 'write_ct' cannot be selected when 'has_ct'=False!")
-                                    results = write_evidences(variant_mapping[gene][variant_id][molecular_profil_id]["evidence_items"][evidence_type], write_therapy=write_therapy, write_ct=None, write_complete=write_complete)
+                                    results = write_evidences(variant_mapping[gene][variant_id][molecular_profil_id]["evidence_items"][evidence_type], write_drug=write_drug, write_ct=None, write_complete=write_complete)
                                     for x in results:
                                         result_mapping[evidence_type].append(gene + ":" + civic_variant + ":" + x)
-        # NOTE: in the above case, if CIViC info is reported across multiple different variant annotations within the same line (e.g. case of the CNVs with >1 genes having CIViC info with the same tier), then the therapy support will need to be recomputed to aggregate the information across all reported variants
-        # Use custom function to recompute final consensus therapy support for the current line
+        # NOTE: in the above case, if CIViC info is reported across multiple different variant annotations within the same line (e.g. case of the CNVs with >1 genes having CIViC info with the same tier), then the drug support will need to be recomputed to aggregate the information across all reported variants
+        # Use custom function to recompute final consensus drug support for the current line
         # Now, support is aggregated across all genes and variants for which CIViC info is to be reported
         # NOTE: currently, for SNV data, only 1 single gene and variant annotation is selected per line
         # NOTE: currently, for CNV data, multiple genes annotated for the same CNV can be reported with CIViC info (only those having the same, highest tier)
-        therapy_support = []
-        therapy_support = reprocess_therapy_support_across_selected_variants(genes_and_variants_to_write, match_mapping, variant_mapping, support_dict, has_support=True)
+        drug_support = []
+        drug_support = reprocess_drug_support_across_selected_variants(genes_and_variants_to_write, match_mapping, variant_mapping, support_dict, has_support=True)
         ## Write result to output
-        out_line = write_output_line(tier_to_write, line.strip(), gene_scores, gene_var_types, therapy_support, result_mapping, write_support)
+        out_line = write_output_line(tier_to_write, line.strip(), gene_scores, gene_var_types, drug_support, result_mapping, write_support)
         # Once here, all genes and variants within the row have been classified into tiers
         if tier_to_write == "tier_4":
             gene_not_found += 1
@@ -465,11 +465,11 @@ def write_match_multiple_annotations(match_mapping, variant_mapping, raw_mapping
 
 
 
-'''
+"""
 Script
-'''
+"""
 
-parser = argparse.ArgumentParser(description="Query CIViC to retrieve therapy information for snvs or cnvs.")
+parser = argparse.ArgumentParser(description="Query CIViC to retrieve drug information for snvs or cnvs.")
 parser.add_argument("--infile", dest="infile", required=True, help="Input table with genes and variants, needs to be tab separated.")
 parser.add_argument("--outfile", dest="outfile", required=True, help="Name of the output file.")
 parser.add_argument("--cancer_type_list", dest="cancer_type_list", required=True, help="Comma-separated list of accepted cancer types. Partial matches will be sought.")
@@ -574,15 +574,15 @@ annot_mapping = annotate_ct(variant_mapping, disease_name_not_in, disease_name_i
 annot_mapping = filter_ct(annot_mapping, select_ct="highest")
 
 # Get custom dictionary of support from data.yml (provided within the package)
-# This defines how each combination of evidence direction + clinical significance in CIViC is classified in terms of therapy support (e.g. sensitivity, resistance, unknown, etc.)
+# This defines how each combination of evidence direction + clinical significance in CIViC is classified in terms of drug support (e.g. sensitivity, resistance, unknown, etc.)
 support_dict = get_dict_support()
 
-# Process therapy support of the matched variants using the annotated CIViC evidences
-annot_match_mapping = process_therapy_support(match_mapping, annot_mapping, support_dict)
+# Process drug support of the matched variants using the annotated CIViC evidences
+annot_match_mapping = process_drug_support(match_mapping, annot_mapping, support_dict)
 
 # Write to output
 # Parse input file again, now checking (and prioritizing, if necessary) the available CIViC info per variant line
-# Report the CT classification of each disease, and write column with the overall therapy support of the match for each available CT class
+# Report the CT classification of each disease, and write column with the overall drug support of the match for each available CT class
 (exact_matches, syn_matches, pos_matches, no_matches, gene_not_found) = write_match_multiple_annotations(annot_match_mapping, annot_mapping, raw_mapping, args.infile, outfile, data_type=data_type, has_support=True, has_ct=True, write_ct=True, write_support=True, write_complete=True)
 
 outfile.close()

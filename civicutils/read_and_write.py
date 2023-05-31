@@ -142,7 +142,7 @@ def read_in_snvs(infile):
         variant = c_var + "|" + p_var + "|" + impact + "|" + exon + "|" + str(n_line)
         # NOTE: Variants can never be duplicated because of the different row numbers assigned
         # if variant in snv_data[gene].keys():
-        #     print("Found duplicated variant '%s|%s' for gene '%s' in line '%s'!" %(c_var,p_var,gene,str(n_line)))
+        #     print("Found duplicated variant '%s|%s' for gene '%s' in line '%s'!" %(c_var, p_var, gene, str(n_line)))
         #     sys.exit(1)
         snv_data[gene][variant] = None
     in_file.close()
@@ -234,7 +234,7 @@ def read_in_expr(infile):
     # dict gene -> expression (logfc|n_line) -> null
     expr_data = {}
 
-    in_file = open(infile,"r")
+    in_file = open(infile, "r")
     header = in_file.readline().strip()
     header_split = header.strip().split("\t")
     (gene_pos, logfc_pos) = process_expr_header(header_split)
@@ -343,7 +343,7 @@ def write_header_line(data_type, header, write_support):
         main_header += "\t%s" %("\t".join(clean_header))
 
     if write_support:
-        out_header = "%s\tCIViC_Tier\tCIViC_Score\tCIViC_VariantType\tCIViC_drug_Support\t%s" %(main_header,"\t".join(["CIViC_" + x for x in sorted_evidence_types]))
+        out_header = "%s\tCIViC_Tier\tCIViC_Score\tCIViC_VariantType\tCIViC_Drug_Support\t%s" %(main_header,"\t".join(["CIViC_" + x for x in sorted_evidence_types]))
     else:
         out_header = "%s\tCIViC_Tier\tCIViC_Score\tCIViC_VariantType\t%s" %(main_header,"\t".join(["CIViC_" + x for x in sorted_evidence_types]))
 
@@ -357,7 +357,7 @@ def write_output_line(tier, main_line, gene_scores, gene_var_types, drug_support
     :param main_line:		String already containing the required columns to be written to output. This will be extended with the available CIViC information to generate the complete output line.
     :param gene_scores:		List containing the CIViC scores of the matched variants for the given 'tier'. Already formatted as required i.e. 'GENE:VARIANT_NAME:SCORE'.
     :param gene_var_types:	List containing the variant types of the matched variants in CIViC. Already formatted as required i.e. 'GENE:VARIANT_NAME:VAR_TYPE1,..'.
-    :param drug_support:	List containing the strings of processed drug support for the matched variants. Already formatted as required i.e. 'DRUG:CT_TAG:drug_SUPPORT'.
+    :param drug_support:	List containing the strings of processed drug support for the matched variants. Already formatted as required i.e. 'DRUG:CT_TAG:CIVIC_CONSENSUS_PREDICTION'.
     :param result_map:		Nested dictionary containing the CIViC evidences associated with each evidence type, already formatted for writing to output (assumes a particular structure).
     :param write_support:	Boolean indicating if processed drug support from CIViC should be written to output.
     :return:			String containing complete output line ready to be written to output.
@@ -414,15 +414,15 @@ def write_evidences(item, write_drug=False, write_ct=None, write_complete=False)
         # For each drug associated with the given cancer type
         for drug in item[disease].keys():
             # For each evidence associated with the given drug
-            # Evidences are simplified by using the combined form 'direction:significance'
+            # Evidences are simplified by using the combined form "direction:significance"
             for evidence in item[disease][drug].keys():
-                # If drug=True, write drug information, i.e. DISEASE|drug(..)
+                # If drug=True, write drug information, i.e. DISEASE|DRUG(..)
                 if write_drug:
-                    # Always one drug (single or combination with '+')
+                    # Always one drug (single or combination with "+")
                     if write_ct:
-                        out_string = disease + '|' + write_ct.upper() + '|' + drug + '('
+                        out_string = disease + "|" + write_ct.upper() + "|" + drug + "("
                     else:
-                        out_string = disease + '|' + drug + '('
+                        out_string = disease + "|" + drug + "("
                 else:
                     if write_ct:
                         out_string = disease + "|" + write_ct.upper() + "("
@@ -478,16 +478,16 @@ def write_match(match_map, var_map, raw_map, header, data_type, outfile, has_sup
     :return:                 	None
     """
     # NOTE: uppercase is critical for matching!
-    sorted_evidence_types = ['PREDICTIVE', 'DIAGNOSTIC', 'PROGNOSTIC', 'PREDISPOSING']
+    sorted_evidence_types = ["PREDICTIVE", "DIAGNOSTIC", "PROGNOSTIC", "PREDISPOSING"]
     evidence_type = "PREDICTIVE"
-    special_cases = ["NON_SNV_MATCH_ONLY","NON_CNV_MATCH_ONLY","NON_EXPR_MATCH_ONLY"]
-    sorted_cts = ["ct","gt","nct"]
-    varmap_entries_variant = ['name','hgvs','types']
+    special_cases = ["NON_SNV_MATCH_ONLY", "NON_CNV_MATCH_ONLY", "NON_EXPR_MATCH_ONLY"]
+    sorted_cts = ["ct", "gt", "nct"]
+    varmap_entries_variant = ["name", "hgvs", "types"]
     
-    from utils import check_match_before_writing,check_keys,check_keys_not,check_data_type,check_dict_entry
+    from utils import check_match_before_writing, check_keys, check_keys_not, check_data_type, check_dict_entry
     check_match_before_writing(match_map, var_map, raw_map, has_support, has_ct, write_ct, write_support, write_complete)
     check_data_type(data_type)
-    outfile = open(outfile,'w')
+    outfile = open(outfile, "w")
     
     # Retrieve the output header given the argument selection
     (out_header, clean_header, write_impact, write_exon) = write_header_line(data_type, header, write_support)
@@ -498,7 +498,7 @@ def write_match(match_map, var_map, raw_map, header, data_type, outfile, has_sup
         extra_line = []
         if data_type == "SNV":
             if (len(line_list) < 5):
-                raise ValueError("Must provide at least 5 elements to describe a SNV variant (even if some can be empty): gene,dna,[prot],[impact],[exon],..'")
+                raise ValueError("Must provide at least 5 elements to describe a SNV variant (even if some can be empty): 'gene,dna,[prot],[impact],[exon],..'")
             gene = line_list[0]
             c_var = line_list[1]
             p_var = line_list[2]
@@ -517,7 +517,7 @@ def write_match(match_map, var_map, raw_map, header, data_type, outfile, has_sup
 
         if data_type == "CNV":
             if (len(line_list) < 2):
-                raise ValueError("Must provide at least 2 elements to describe a CNV variant: gene,cnv,..'")
+                raise ValueError("Must provide at least 2 elements to describe a CNV variant: 'gene,cnv,..'")
             gene = line_list[0]
             cnv = line_list[1]
             comb_id = cnv + "|" + str(n_line)
@@ -529,7 +529,7 @@ def write_match(match_map, var_map, raw_map, header, data_type, outfile, has_sup
 
         if data_type == "EXPR":
             if (len(line_list) < 2):
-                raise ValueError("Must provide at least 2 elements to describe a EXPR variant: gene,logFC,..'")
+                raise ValueError("Must provide at least 2 elements to describe a EXPR variant: 'gene,logFC,..'")
             gene = line_list[0]
             logfc = line_list[1]
             comb_id = str(logfc) + "|" + str(n_line)
@@ -560,11 +560,11 @@ def write_match(match_map, var_map, raw_map, header, data_type, outfile, has_sup
             if tier != "tier_4":
                 all_variants = []
                 if has_support:
-                    drugSupport = match_map[gene][comb_id][tier]["drug_support"]
+                    this_drug_support = match_map[gene][comb_id][tier]["drug_support"]
                     for tmp_var in match_map[gene][comb_id][tier]["matched"]:
                         all_variants.append(tmp_var)
                     if write_support:
-                        for i in drugSupport:
+                        for i in this_drug_support:
                             drug_support.append(i.upper())
                 else:
                     if write_support:
@@ -587,7 +587,7 @@ def write_match(match_map, var_map, raw_map, header, data_type, outfile, has_sup
                     gene_var_types.append(gene + ":" + variant + ":" + ",".join(var_map[gene][var_id]["types"]))
                     molecular_profile_ids = set(list(var_map[gene][var_id].keys())) ^ set(varmap_entries_variant)
                     for molecular_profil_id in molecular_profile_ids:
-                        gene_scores.append(gene + ':' + variant + ':' + molecular_profil_id + ':' + str(var_map[gene][var_id][molecular_profil_id]['civic_score']))
+                        gene_scores.append(gene + ":" + variant + ":" + molecular_profil_id + ":" + str(var_map[gene][var_id][molecular_profil_id]["civic_score"]))
                         for evidence_type in sorted_evidence_types:
                             if evidence_type in var_map[gene][var_id][molecular_profil_id]["evidence_items"].keys():
                                 if evidence_type not in result_map.keys():
@@ -596,21 +596,21 @@ def write_match(match_map, var_map, raw_map, header, data_type, outfile, has_sup
                                 if evidence_type == evidence_type:
                                     write_drug=True
                                 if has_ct:
-                                    check_keys(list(var_map[gene][var_id][molecular_profil_id]["evidence_items"][evidence_type].keys()),"var_map",sorted_cts,matches_all=True)
+                                    check_keys(list(var_map[gene][var_id][molecular_profil_id]["evidence_items"][evidence_type].keys()), "var_map", sorted_cts, matches_all=True)
                                     for ct in var_map[gene][var_id][molecular_profil_id]["evidence_items"][evidence_type].keys():
                                         if write_ct:
                                             results = write_evidences(var_map[gene][var_id][molecular_profil_id]["evidence_items"][evidence_type][ct], write_drug=write_drug, write_ct=ct, write_complete=write_complete)
                                         else:
                                             results = write_evidences(var_map[gene][var_id][molecular_profil_id]["evidence_items"][evidence_type][ct], write_drug=write_drug, write_ct=None, write_complete=write_complete)
                                         for x in results:
-                                            result_map[evidence_type].append(gene + ":" + variant + ":" + molecular_profil_id + ':' + x)
+                                            result_map[evidence_type].append(gene + ":" + variant + ":" + molecular_profil_id + ":" + x)
                                 else:
                                     check_keys_not(list(var_map[gene][var_id][molecular_profil_id]["evidence_items"][evidence_type].keys()), "var_map", sorted_cts)
                                     if write_ct:
                                         raise ValueError("Option 'write_ct' cannot be selected when 'has_ct'=False!")
                                     results = write_evidences(var_map[gene][var_id][molecular_profil_id]["evidence_items"][evidence_type], write_drug=write_drug, write_ct=None, write_complete=write_complete)
                                     for x in results:
-                                        result_map[evidence_type].append(gene + ":" + variant + ":" + molecular_profil_id + ':' + x)
+                                        result_map[evidence_type].append(gene + ":" + variant + ":" + molecular_profil_id + ":" + x)
 
                 # Only write line current tier when there was at least one match for it
                 if all_variants:
@@ -632,4 +632,3 @@ def write_match(match_map, var_map, raw_map, header, data_type, outfile, has_sup
     outfile.close()
 
     return None
-

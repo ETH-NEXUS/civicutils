@@ -1170,29 +1170,29 @@ def add_ct(diseases, ct, gene, variant, molecular_profile, evidence_type, new_ma
     
     if ct not in sorted_cts:
         raise ValueError("Provided ct '%s' is not valid! Please provide one of: %s" %(ct,sorted_cts))
-    check_is_bool(is_annot,"isAnnot")
-    check_dict_entry(new_map,"new_map",gene,"gene")
-    check_dict_entry(new_map[gene],"new_map",variant,"variant")
-    check_dict_entry(new_map[gene][variant][molecular_profile],"new_map","evidence_items","key")
-    check_dict_entry(new_map[gene][variant][molecular_profile]["evidence_items"],"new_map",evidence_type,"evidence type")
-    check_dict_entry(var_map,"var_map",gene,"gene")
-    check_dict_entry(var_map[gene],"var_map",variant,"variant")
-    check_dict_entry(var_map[gene][variant][molecular_profile],"var_map","evidence_items","key")
-    check_dict_entry(var_map[gene][variant][molecular_profile]["evidence_items"],"var_map",evidence_type,"evidence type")
+    check_is_bool(is_annot, "is_annot")
+    check_dict_entry(new_map, "new_map", gene, "gene")
+    check_dict_entry(new_map[gene], "new_map", variant, "variant")
+    check_dict_entry(new_map[gene][variant][molecular_profile], "new_map", "evidence_items", "evidence_items")
+    check_dict_entry(new_map[gene][variant][molecular_profile]["evidence_items"], "new_map", evidence_type, "evidence_type")
+    check_dict_entry(var_map, "var_map", gene, "gene")
+    check_dict_entry(var_map[gene], "var_map", variant, "variant")
+    check_dict_entry(var_map[gene][variant][molecular_profile], "var_map", "evidence_items", "evidence_items")
+    check_dict_entry(var_map[gene][variant][molecular_profile]["evidence_items"],"var_map", evidence_type, "evidence_type")
     
     # Check whether provided var_map is annotated with disease specificity info (ct/gt/nct) or not
     if is_annot:
-        check_keys(list(var_map[gene][variant][molecular_profile]["evidence_items"][evidence_type].keys()),"var_map",sorted_cts,matches_all=True)
+        check_keys(list(var_map[gene][variant][molecular_profile]["evidence_items"][evidence_type].keys()), "var_map", sorted_cts, matches_all=True)
         # If a non-empty list of diseases was provided, check they exist in var_map
         if diseases:
-            diseases = uppercase_list(diseases,"diseases")
-            check_keys(list(var_map[gene][variant][molecular_profile]["evidence_items"][evidence_type][ct].keys()),"var_map",diseases,matches_all=False)
+            diseases = uppercase_list(diseases, "diseases")
+            check_keys(list(var_map[gene][variant][molecular_profile]["evidence_items"][evidence_type][ct].keys()), "var_map", diseases, matches_all=False)
     else:
-        check_keys_not(list(var_map[gene][variant][molecular_profile]["evidence_items"][evidence_type].keys()),"var_map",sorted_cts)
+        check_keys_not(list(var_map[gene][variant][molecular_profile]["evidence_items"][evidence_type].keys()), "var_map", sorted_cts)
         # If a non-empty list of diseases was provided, check they exist in var_map
         if diseases:
-            diseases = uppercase_list(diseases,"diseases")
-            check_keys(list(var_map[gene][variant][molecular_profile]["evidence_items"][evidence_type].keys()),"var_map",diseases,matches_all=False)
+            diseases = uppercase_list(diseases, "diseases")
+            check_keys(list(var_map[gene][variant][molecular_profile]["evidence_items"][evidence_type].keys()), "var_map", diseases, matches_all=False)
     
     # Do not check if new_map already contains ct annotations (overwritten in this case)
     new_map[gene][variant][molecular_profile]["evidence_items"][evidence_type][ct] = {}
@@ -1231,8 +1231,8 @@ def annotate_ct(var_map, disease_name_not_in, disease_name_in, alt_disease_names
     :return:				Updated 'var_map' dictionary after annotating disease specificity according to the provided terms. See README for more details about the specific structure of 'var_map' when disease specificity annotations are included.
     """
     
-    sorted_cts = ["ct","gt","nct"]
-    var_map_entries_variant = ['name','hgvs','types']
+    sorted_cts = ["ct", "gt", "nct"]
+    var_map_entries_variant = ["name", "hgvs", "types"]
     new_map = {}
 
     # Iterate the complete var_map dict and reorganize it to classify diseases
@@ -1243,34 +1243,34 @@ def annotate_ct(var_map, disease_name_not_in, disease_name_in, alt_disease_names
             # Overwrite duplicated variant ids (should never happen)
             new_map[gene][variant] = {}
             # Sanity check that some expected fields can be found in the dictionary
-            check_keys(list(var_map[gene][variant].keys()),"var_map",var_map_entries_variant,matches_all=False)
-            new_map[gene][variant]['name'] = var_map[gene][variant]['name']
-            new_map[gene][variant]['hgvs'] = [a for a in var_map[gene][variant]['hgvs']]
-            new_map[gene][variant]['types'] = [b for b in var_map[gene][variant]['types']]
+            check_keys(list(var_map[gene][variant].keys()), "var_map", var_map_entries_variant, matches_all=False)
+            new_map[gene][variant]["name"] = var_map[gene][variant]["name"]
+            new_map[gene][variant]["hgvs"] = [a for a in var_map[gene][variant]["hgvs"]]
+            new_map[gene][variant]["types"] = [b for b in var_map[gene][variant]["types"]]
             
             molecular_profile_ids = set(list(var_map[gene][variant].keys())) ^ set(var_map_entries_variant)
 
             for molecular_profile_id in molecular_profile_ids:
                 new_map[gene][variant][molecular_profile_id] = {}
-                new_map[gene][variant][molecular_profile_id]['civic_score'] = var_map[gene][variant][molecular_profile_id]['civic_score']
-                new_map[gene][variant][molecular_profile_id]['n_evidence_items'] = var_map[gene][variant][molecular_profile_id]['n_evidence_items']
-                new_map[gene][variant][molecular_profile_id]['evidence_items'] = {}
-                for evidence_type in var_map[gene][variant][molecular_profile_id]['evidence_items'].keys():
-                    new_map[gene][variant][molecular_profile_id]['evidence_items'][evidence_type] = {}
+                new_map[gene][variant][molecular_profile_id]["civic_score"] = var_map[gene][variant][molecular_profile_id]["civic_score"]
+                new_map[gene][variant][molecular_profile_id]["n_evidence_items"] = var_map[gene][variant][molecular_profile_id]["n_evidence_items"]
+                new_map[gene][variant][molecular_profile_id]["evidence_items"] = {}
+                for evidence_type in var_map[gene][variant][molecular_profile_id]["evidence_items"].keys():
+                    new_map[gene][variant][molecular_profile_id]["evidence_items"][evidence_type] = {}
                     # Retrieve all disease names associated witht he current evidence type, and classify them into ct, gt, nct
-                    allDiseases = list(var_map[gene][variant][molecular_profile_id]['evidence_items'][evidence_type].keys())
+                    all_diseases = list(var_map[gene][variant][molecular_profile_id]["evidence_items"][evidence_type].keys())
                     # Check that provided var_map is not annotated with disease specificity info (ct/gt/nct)
-                    # check_keys_not(allDiseases,"var_map",sorted_cts)
+                    # check_keys_not(all_diseases, "var_map", sorted_cts)
                     #   Classify diseases by provided specificity criteria (ct/gt/nct)
-                    (ctDis,gtDis,nctDis) = classify_diseases(allDiseases, disease_name_not_in, disease_name_in, alt_disease_names)
+                    (ct_disease_list, gt_disease_list, nct_disease_list) = classify_diseases(all_diseases, disease_name_not_in, disease_name_in, alt_disease_names)
                     # Add new layer of classification within the evidence types: specificity of the disease (ct, gt, nct)
                     for ct in sorted_cts:
                         if ct == "ct":
-                            new_map = add_ct(ctDis,ct,gene,variant,molecular_profile_id,evidence_type,new_map,var_map,is_annot=False)
+                            new_map = add_ct(ct_disease_list, ct, gene, variant, molecular_profile_id, evidence_type, new_map, var_map, is_annot=False)
                         if ct == "gt":
-                            new_map = add_ct(gtDis,ct,gene,variant,molecular_profile_id,evidence_type,new_map,var_map,is_annot=False)
+                            new_map = add_ct(gt_disease_list, ct, gene, variant, molecular_profile_id, evidence_type, new_map, var_map, is_annot=False)
                         if ct == "nct":
-                            new_map = add_ct(nctDis,ct,gene,variant,molecular_profile_id,evidence_type,new_map,var_map,is_annot=False)
+                            new_map = add_ct(nct_disease_list, ct, gene, variant, molecular_profile_id, evidence_type, new_map, var_map, is_annot=False)
 
     return new_map
 
@@ -1287,12 +1287,12 @@ def filter_ct(var_map, select_ct):
     :return:			Updated 'var_map' dictionary after filtering disease specificity according to the provided selection.
     """
     sorted_cts = ["ct", "gt", "nct"]
-    var_map_entries_variant = ['name','hgvs','types']
+    var_map_entries_variant = ["name", "hgvs", "types"]
 
     # Sanity check for the expected object types
     check_is_dict(var_map, "var_map")
     # Process and sanity check provided select_ct (expected format, valid values, etc.)
-    select_ct = check_tier_selection(select_ct,sorted_cts)
+    select_ct = check_tier_selection(select_ct, sorted_cts)
     new_map = {}
     # When select_ct="all", filter is off (keep data for all 3 cts)
     # Do not copy dict again, simply return input dict untouched
@@ -1300,11 +1300,11 @@ def filter_ct(var_map, select_ct):
         # Sanity check that provided var_map has expected format and is annotated for ct
         for gene in var_map.keys():
             for variant in var_map[gene].keys():
-                check_keys(list(var_map[gene][variant].keys()),"var_map",var_map_entries_variant,matches_all=False)
+                check_keys(list(var_map[gene][variant].keys()), "var_map", var_map_entries_variant, matches_all=False)
                 molecular_profile_ids = set(list(var_map[gene][variant].keys())) ^ set(var_map_entries_variant)
                 for molecular_profile_id in molecular_profile_ids:
-                    for evidence_type in var_map[gene][variant][molecular_profile_id]['evidence_items'].keys():
-                        check_keys(list(var_map[gene][variant][molecular_profile_id]['evidence_items'][evidence_type].keys()),"var_map",sorted_cts,matches_all=True)
+                    for evidence_type in var_map[gene][variant][molecular_profile_id]["evidence_items"].keys():
+                        check_keys(list(var_map[gene][variant][molecular_profile_id]["evidence_items"][evidence_type].keys()), "var_map", sorted_cts, matches_all=True)
         return var_map
     
     # Otherwise, some filtering needs to be done, so iterate var_map
@@ -1316,29 +1316,29 @@ def filter_ct(var_map, select_ct):
             # Overwrite duplicated variant ids (should never happen)
             new_map[gene][variant] = {}
             # Sanity check that some expected fields can be found in the dictionary
-            check_keys(list(var_map[gene][variant].keys()),"var_map",var_map_entries_variant,matches_all=False)
-            new_map[gene][variant]['name'] = var_map[gene][variant]['name']
-            new_map[gene][variant]['hgvs'] = [a for a in var_map[gene][variant]['hgvs']]
-            new_map[gene][variant]['types'] = [b for b in var_map[gene][variant]['types']]
+            check_keys(list(var_map[gene][variant].keys()), "var_map", var_map_entries_variant, matches_all=False)
+            new_map[gene][variant]["name"] = var_map[gene][variant]["name"]
+            new_map[gene][variant]["hgvs"] = [a for a in var_map[gene][variant]["hgvs"]]
+            new_map[gene][variant]["types"] = [b for b in var_map[gene][variant]["types"]]
             molecular_profile_ids = set(list(var_map[gene][variant].keys())) ^ set(var_map_entries_variant)
             for molecular_profile_id in molecular_profile_ids:
                 new_map[gene][variant][molecular_profile_id] = {}
-                new_map[gene][variant][molecular_profile_id]['civic_score'] = var_map[gene][variant][molecular_profile_id]['civic_score']
-                new_map[gene][variant][molecular_profile_id]['n_evidence_items'] = var_map[gene][variant][molecular_profile_id]['n_evidence_items']
-                new_map[gene][variant][molecular_profile_id]['evidence_items'] = {}
-                for evidence_type in var_map[gene][variant][molecular_profile_id]['evidence_items'].keys():
-                    new_map[gene][variant][molecular_profile_id]['evidence_items'][evidence_type] = {}
+                new_map[gene][variant][molecular_profile_id]["civic_score"] = var_map[gene][variant][molecular_profile_id]["civic_score"]
+                new_map[gene][variant][molecular_profile_id]["n_evidence_items"] = var_map[gene][variant][molecular_profile_id]["n_evidence_items"]
+                new_map[gene][variant][molecular_profile_id]["evidence_items"] = {}
+                for evidence_type in var_map[gene][variant][molecular_profile_id]["evidence_items"].keys():
+                    new_map[gene][variant][molecular_profile_id]["evidence_items"][evidence_type] = {}
                     # Sanity check that input dict is annotated with disease specificity info (ie. has the expected format)
-                    check_keys(list(var_map[gene][variant][molecular_profile_id]['evidence_items'][evidence_type].keys()),"var_map",sorted_cts,matches_all=True)
+                    check_keys(list(var_map[gene][variant][molecular_profile_id]["evidence_items"][evidence_type].keys()), "var_map", sorted_cts, matches_all=True)
                     skip = False
                     for ct in sorted_cts:
-                        new_map[gene][variant][molecular_profile_id]['evidence_items'][evidence_type][ct] = {}
-                        ctArr = list(var_map[gene][variant][molecular_profile_id]['evidence_items'][evidence_type][ct].keys())
+                        new_map[gene][variant][molecular_profile_id]["evidence_items"][evidence_type][ct] = {}
+                        ct_list = list(var_map[gene][variant][molecular_profile_id]["evidence_items"][evidence_type][ct].keys())
                         # When select_ct="highest", then keep data only for the highest specificity available ct>gt>nct
                         if isinstance(select_ct, str) and (select_ct == "highest"):
                             # Check if data is available for the currently iterated ct
-                            if ctArr and (not skip):
-                                new_map = add_ct(ctArr,ct,gene,variant,molecular_profile_id,evidence_type,new_map,var_map,is_annot=True)
+                            if ct_list and (not skip):
+                                new_map = add_ct(ct_list, ct, gene, variant, molecular_profile_id, evidence_type, new_map, var_map, is_annot=True)
                                 # Prematurely exit the loop after this successful iteration (to keep only the highest ct)
                                 skip = True
                         # When select_ct is a list of cts, then keep data only for those selected
@@ -1346,7 +1346,7 @@ def filter_ct(var_map, select_ct):
                             # Check if the currently iterated ct should be kept or skipped
                             # Iterate all cts and add all those that are select (no premature exit of loop)
                             if (ct in select_ct):
-                                new_map = add_ct(ctArr,ct,gene,variant,molecular_profile_id,evidence_type,new_map,var_map,is_annot=True)
+                                new_map = add_ct(ct_list, ct, gene, variant, molecular_profile_id, evidence_type, new_map, var_map, is_annot=True)
     return new_map
 
 
@@ -1358,17 +1358,17 @@ def process_drug_support(match_map, var_map, support_dict):
     :param support_dict:	Dictionary of evidence-to-drug response, provided in the data.yml file, and to be used for computing consensus drug predictions. See README for more details about this topic.
     :return:			Updated 'match_map' dictionary, containing consensus drug response prediction information. Individual consensus predictions use format 'DRUG_NAME:CT_CLASS:CONSENSUS_RESPONSE:#positive|#negative|#unknown|#do_not_support'.
     """
-    sorted_tiers = ["tier_1","tier_1b","tier_2","tier_3","tier_4"]
-    sorted_cts = ["ct","gt","nct"]
-    evidenceType = "PREDICTIVE"
-    special_cases = ["NON_SNV_MATCH_ONLY","NON_CNV_MATCH_ONLY","NON_EXPR_MATCH_ONLY"]
-    var_map_entries_variant = ['name','hgvs','types']
+    sorted_tiers = ["tier_1", "tier_1b", "tier_2", "tier_3", "tier_4"]
+    sorted_cts = ["ct", "gt", "nct"]
+    evidence_type = "PREDICTIVE"
+    special_cases = ["NON_SNV_MATCH_ONLY", "NON_CNV_MATCH_ONLY", "NON_EXPR_MATCH_ONLY"]
+    var_map_entries_variant = ["name", "hgvs", "types"]
     
     # Check provided argument
-    check_arguments([match_map,support_dict],["match_map","supportDict"])
-    check_is_dict(match_map,"match_map")
-    check_is_dict(var_map,"var_map")
-    check_is_dict(support_dict,"supportDict")
+    check_arguments([match_map, support_dict], ["match_map", "support_dict"])
+    check_is_dict(match_map, "match_map")
+    check_is_dict(var_map, "var_map")
+    check_is_dict(support_dict, "support_dict")
     
     # Format: drug -> ct -> [support1,support2,..,support1] (keep track of all occurrences)
     new_map = {}
@@ -1381,7 +1381,7 @@ def process_drug_support(match_map, var_map, support_dict):
         for variant in match_map[gene].keys():
             new_map[gene][variant] = {}
             # Sanity check that provided match_map has expected format (ie. is annotated with drug support)
-            check_keys(list(match_map[gene][variant].keys()),"match_map",sorted_tiers,matches_all=True)
+            check_keys(list(match_map[gene][variant].keys()), "match_map", sorted_tiers, matches_all=True)
             for tier in match_map[gene][variant].keys():
                 new_map[gene][variant][tier] = {}
                 # Sanity check that provided match_map has expected format
@@ -1393,7 +1393,7 @@ def process_drug_support(match_map, var_map, support_dict):
                     check_is_list(match_map[gene][variant][tier], tier)
                     new_map[gene][variant][tier]["matched"] = []
 
-                new_map[gene][variant][tier]['drug_support'] = []
+                new_map[gene][variant][tier]["drug_support"] = []
                 drug_map = {}
                 if tier != "tier_4":
                     for var_id in match_map[gene][variant][tier]:
@@ -1407,34 +1407,34 @@ def process_drug_support(match_map, var_map, support_dict):
                             continue
                         
                         # For matched variants, they must be contained in the provided var_map
-                        check_dict_entry(var_map,"var_map",gene,"gene")
-                        check_dict_entry(var_map[gene],"var_map",var_id,"variant")
+                        check_dict_entry(var_map, "var_map", gene, "gene")
+                        check_dict_entry(var_map[gene], "var_map", var_id, "variant")
                         
                         molecular_profile_ids = set(list(var_map[gene][var_id].keys())) ^ set(var_map_entries_variant)
                         for molecular_profile_id in molecular_profile_ids:
-                            check_dict_entry(var_map[gene][var_id][molecular_profile_id],"var_map","evidence_items","key")
-                            if evidenceType in var_map[gene][var_id][molecular_profile_id]['evidence_items'].keys():
+                            check_dict_entry(var_map[gene][var_id][molecular_profile_id], "var_map", "evidence_items","evidence_items")
+                            if evidence_type in var_map[gene][var_id][molecular_profile_id]["evidence_items"].keys():
                                 # Sanity check that provided var_map has expected format (ie. annotated for disease specificity)
-                                check_keys(list(var_map[gene][var_id][molecular_profile_id]['evidence_items'][evidenceType].keys()),"var_map",sorted_cts,matches_all=True)
-                                for ct in var_map[gene][var_id][molecular_profile_id]['evidence_items'][evidenceType].keys():
-                                    for disease in var_map[gene][var_id][molecular_profile_id]['evidence_items'][evidenceType][ct].keys():
-                                        for drug in var_map[gene][var_id][molecular_profile_id]['evidence_items'][evidenceType][ct][disease].keys():
+                                check_keys(list(var_map[gene][var_id][molecular_profile_id]["evidence_items"][evidence_type].keys()), "var_map", sorted_cts, matches_all=True)
+                                for ct in var_map[gene][var_id][molecular_profile_id]["evidence_items"][evidence_type].keys():
+                                    for disease in var_map[gene][var_id][molecular_profile_id]["evidence_items"][evidence_type][ct].keys():
+                                        for drug in var_map[gene][var_id][molecular_profile_id]["evidence_items"][evidence_type][ct][disease].keys():
                                             if drug not in drug_map.keys():
                                                 drug_map[drug] = {}
                                             if ct not in drug_map[drug].keys():
                                                 drug_map[drug][ct] = []
-                                            for evidence in var_map[gene][var_id][molecular_profile_id]['evidence_items'][evidenceType][ct][disease][drug].keys():
+                                            for evidence in var_map[gene][var_id][molecular_profile_id]["evidence_items"][evidence_type][ct][disease][drug].keys():
                                                 # Split the evidence direction and clinical significance
-                                                evidenceArr = evidence.strip().split(':')
-                                                if (len(evidenceArr) != 2):
+                                                evidence_list = evidence.strip().split(":")
+                                                if (len(evidence_list) != 2):
                                                     raise ValueError("Unexpected format of evidence '%s'! Please provide string as 'EVIDENCE_DIRECTION:CLINICAL_SIGNIFICANCE'." %(evidence))
-                                                direction = evidenceArr[0]
-                                                clin_signf = evidenceArr[1]
+                                                direction = evidence_list[0]
+                                                clin_signf = evidence_list[1]
                                                 
                                                 # For each evidence (ie combination of direction+clin_signf), count how many different evidence items support it
                                                 # At this stage, we find count evidence items by counting how many different combinations of level+pmids there are for the same drug, disease and evidence
-                                                if ('NULL' in direction) or ('N/A' in direction) or ('NULL' in clin_signf) or ('N/A' in clin_signf):
-                                                    this_drug_support = 'UNKNOWN_BLANK'
+                                                if ("NULL" in direction) or ("N/A" in direction) or ("NULL" in clin_signf) or ("N/A" in clin_signf):
+                                                    this_drug_support = "UNKNOWN_BLANK"
                                                 else:
                                                     if direction not in support_dict.keys():
                                                         raise ValueError("Could not find evidence direction '%s' in provided 'support_dict'!" %(direction))
@@ -1444,27 +1444,27 @@ def process_drug_support(match_map, var_map, support_dict):
                                                     
                                                 # Keep track of number of occurrences for each support type for the given drug
                                                 # Here, take into account the number of supporting PMIDs associated to each evidence item
-                                                for evidence_level in var_map[gene][var_id][molecular_profile_id]['evidence_items'][evidenceType][ct][disease][drug][evidence].keys():
-                                                    for this_evidence_string in var_map[gene][var_id][molecular_profile_id]['evidence_items'][evidenceType][ct][disease][drug][evidence][evidence_level]:
+                                                for evidence_level in var_map[gene][var_id][molecular_profile_id]["evidence_items"][evidence_type][ct][disease][drug][evidence].keys():
+                                                    for this_evidence_string in var_map[gene][var_id][molecular_profile_id]["evidence_items"][evidence_type][ct][disease][drug][evidence][evidence_level]:
                                                         drug_map[drug][ct].append(this_drug_support)
                                                         
                     # Process drug support information parsed for the current tier match
-                    # drug support for tier 4 will never be available
+                    # Drug support for tier 4 will never be available
                     for this_drug in drug_map.keys():
                         for this_ct in drug_map[this_drug].keys():
                             # Given the selected ct, count number of occurrences for each possible support type (if any)
-                            count_pos = drug_map[this_drug][this_ct].count('POSITIVE')
-                            count_neg = drug_map[this_drug][this_ct].count('NEGATIVE')
-                            count_unk = drug_map[this_drug][this_ct].count('UNKNOWN_BLANK')
-                            count_dns = drug_map[this_drug][this_ct].count('UNKNOWN_DNS')
-                            # Pool UNKNOWN_BLANK and UNKNOWN_DNS together (as both result in unknown CIVIC support)
+                            count_pos = drug_map[this_drug][this_ct].count("POSITIVE")
+                            count_neg = drug_map[this_drug][this_ct].count("NEGATIVE")
+                            count_unk = drug_map[this_drug][this_ct].count("UNKNOWN_BLANK")
+                            count_dns = drug_map[this_drug][this_ct].count("UNKNOWN_DNS")
+                            # Pool UNKNOWN_BLANK and UNKNOWN_DNS together (as both result in unknown CIViC support)
                             count_total_unk = count_unk + count_dns
                             # Sanity check that there is at least some support
                             if (count_pos == 0) and (count_neg == 0) and (count_total_unk == 0):
                                 raise ValueError("Encountered unexpected support case for gene '%s'." %(gene))
                             
                             # Resolve contradicting evidence (if any) by majority vote
-                            temp_support = ''
+                            temp_support = ""
                             # For this, pool UNKNOWN_BLANK and UNKNOWN_DNS together
                             # Whenever there is a tie of "confident" (pos or neg) vs "non-confident" (unk), choose the confident one
                             if (count_total_unk > count_pos) and (count_total_unk > count_neg):
@@ -1479,9 +1479,9 @@ def process_drug_support(match_map, var_map, support_dict):
                                 raise ValueError("Encountered unexpected support case for gene '%s'." %(gene))
                             
                             # Build support string for each given combination of drug, ct and matched tier
-                            # Format: drug:CT:SUPPORT:#pos|#neg|#unk|#dns
-                            drug_support = this_drug + ':' + this_ct.upper() + ':' + temp_support
-                            new_map[gene][variant][tier]['drug_support'].append(drug_support)
+                            # Format: DRUG:CT:SUPPORT:#pos|#neg|#unk|#dns
+                            drug_support = this_drug + ":" + this_ct.upper() + ":" + temp_support
+                            new_map[gene][variant][tier]["drug_support"].append(drug_support)
 
             # Always check if current match corresponds to a tier_4 situation (all other tiers will be empty)
             if not (new_map[gene][variant]["tier_1"]["matched"] or new_map[gene][variant]["tier_1b"]["matched"] or new_map[gene][variant]["tier_2"]["matched"] or new_map[gene][variant]["tier_3"]["matched"]):
@@ -1504,7 +1504,7 @@ def reprocess_drug_support_across_selected_variants(input_data, match_map, var_m
     sorted_cts = ["ct", "gt", "nct"]
     evidence_type = "PREDICTIVE"
     special_cases = ["NON_SNV_MATCH_ONLY", "NON_CNV_MATCH_ONLY", "NON_EXPR_MATCH_ONLY"]
-    var_map_entries_variant = ['name','hgvs','types']
+    var_map_entries_variant = ["name", "hgvs", "types"]
 
     # Check provided argument
     check_arguments([match_map, support_dict], ["match_map", "support_dict"])
@@ -1563,7 +1563,7 @@ def reprocess_drug_support_across_selected_variants(input_data, match_map, var_m
                         
                         molecular_profile_ids = set(list(var_map[gene][var_id].keys())) ^ set(var_map_entries_variant)
                         for molecular_profile_id in molecular_profile_ids:
-                            check_dict_entry(var_map[gene][var_id][molecular_profile_id],"var_map","evidence_items","key")
+                            check_dict_entry(var_map[gene][var_id][molecular_profile_id], "var_map", "evidence_items", "evidence_items")
                             if evidence_type in var_map[gene][var_id][molecular_profile_id]["evidence_items"].keys():
                                 # Sanity check that provided var_map has expected format (i.e. annotated for disease specificity)
                                 check_keys(list(var_map[gene][var_id][molecular_profile_id]["evidence_items"][evidence_type].keys()), "var_map", sorted_cts, matches_all=True)
@@ -1600,7 +1600,7 @@ def reprocess_drug_support_across_selected_variants(input_data, match_map, var_m
                                                         drug_map[drug][ct].append(this_drug_support)
 
     # Process drug support information parsed and aggregated across all provided genes and variants
-    # drug support for tier 4 will never be available
+    # Drug support for tier 4 will never be available
     for this_drug in drug_map.keys():
         for this_ct in drug_map[this_drug].keys():
             # Given the selected ct, count number of occurrences for each possible support type (if any)
@@ -1631,14 +1631,8 @@ def reprocess_drug_support_across_selected_variants(input_data, match_map, var_m
                 raise ValueError("Encountered unexpected support case when aggregating evidences across provided 'input_data'!")
 
             # Build support string for each given combination of drug, ct and matched tier
-            # Format: drug:CT:SUPPORT:#pos|#neg|#unk|#dns
+            # Format: DRUG:CT:SUPPORT:#pos|#neg|#unk|#dns
             drug_support = this_drug + ":" + this_ct.upper() + ":" + temp_support + ":" + str(count_pos) + "|" + str(count_neg) + "|" + str(count_unk) + "|" + str(count_dns)
             drug_support_strings.append(drug_support)
 
     return drug_support_strings
-
-
-
-
-
-
