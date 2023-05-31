@@ -136,7 +136,6 @@ var_map
 └── <gene_id>
     └── <var_id>
         ├── 'name' ── <var_name>
-        ├── 'civic_score' ── <var_score>
         ├── 'hgvs' ── [hgvs1, ..., hgvsN]                       # empty when no HGVS are available
         ├── 'types' ── [type1, ..., typeN]                      # 'NULL' when no types are available
         └── <molecular_profile_id>
@@ -312,9 +311,9 @@ CIViC records are classified and selected/excluded based on cancer specificity a
 
 The above logic (hierarchy ct>gt>nct) is applied separately for each evidence type (i.e. `Predictive`, `Diagnostic`, `Prognostic` or `Predisposing`), which means that records of distinct evidence types can be associated to different sets of disease names, hence resulting in different cancer specificity classifications for the same variant.
 
-To ease the selection of appropriate terms for classifying the disease specificity of a particular cancer type or subtype of interest, we provide a helper file `civic_available_diseases_<DATE>.txt` in subfolder [data](https://github.com/ETH-NEXUS/civicutils/tree/master/civicutils/data) listing all disease names available in CIViC as of `<DATE>`. To update this file, run standalone script `get_available_diseases_in_civic.py` (which can be found in the `scripts` folder of the [TCGA-BLCA analysis](https://github.com/ETH-NEXUS/civicutils/tree/master/tcga_analysis)) as follows, replacing `<DATE>` with the new date:
+To ease the selection of appropriate terms for classifying the disease specificity of a particular cancer type or subtype of interest, we provide a helper file `civic_available_diseases_<DATE>.txt` in the [data subfolder](https://github.com/ETH-NEXUS/civicutils/tree/master/tcga_analysis/data) of the [TCGA-BLCA analysis](https://github.com/ETH-NEXUS/civicutils/tree/master/tcga_analysis), listing all disease names available in CIViC as of `<DATE>`. To update this file, run standalone script `get_available_diseases_in_civic.py` (which can be found in the [scripts subfolder](https://github.com/ETH-NEXUS/civicutils/tree/master/tcga_analysis/scripts) of the TCGA-BLCA analysis) as follows, replacing `<DATE>` with the new date:
 ```
-> python tcga_analysis/scripts/get_available_diseases_in_civic.py --outfile data/civic_available_diseases_<DATE>.txt
+> python tcga_analysis/scripts/get_available_diseases_in_civic.py --outfile tcga_analysis/data/civic_available_diseases_<DATE>.txt
 ```
 
 #### Filtering based on annotated cancer type specificity
@@ -358,7 +357,7 @@ The consensus annotations resulting from the majority vote have the following fo
 ```
 <DRUG>:<CT>:CIVIC_<CONSENSUS_PREDICTION>:<N_POSITIVE>:<N_NEGATIVE>:<N_UNKNOWN_BLANK>:<N_UNKNOWN_DNS>
 ```
-where `<DRUG>` corresponds to the drug name or drug retrieved from CIViC, `<CT>` to the corresponding cancer type specificity reported by CIViCutils (i.e. either `CT`, `GT` or `NCT`), and `<CONSENSUS_PREDICTION>` to the unanimous drug response assigned by the package based on the counts of evidence items available for each therapeutic prediction, which are also reported (`<N_POSITIVE>`, `<N_NEGATIVE>`, `<N_UNKNOWN_BLANK>` and `<N_UNKNOWN_DNS>`), resulting in the following response categories that can be reported as the final consensus prediction: `SUPPORT` (when most items are `POSITIVE`), `RESISTANCE` (when majority is `NEGATIVE`), `CONFLICT` (unresolved cases of confident and contradicting evidence) and `UNKNOWN` (prevailing category is `UNKNOWN`, i.e. aggregation of `UNKNOWN_BLANK` and `UNKNOWN_DNS` items, meaning that the predictive value is not known).
+where `<DRUG>` corresponds to the drug name or therapy retrieved from CIViC, `<CT>` to the corresponding cancer type specificity reported by CIViCutils (i.e. either `CT`, `GT` or `NCT`), and `<CONSENSUS_PREDICTION>` to the unanimous drug response assigned by the package based on the counts of evidence items available for each therapeutic prediction, which are also reported (`<N_POSITIVE>`, `<N_NEGATIVE>`, `<N_UNKNOWN_BLANK>` and `<N_UNKNOWN_DNS>`), resulting in the following response categories that can be reported as the final consensus prediction: `SUPPORT` (when most items are `POSITIVE`), `RESISTANCE` (when majority is `NEGATIVE`), `CONFLICT` (unresolved cases of confident and contradicting evidence) and `UNKNOWN` (prevailing category is `UNKNOWN`, i.e. aggregation of `UNKNOWN_BLANK` and `UNKNOWN_DNS` items, meaning that the predictive value is not known).
 
 The annotation of consensus drug response predictions can only be performed if the provided `var_map` has been previously annotated with cancer type specificity information. The function returns a similar nested dictionary as `match_in_civic()`, but with a slightly different structure, namely, containing two additional layers per tier category: `matches` (containing the corresponding variant record hits found in CIViC, if any), and `drug_support` (listing one string for each consensus drug response generated for the given tier match) (see below).
 ```
@@ -390,7 +389,7 @@ match_map
 
 The retrieved CIViC annotations can be written into a new output file with tabular format using function `write_match()`. The output table includes a header and uses a standardized structure which is identical regardless of the type of data at hand, including the same columns and contents of the input file originally supplied to the CIViCutils workflow, in addition to new columns which are appended by the package summarizing the data retrieved from the knowledgebase.
 
-Required columns (dependent on the data type) are reported first in the output, while other columns that may have been present in the original input table can also be appended using parameter `header` (list is always retuned upon reading of the input data file). Subsequently, new CIViC-related columns are appended (see below), and in order to enable keeping track of the specific CIViC record from which each clinical statement in the output is derived, the reported entries include a prefix of the form `<GENE>:<CIVIC_VARIANT>` whenever applicable (namely, only not reported for columns `CIViC_Tier` and `CIViC_drug_Support`). While `<GENE>` can take different values depending on the type of identifier selected by the user, the name of the retrieved variant record (i.e. `<CIVIC_VARIANT>`) remains unchanged regardless of the kind of queries performed to the knowledgebase.
+Required columns (dependent on the data type) are reported first in the output, while other columns that may have been present in the original input table can also be appended using parameter `header` (list is always retuned upon reading of the input data file). Subsequently, new CIViC-related columns are appended (see below), and in order to enable keeping track of the specific CIViC record from which each clinical statement in the output is derived, the reported entries include a prefix of the form `<GENE>:<CIVIC_VARIANT>` whenever applicable (namely, only not reported for columns `CIViC_Tier` and `CIViC_Drug_Support`). While `<GENE>` can take different values depending on the type of identifier selected by the user, the name of the retrieved variant record (i.e. `<CIVIC_VARIANT>`) remains unchanged regardless of the kind of queries performed to the knowledgebase.
 ```
 from read_and_write import write_match
 
@@ -477,14 +476,14 @@ annot_map = annotate_ct(var_map, disease_name_not_in, disease_name_in, alt_disea
 annot_map = filter_ct(annot_map, select_ct="highest")
 
 # Get custom dictionary of support from data.yml (provided within the package)
-# This defines how each combination of evidence direction + clinical significance in CIViC is classified in terms of drug support (e.g. sensitivity, resistance, unknown, etc.)
+# This defines how each combination of evidence direction + clinical significance in CIViC is classified in terms of drug response (e.g. sensitivity, resistance, unknown, etc.)
 support_dict = get_dict_support()
 
-# Process drug support of the matched variants using the annotated CIViC evidences
+# Process consensus drug support for the matched variants using the underlying CIViC evidences annotated 
 annot_match = process_drug_support(match_map, annot_map, support_dict)
 
 # Write to output
-# Do not report the CT classification of each disease, and write column with the overall drug support of the match for each available CT class
+# Do not report the CT classification of each disease, and write column with the drug responses predicted for each available CT class of every variant match
 write_match(annot_match, annot_map, raw_data, extra_header, data_type="SNV", outfile, has_support=True, has_ct=True, write_ct=False, write_support=True, write_complete=False)
 ```
 
