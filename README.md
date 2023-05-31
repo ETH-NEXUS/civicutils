@@ -2,29 +2,33 @@
 
 ## General overview
 
-[CIViCutils](https://github.com/ETH-NEXUS/civicutils) is a Python package for rapid retrieval, annotation, prioritization and downstream processing of information from the expert-curated [CIViC knowledgebase](https://civicdb.org/welcome) (Clinical Interpretations of Variants in Cancer). CIViCutils can be integrated into novel and existing clinical workflows to provide variant-level disease-specific information about treatment response, pathogenesis, diagnosis, and prognosis of genomic aberrations (SNVs, InDels and CNVs), as well as differentially expressed genes. It streamlines interpreting large numbers of input alterations with querying and analyzing CIViC information, and enables the harmonization of input across different nomenclatures. Key features of CIViCutils include an automated matching framework for linking clinical evidence to input variants, as well as evaluating the accuracy of the resulting hits, and in-silico prediction of drug-target interactions tailored to individual patients and cancer subtypes of interest. For more details, see the CIViCutils publication.
+[CIViCutils](https://pypi.org/project/civicutils) is a Python package for rapid retrieval, annotation, prioritization and downstream processing of information from the expert-curated [CIViC knowledgebase](https://civicdb.org/welcome) (Clinical Interpretations of Variants in Cancer). CIViCutils can be integrated into novel and existing clinical workflows to provide variant-level disease-specific information about treatment response, pathogenesis, diagnosis, and prognosis of genomic aberrations (SNVs, InDels and CNVs), as well as differentially expressed genes. It streamlines interpreting large numbers of input alterations with querying and analyzing CIViC information, and enables the harmonization of input across different nomenclatures. Key features of CIViCutils include an automated matching framework for linking clinical evidence to input variants, as well as evaluating the accuracy of the resulting hits, and in-silico prediction of drug-target interactions tailored to individual patients and cancer subtypes of interest. For more details, see the CIViCutils publication.
 
-![README_diagram](images/civicutils-workflow.png)
+![README_diagram](https://github.com/ETH-NEXUS/civicutils/blob/master/images/civicutils-workflow.png)
 
 
 ## Installation instructions
 
-TODO
-
-
 ### Dependencies
-- [CIViCpy](https://github.com/griffithlab/civicpy):
-To install, first activate the relevant Python environment and then use pip install:
+- [civicpy](https://github.com/griffithlab/civicpy):
+To install, first activate the relevant Python (>=3.7) environment and then use pip install:
 
 ```
 >> pip install civicpy
 ```
 
-The CIViC query implemented in CIViCutils makes use of an offline cache file of the CIViC database. The cache is provided by CIViCpy and retrieved with the initial installation of the CIViCutils package. Afterwards, users have to manually update the cache file if they want to leverage a new release version. To update the cache file, open a Python session and load package `civicpy`. Then type:
+Then, to install CIViCutils, first activate the relevant Python (>=3.7) environment (i.e. already containing `civicpy`) and then use pip install:
+
 ```
+>> pip install civicutils
+```
+
+The CIViC query implemented in CIViCutils makes use of an offline cache file of the CIViC database. The cache is provided by `civicpy` and retrieved with the initial installation of the CIViCutils package. Afterwards, users have to manually update the cache file if they want to leverage a new release version. To update the cache file, first activate the relevant Python environment, open a Python session, and then type:
+```
+from civicpy import civic
 >> civic.update_cache()
 ```
-More information can be found on the [CIViCpy documentation](https://docs.civicpy.org/en/latest/).
+More information can be found on the [civicpy documentation](https://docs.civicpy.org/en/latest/).
 
 
 ## Documentation
@@ -117,7 +121,7 @@ expr_data
 
 ### Querying CIViC
 
-CIViCutils leverages the offline cache file of the CIViC database provided by [CIViCpy](https://docs.civicpy.org/en/latest/), which allows performing high-throughput queries to the database. Information on how to install CIViCpy, as well as how to download and update the CIViC offline cache file, can be found above.
+CIViCutils leverages the offline cache file of the CIViC database provided by Python package [civicpy](https://docs.civicpy.org/en/latest/), which allows performing high-throughput queries to the database. Information on how to install `civicpy`, as well as how to download and update the CIViC offline cache file, can be found above.
 
 CIViCutils handles queries to CIViC through function `query_civic()`. Queries can only be gene-based and return all variants and associated clinical data which are annotated in the knowledgebase for each queried gene (only if any exist). Three types of identifiers are supported: `entrez_symbol`, `entrez_id` and `civic_id`. Note that the type of gene identifier initially chosen to perform the CIViC query must be selected throughout all the CIViCutils functions applied downstream. 
 ```
