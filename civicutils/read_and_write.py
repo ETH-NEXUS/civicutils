@@ -484,7 +484,7 @@ def write_match(match_map, var_map, raw_map, header, data_type, outfile, has_sup
     sorted_cts = ["ct", "gt", "nct"]
     varmap_entries_variant = ["name", "hgvs", "types"]
     
-    from utils import check_match_before_writing, check_keys, check_keys_not, check_data_type, check_dict_entry
+    from civicutils.utils import check_match_before_writing, check_keys, check_keys_not, check_data_type, check_dict_entry
     check_match_before_writing(match_map, var_map, raw_map, has_support, has_ct, write_ct, write_support, write_complete)
     check_data_type(data_type)
     outfile = open(outfile, "w")

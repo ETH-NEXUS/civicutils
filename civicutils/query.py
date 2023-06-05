@@ -2,7 +2,7 @@ import sys
 import os
 import re
 
-from utils import check_identifier_type, check_empty_field, check_argument, check_is_list
+from civicutils.utils import check_identifier_type, check_empty_field, check_argument, check_is_list
 
 
 def query_civic(genes, identifier_type="entrez_symbol"):
@@ -235,7 +235,7 @@ def reformat_civic(results, identifier_type="entrez_symbol"):
                         # Sanity checks that only "PREDICTIVE" evidences have drugs associated
                         # Submitted evidence items can fulfill having "PREDICTIVE" evidence type and no drugs ("NULL")
                         if (evidence_type != "PREDICTIVE") and (drugs != ["NULL"]):
-                            raise ValueError("Only evidences of type "PREDICTIVE" can have drugs associated!")
+                            raise ValueError("Only evidences of type 'PREDICTIVE' can have drugs associated!")
                             
                 # Iterate through drugs to add evidences associated to them
                 #   For non-Predictive evidences or Predictive with empty drugs, drugs=["NULL"]

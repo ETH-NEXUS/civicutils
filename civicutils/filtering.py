@@ -2,7 +2,7 @@ import sys
 import os
 import re
 
-from utils import check_string_filter_arguments, check_cutoff_filter_arguments, check_is_bool, check_keys, check_keys_not, check_is_none
+from civicutils.utils import check_string_filter_arguments, check_cutoff_filter_arguments, check_is_bool, check_keys, check_keys_not, check_is_none
 
 
 def filter_in(field, field_name, in_list, list_name, match_type="exact"):

@@ -2,7 +2,7 @@ import sys
 import os
 import re
 
-from utils import check_arguments, check_argument, translate_aa, check_is_dict, check_is_list, check_is_str, check_keys, check_keys_not, check_tier_selection, parse_input, check_empty_input, check_dict_entry, check_is_chgvs, check_is_phgvs, check_identifier_type, check_data_type, check_is_bool, uppercase_list, check_is_none, check_logfc
+from civicutils.utils import check_arguments, check_argument, translate_aa, check_is_dict, check_is_list, check_is_str, check_keys, check_keys_not, check_tier_selection, parse_input, check_empty_input, check_dict_entry, check_is_chgvs, check_is_phgvs, check_identifier_type, check_data_type, check_is_bool, uppercase_list, check_is_none, check_logfc
 
 
 def civic_name_to_hgvs(var_name):
