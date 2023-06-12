@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "civicutils"
-version = "1.0.1"
+version = "1.0.2"
 description = "Python package for querying, matching and downstream processing of CIViC information."
 requires-python = ">=3.7"
 dependencies = ["civicpy>=3.0.0"]
