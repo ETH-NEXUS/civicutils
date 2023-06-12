@@ -4,8 +4,7 @@
 
 [CIViCutils](https://pypi.org/project/civicutils) is a Python package for rapid retrieval, annotation, prioritization and downstream processing of information from the expert-curated [CIViC knowledgebase](https://civicdb.org/welcome) (Clinical Interpretations of Variants in Cancer). CIViCutils can be integrated into novel and existing clinical workflows to provide variant-level disease-specific information about treatment response, pathogenesis, diagnosis, and prognosis of genomic aberrations (SNVs, InDels and CNVs), as well as differentially expressed genes. It streamlines interpreting large numbers of input alterations with querying and analyzing CIViC information, and enables the harmonization of input across different nomenclatures. Key features of CIViCutils include an automated matching framework for linking clinical evidence to input variants, as well as evaluating the accuracy of the resulting hits, and in-silico prediction of drug-target interactions tailored to individual patients and cancer subtypes of interest. For more details, see the CIViCutils publication.
 
-![README_diagram](https://github.com/ETH-NEXUS/civicutils/blob/master/images/civicutils-workflow.png)
-
+![README_diagram](https://github.com/ETH-NEXUS/civicutils/blob/master/images/civicutils-workflow.png?raw=true)
 
 ## Installation instructions
 
