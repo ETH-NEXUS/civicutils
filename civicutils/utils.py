@@ -404,7 +404,7 @@ def translate_aa(aminoacid):
     :param aminoacid:     Aminoacid code in 1-letter format.
     :return:              Translated 3-letter aminoacid code.
     """
-    from read_and_write import get_dict_aminoacids
+    from civicutils.read_and_write import get_dict_aminoacids
     # Import the dictionary of aminoacid codes provided in the config "data.yml" file
     dict_codes = get_dict_aminoacids()
     aa_new = None

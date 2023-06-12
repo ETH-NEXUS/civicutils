@@ -833,7 +833,7 @@ def match_in_civic(var_data, data_type, identifier_type, select_tier="all", var_
 
     # Check if an existing var_map was provided or if CIViC needs to be queried
     if (var_map is None) or (not var_map):
-        from query import query_civic
+        from civicutils.query import query_civic
         # gene -> variant -> null
         all_genes = list(var_data.keys())
         var_map = query_civic(all_genes, identifier_type)
@@ -935,7 +935,7 @@ def match_in_civic(var_data, data_type, identifier_type, select_tier="all", var_
 
     # At this point, all input gene + variants in var_data have been matched to CIViC
     # Filter var_map used to match CIViC info based on the matched variant ids (to avoid returning unnecessary records)
-    from filtering import filter_civic
+    from civicutils.filtering import filter_civic
     var_map = filter_civic(var_map, var_id_in=matched_ids, output_empty=False)
 
     # Return match_map, list of all matched variant ids, and associated variant records retrieved from CIViC (or provided by user), already filtered for the matched variants
