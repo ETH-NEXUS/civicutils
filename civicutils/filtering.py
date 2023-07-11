@@ -2,7 +2,7 @@ import sys
 import os
 import re
 
-from civicutils.utils import check_string_filter_arguments, check_cutoff_filter_arguments, check_is_bool, check_keys, check_keys_not, check_is_none
+from civicutils.utils import check_string_filter_arguments, check_cutoff_filter_arguments, check_is_bool, check_keys, check_keys_not, check_is_none, check_molecular_profile
 
 
 def filter_in(field, field_name, in_list, list_name, match_type="exact"):
@@ -221,6 +221,12 @@ def filter_civic(var_map, gene_id_in=[], gene_id_not_in=[], min_variants=0, var_
             for molecular_profil_id in molecular_profile_ids:
                 # Check that the expected entries are found in the dictionary
                 check_keys(list(var_map[gene_id][var_id][molecular_profil_id].keys()), "var_map", var_map_entries_molecular_profile, matches_all=False)
+               
+                # Check that all the genes involved in the molecular profile are in the input
+                if hasattr(var_map[gene_id][var_id][molecular_profil_id], "Name"):
+                    keep_mp = check_molecular_profile(var_map[gene_id][var_id][molecular_profil_id]["name"], list(var_map.keys()))
+                    if not keep_mp:
+                        continue  
                 
                 # Allow number of evidence items to be 0
                 n_evidence_items = var_map[gene_id][var_id][molecular_profil_id]["n_evidence_items"]
