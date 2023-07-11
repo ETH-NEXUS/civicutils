@@ -66,22 +66,22 @@ def check_header_field(name, header_split, is_required=True):
     return pos
 
 
-def process_snv_header(header_split):
+def process_snv_header(header_split, gene_name, variant_dna_name, variant_prot_name, variant_impact_name, variant_exon_name):
     """
     Retrieve the required column names expected for the header of an input SNV file. Assume column names are: Gene, Variant_dna, Variant_prot, Variant_impact and Variant_impact. Only the last two are not required.
     :param header_split:	List of columns from splitting a tab-separated header.
     :return:			Tuple of column positions for the gene, cHGVS, pHGVS, impact and exon, in that order. Only the last two can be None.
     """
-    gene_pos = check_header_field("Gene", header_split, is_required=True)
-    c_pos = check_header_field("Variant_dna", header_split, is_required=True)
-    p_pos = check_header_field("Variant_prot", header_split, is_required=True)
-    impact_pos = check_header_field("Variant_impact", header_split, is_required=False)
-    exon_pos = check_header_field("Variant_exon", header_split, is_required=False)
+    gene_pos = check_header_field(gene_name, header_split, is_required=True)
+    c_pos = check_header_field(variant_dna_name, header_split, is_required=True)
+    p_pos = check_header_field(variant_prot_name, header_split, is_required=True)
+    impact_pos = check_header_field(variant_impact_name, header_split, is_required=False)
+    exon_pos = check_header_field(variant_exon_name, header_split, is_required=False)
 
     return (gene_pos, c_pos, p_pos, impact_pos, exon_pos)
 
 
-def read_in_snvs(infile):
+def read_in_snvs(infile, Gene_name="Gene", Variant_dna_name="Variant_dna", Variant_prot_name="Variant_prot", Variant_impact_name="Variant_impact", Variant_exon_name="Variant_exon"):
     """
     Read-in input file of SNV data and process it into structured dictionaries. Assumes header and that relevant info is contained in the following columns: Gene, Variant_dna, Variant_prot. Optional columns:  Variant_impact, Variant_exon.
     :param infile:    Path to the input SNV file to read in.
@@ -96,7 +96,7 @@ def read_in_snvs(infile):
     in_file = open(infile, "r")
     header = in_file.readline().strip()
     header_split = header.strip().split("\t")
-    (gene_pos, c_pos, p_pos, impact_pos, exon_pos) = process_snv_header(header_split)
+    (gene_pos, c_pos, p_pos, impact_pos, exon_pos) = process_snv_header(header_split, gene_name=Gene_name, variant_dna_name=Variant_dna_name, variant_prot_name=Variant_prot_name, variant_impact_name=Variant_impact_name, variant_exon_name=Variant_exon_name)
 
     extra_header = []
     if impact_pos:
@@ -150,19 +150,19 @@ def read_in_snvs(infile):
     return (raw_data, snv_data, extra_header)
 
 
-def process_cnv_header(header_split):
+def process_cnv_header(header_split, gene_name, variant_cnv_name):
     """
     Retrieve the required column names expected for the header of an input CNV file. Assume column names are: Gene, Variant_cnv (both are required). The type of CNV variant should be one of the following terms: 'GAIN', 'DUPLICATION', 'DUP', 'AMPLIFICATION' or 'AMP' (synonyms for AMPLIFICATION), and 'DELETION', 'DEL' or 'LOSS' (synonyms for DELETION).
     :param header_split:	List of columns from splitting a tab-separated header.
     :return:			Tuple of column positions for the gene and CNV type.
     """
-    gene_pos = check_header_field("Gene", header_split, is_required=True)
-    cnv_pos = check_header_field("Variant_cnv", header_split, is_required=True)
+    gene_pos = check_header_field(gene_name, header_split, is_required=True)
+    cnv_pos = check_header_field(variant_cnv_name, header_split, is_required=True)
 
     return (gene_pos, cnv_pos)
 
 
-def read_in_cnvs(infile):
+def read_in_cnvs(infile, Gene_name="Gene", Variant_cnv_name="Variant_cnv"):
     """
     Read-in input file of CNV data and process it into structured dictionaries. Assumes header and that relevant info is contained in the following columns: Gene, Variant_cnv.
     :param infile:    Path to the input CNV file to read in.
@@ -176,7 +176,7 @@ def read_in_cnvs(infile):
     in_file = open(infile, "r")
     header = in_file.readline().strip()
     header_split = header.strip().split("\t")
-    (gene_pos, cnv_pos) = process_cnv_header(header_split)
+    (gene_pos, cnv_pos) = process_cnv_header(header_split, gene_name=Gene_name, variant_cnv_name=Variant_cnv_name)
 
     extra_header = []
     extra_pos = []
@@ -211,19 +211,19 @@ def read_in_cnvs(infile):
     return (raw_data, cnv_data, extra_header)
 
 
-def process_expr_header(header_split):
+def process_expr_header(header_split, gene_name, logfc_name):
     """
     Retrieve the required column names expected for the header of an input Expression file. Assume column names are: Gene, logFC (both are required). The log fold-change value of a differentially expressed gene should be numeric and different from zero (to query CIViC, it will be translated into 'OVEREXPRESSION', if positive, and 'UNDEREXPRESSION', if negative).
     :param header_split:	List of columns from splitting a tab-separated header.
     :return:			Tuple of column positions for the gene and log fold-change.
     """
-    gene_pos = check_header_field("Gene", header_split, is_required=True)
-    logfc_pos = check_header_field("logFC", header_split, is_required=True)
+    gene_pos = check_header_field(gene_name, header_split, is_required=True)
+    logfc_pos = check_header_field(logfc_name, header_split, is_required=True)
 
     return (gene_pos, logfc_pos)
 
 
-def read_in_expr(infile):
+def read_in_expr(infile, Gene_name="Gene", Logfc_name="logFC"):
     """
     Read-in input file of differentially expressed data and process it into structured dictionaries. Assumes header and that relevant info is contained in the following columns: Gene, logFC.
     :param infile:    Path to the input expression file to read in.
@@ -237,7 +237,7 @@ def read_in_expr(infile):
     in_file = open(infile, "r")
     header = in_file.readline().strip()
     header_split = header.strip().split("\t")
-    (gene_pos, logfc_pos) = process_expr_header(header_split)
+    (gene_pos, logfc_pos) = process_expr_header(header_split, gene_name=Gene_name, logfc_name=Logfc_name)
 
     extra_header = []
     extra_pos = []
