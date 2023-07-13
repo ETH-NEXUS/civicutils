@@ -1373,6 +1373,9 @@ def process_drug_support(match_map, var_map, support_dict):
     # Format: drug -> ct -> [support1,support2,..,support1] (keep track of all occurrences)
     new_map = {}
     
+    # creating a dictionnary for retrieving drug whose target several genes/variants submitted
+    drug_target = {}
+    
     # gene -> variant -> {tier1,tier1b..} -> [matched_vars]
     # where variant -> var="dna|prot|impact|exon|n_line"
     for gene in match_map.keys():
@@ -1421,6 +1424,12 @@ def process_drug_support(match_map, var_map, support_dict):
                                         for drug in var_map[gene][var_id][molecular_profile_id]["evidence_items"][evidence_type][ct][disease].keys():
                                             if drug not in drug_map.keys():
                                                 drug_map[drug] = {}
+                                            if drug in drug_target.keys():
+                                                if gene not in drug_target[drug]:
+                                                    drug_target[drug].append(gene)
+                                            if drug not in drug_target.keys():
+                                                drug_target[drug] = []
+                                                drug_target[drug].append(gene)
                                             if ct not in drug_map[drug].keys():
                                                 drug_map[drug][ct] = []
                                             for evidence in var_map[gene][var_id][molecular_profile_id]["evidence_items"][evidence_type][ct][disease][drug].keys():
@@ -1486,7 +1495,7 @@ def process_drug_support(match_map, var_map, support_dict):
             # Always check if current match corresponds to a tier_4 situation (all other tiers will be empty)
             if not (new_map[gene][variant]["tier_1"]["matched"] or new_map[gene][variant]["tier_1b"]["matched"] or new_map[gene][variant]["tier_2"]["matched"] or new_map[gene][variant]["tier_3"]["matched"]):
                 new_map[gene][variant]["tier_4"]["matched"] = True
-    return new_map
+    return (new_map, drug_target)
 
 
 def reprocess_drug_support_across_selected_variants(input_data, match_map, var_map, support_dict, has_support=True):
