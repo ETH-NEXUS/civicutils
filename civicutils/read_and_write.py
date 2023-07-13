@@ -632,3 +632,17 @@ def write_match(match_map, var_map, raw_map, header, data_type, outfile, has_sup
     outfile.close()
 
     return None
+
+def write_drug_targets(drug_targets, outfile):
+    """
+    Process drug targets data to write into a tab-separated table.
+    :param drug_targets:		Dictionary containing data matched in CIViC (there must be a correspondance of 'match_map' and the variant data in 'var_map'). See README for more details about the specific structure of dictionary 'match_map'.
+    :param outfile:          	Path to the output file to write the drug targets into (tab-separated table).
+    :return:                 	None
+    """
+    with open(outfile, "w") as file:
+        file.write("Drug\tTargets\n")
+        for drug, targets in drug_targets.items():
+            line = f"{drug}\t{'; '.join(targets)}\n"
+            file.write(line)
+    return None 
