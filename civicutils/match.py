@@ -1350,7 +1350,7 @@ def filter_ct(var_map, select_ct):
     return new_map
 
 
-def process_drug_support(match_map, var_map, support_dict):
+def process_drug_support(match_map, var_map, support_dict, report_drug_targets=False):
     """
     Given a dictionary of CIViC variant-level records matched to a set of input molecular alterations ('match_map'), and the corresponding set of associated clinical information retrieved from CIViC ('var_map'), compute consensus drug response predictions based on the available 'predictive' CIViC information and a helper dictionary of evidence-to-drug response provided by the user ('support_dict').
     :param match_map:		Nested dictionary with fixed structure containing all tier categories and corresponding list of CIViC variant matches found in each case (if any) for the input gene and molecular alteration at hand. This dictionary will be annotated by the function with consensus drug response information computed based on the provided 'predictive' CIViC evidence. See README for more details about the specific structure expected for this dictionary, before and after the annotation of consensus drug information.
@@ -1495,7 +1495,10 @@ def process_drug_support(match_map, var_map, support_dict):
             # Always check if current match corresponds to a tier_4 situation (all other tiers will be empty)
             if not (new_map[gene][variant]["tier_1"]["matched"] or new_map[gene][variant]["tier_1b"]["matched"] or new_map[gene][variant]["tier_2"]["matched"] or new_map[gene][variant]["tier_3"]["matched"]):
                 new_map[gene][variant]["tier_4"]["matched"] = True
-    return (new_map, drug_target)
+    if(report_drug_targets):
+        return (new_map, drug_target)
+    else:
+        return new_map
 
 
 def reprocess_drug_support_across_selected_variants(input_data, match_map, var_map, support_dict, has_support=True):
