@@ -1496,6 +1496,7 @@ def process_drug_support(match_map, var_map, support_dict, report_drug_targets=F
             if not (new_map[gene][variant]["tier_1"]["matched"] or new_map[gene][variant]["tier_1b"]["matched"] or new_map[gene][variant]["tier_2"]["matched"] or new_map[gene][variant]["tier_3"]["matched"]):
                 new_map[gene][variant]["tier_4"]["matched"] = True
     if(report_drug_targets):
+        drug_target = {key: values for key, values in drug_target.items() if len(values) >= 2}
         return (new_map, drug_target)
     else:
         return new_map
