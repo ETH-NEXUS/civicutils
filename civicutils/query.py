@@ -68,7 +68,7 @@ def query_civic(genes, identifier_type="entrez_symbol"):
             results.append(gene_record)
 
     if len(results) == 0:
-        raise ValueError("Any of the input genes '%s' were found in civic database" %(genes))
+        raise ValueError("None of the input genes '%s' were found in civic database" %(genes))
     # At this point, all CIViC results for queried genes have been retrieved in a list
     # Process gene records into a dictionary with structured format
     # gene -> variants -> evidence_items
