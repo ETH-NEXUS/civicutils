@@ -81,7 +81,7 @@ def process_snv_header(header_split, gene_name, variant_dna_name, variant_prot_n
     return (gene_pos, c_pos, p_pos, impact_pos, exon_pos)
 
 
-def read_in_snvs(infile, Gene_name="Gene", Variant_dna_name="Variant_dna", Variant_prot_name="Variant_prot", Variant_impact_name="Variant_impact", Variant_exon_name="Variant_exon"):
+def read_in_snvs(infile, expected_gene_name="Gene", expected_variant_dna_name="Variant_dna", expected_variant_prot_name="Variant_prot", expected_variant_impact_name="Variant_impact", expected_variant_exon_name="Variant_exon"):
     """
     Read-in input file of SNV data and process it into structured dictionaries. Assumes header and that relevant info is contained in the following columns: Gene, Variant_dna, Variant_prot. Optional columns:  Variant_impact, Variant_exon.
     :param infile:    Path to the input SNV file to read in.
@@ -96,7 +96,7 @@ def read_in_snvs(infile, Gene_name="Gene", Variant_dna_name="Variant_dna", Varia
     in_file = open(infile, "r")
     header = in_file.readline().strip()
     header_split = header.strip().split("\t")
-    (gene_pos, c_pos, p_pos, impact_pos, exon_pos) = process_snv_header(header_split, gene_name=Gene_name, variant_dna_name=Variant_dna_name, variant_prot_name=Variant_prot_name, variant_impact_name=Variant_impact_name, variant_exon_name=Variant_exon_name)
+    (gene_pos, c_pos, p_pos, impact_pos, exon_pos) = process_snv_header(header_split, gene_name=expected_gene_name, variant_dna_name=expected_variant_dna_name, variant_prot_name=expected_variant_prot_name, variant_impact_name=expected_variant_impact_name, variant_exon_name=expected_variant_exon_name)
 
     extra_header = []
     if impact_pos:
@@ -162,7 +162,7 @@ def process_cnv_header(header_split, gene_name, variant_cnv_name):
     return (gene_pos, cnv_pos)
 
 
-def read_in_cnvs(infile, Gene_name="Gene", Variant_cnv_name="Variant_cnv"):
+def read_in_cnvs(infile, expected_gene_name="Gene", expected_variant_cnv_name="Variant_cnv"):
     """
     Read-in input file of CNV data and process it into structured dictionaries. Assumes header and that relevant info is contained in the following columns: Gene, Variant_cnv.
     :param infile:    Path to the input CNV file to read in.
@@ -176,7 +176,7 @@ def read_in_cnvs(infile, Gene_name="Gene", Variant_cnv_name="Variant_cnv"):
     in_file = open(infile, "r")
     header = in_file.readline().strip()
     header_split = header.strip().split("\t")
-    (gene_pos, cnv_pos) = process_cnv_header(header_split, gene_name=Gene_name, variant_cnv_name=Variant_cnv_name)
+    (gene_pos, cnv_pos) = process_cnv_header(header_split, gene_name=expected_gene_name, variant_cnv_name=expected_variant_cnv_name)
 
     extra_header = []
     extra_pos = []
@@ -223,7 +223,7 @@ def process_expr_header(header_split, gene_name, logfc_name):
     return (gene_pos, logfc_pos)
 
 
-def read_in_expr(infile, Gene_name="Gene", Logfc_name="logFC"):
+def read_in_expr(infile, expected_gene_name="Gene", expected_logFC_name="logFC"):
     """
     Read-in input file of differentially expressed data and process it into structured dictionaries. Assumes header and that relevant info is contained in the following columns: Gene, logFC.
     :param infile:    Path to the input expression file to read in.
@@ -237,7 +237,7 @@ def read_in_expr(infile, Gene_name="Gene", Logfc_name="logFC"):
     in_file = open(infile, "r")
     header = in_file.readline().strip()
     header_split = header.strip().split("\t")
-    (gene_pos, logfc_pos) = process_expr_header(header_split, gene_name=Gene_name, logfc_name=Logfc_name)
+    (gene_pos, logfc_pos) = process_expr_header(header_split, gene_name=expected_gene_name, logfc_name=expected_logFC_name)
 
     extra_header = []
     extra_pos = []
