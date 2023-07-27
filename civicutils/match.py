@@ -1424,11 +1424,9 @@ def process_drug_support(match_map, var_map, support_dict, report_drug_targets=F
                                         for drug in var_map[gene][var_id][molecular_profile_id]["evidence_items"][evidence_type][ct][disease].keys():
                                             if drug not in drug_map.keys():
                                                 drug_map[drug] = {}
-                                            if drug in drug_target.keys():
-                                                if gene not in drug_target[drug]:
-                                                    drug_target[drug].append(gene)
                                             if drug not in drug_target.keys():
                                                 drug_target[drug] = []
+                                            if gene not in drug_target[drug]:
                                                 drug_target[drug].append(gene)
                                             if ct not in drug_map[drug].keys():
                                                 drug_map[drug][ct] = []

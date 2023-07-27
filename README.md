@@ -484,10 +484,11 @@ annot_map = filter_ct(annot_map, select_ct="highest")
 support_dict = get_dict_support()
 
 # Process consensus drug support for the matched variants using the underlying CIViC evidences annotated 
-(annot_match, drug_targets)  = process_drug_support(match_map, annot_map, support_dict)
+(annot_match, drug_targets)  = process_drug_support(match_map, annot_map, support_dict, report_drug_targets=True)
 
 # Write to output
 # Do not report the CT classification of each disease, and write column with the drug responses predicted for each available CT class of every variant match
 write_match(annot_match, annot_map, raw_data, extra_header, data_type="SNV", outfile, has_support=True, has_ct=True, write_ct=False, write_support=True, write_complete=False)
+# Write second output file listing drugs and their associated genes
+write_drug_targets(drug_targets, outfile_drug_targets)
 ```
-write_drug_targets(drug_targets, outfile)
