@@ -237,22 +237,22 @@ def reformat_civic(results, identifier_type="entrez_symbol"):
                         if (evidence_type != "PREDICTIVE") and (drugs != ["NULL"]):
                             raise ValueError("Only evidences of type 'PREDICTIVE' can have drugs associated!")
                             
-                # Iterate through drugs to add evidences associated to them
-                #   For non-Predictive evidences or Predictive with empty drugs, drugs=["NULL"]
-                #   For Predictive and interaction=None, len(drugs) = 1
-                #   For Predictive and interaction="Substitutes", len(drugs)>1
-                #   For Predictive and interaction!="Substitutes", len(drugs)=1 (combiantion of several using "+")
-                for drug in drugs:
-                    if drug not in var_map[gene_key][variant_id][molecular_profile_id]["evidence_items"][evidence_type][disease].keys():
-                        var_map[gene_key][variant_id][molecular_profile_id]["evidence_items"][evidence_type][disease][drug] = {}
-                    if evidence not in var_map[gene_key][variant_id][molecular_profile_id]["evidence_items"][evidence_type][disease][drug].keys():
-                        var_map[gene_key][variant_id][molecular_profile_id]["evidence_items"][evidence_type][disease][drug][evidence] = {}
-                    if evidence_level not in var_map[gene_key][variant_id][molecular_profile_id]["evidence_items"][evidence_type][disease][drug][evidence].keys():
-                        var_map[gene_key][variant_id][molecular_profile_id]["evidence_items"][evidence_type][disease][drug][evidence][evidence_level] = []
+                        # Iterate through drugs to add evidences associated to them
+                        #   For non-Predictive evidences or Predictive with empty drugs, drugs=["NULL"]
+                        #   For Predictive and interaction=None, len(drugs) = 1
+                        #   For Predictive and interaction="Substitutes", len(drugs)>1
+                        #   For Predictive and interaction!="Substitutes", len(drugs)=1 (combiantion of several using "+")
+                        for drug in drugs:
+                            if drug not in var_map[gene_key][variant_id][molecular_profile_id]["evidence_items"][evidence_type][disease].keys():
+                                var_map[gene_key][variant_id][molecular_profile_id]["evidence_items"][evidence_type][disease][drug] = {}
+                            if evidence not in var_map[gene_key][variant_id][molecular_profile_id]["evidence_items"][evidence_type][disease][drug].keys():
+                                var_map[gene_key][variant_id][molecular_profile_id]["evidence_items"][evidence_type][disease][drug][evidence] = {}
+                            if evidence_level not in var_map[gene_key][variant_id][molecular_profile_id]["evidence_items"][evidence_type][disease][drug][evidence].keys():
+                                var_map[gene_key][variant_id][molecular_profile_id]["evidence_items"][evidence_type][disease][drug][evidence][evidence_level] = []
 
-                    # Group all publications associated to the same level
-                    # Keep track of associated info: source type, source id, evidence status, publication status, variant origin, evidence rating
-                    # Format: "TYPE_ID:EVIDENCESTATUS:SOURCESTATUS:VARORIGIN:RATING"
-                    var_map[gene_key][variant_id][molecular_profile_id]["evidence_items"][evidence_type][disease][drug][evidence][evidence_level].append(source_type + "_" + str(evidence_id) + ":" + evidence_status + ":" + source_status + ":" + variant_origin + ":" + str(evidence_rating))
+                            # Group all publications associated to the same level
+                            # Keep track of associated info: source type, source id, evidence status, publication status, variant origin, evidence rating
+                            # Format: "TYPE_ID:EVIDENCESTATUS:SOURCESTATUS:VARORIGIN:RATING"
+                            var_map[gene_key][variant_id][molecular_profile_id]["evidence_items"][evidence_type][disease][drug][evidence][evidence_level].append(source_type + "_" + str(evidence_id) + ":" + evidence_status + ":" + source_status + ":" + variant_origin + ":" + str(evidence_rating))
 
     return var_map
