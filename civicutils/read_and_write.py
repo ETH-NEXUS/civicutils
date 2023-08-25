@@ -66,22 +66,22 @@ def check_header_field(name, header_split, is_required=True):
     return pos
 
 
-def process_snv_header(header_split):
+def process_snv_header(header_split, gene_name, variant_dna_name, variant_prot_name, variant_impact_name, variant_exon_name):
     """
     Retrieve the required column names expected for the header of an input SNV file. Assume column names are: Gene, Variant_dna, Variant_prot, Variant_impact and Variant_impact. Only the last two are not required.
     :param header_split:	List of columns from splitting a tab-separated header.
     :return:			Tuple of column positions for the gene, cHGVS, pHGVS, impact and exon, in that order. Only the last two can be None.
     """
-    gene_pos = check_header_field("Gene", header_split, is_required=True)
-    c_pos = check_header_field("Variant_dna", header_split, is_required=True)
-    p_pos = check_header_field("Variant_prot", header_split, is_required=True)
-    impact_pos = check_header_field("Variant_impact", header_split, is_required=False)
-    exon_pos = check_header_field("Variant_exon", header_split, is_required=False)
+    gene_pos = check_header_field(gene_name, header_split, is_required=True)
+    c_pos = check_header_field(variant_dna_name, header_split, is_required=True)
+    p_pos = check_header_field(variant_prot_name, header_split, is_required=True)
+    impact_pos = check_header_field(variant_impact_name, header_split, is_required=False)
+    exon_pos = check_header_field(variant_exon_name, header_split, is_required=False)
 
     return (gene_pos, c_pos, p_pos, impact_pos, exon_pos)
 
 
-def read_in_snvs(infile):
+def read_in_snvs(infile, expected_gene_name="Gene", expected_variant_dna_name="Variant_dna", expected_variant_prot_name="Variant_prot", expected_variant_impact_name="Variant_impact", expected_variant_exon_name="Variant_exon"):
     """
     Read-in input file of SNV data and process it into structured dictionaries. Assumes header and that relevant info is contained in the following columns: Gene, Variant_dna, Variant_prot. Optional columns:  Variant_impact, Variant_exon.
     :param infile:    Path to the input SNV file to read in.
@@ -96,13 +96,13 @@ def read_in_snvs(infile):
     in_file = open(infile, "r")
     header = in_file.readline().strip()
     header_split = header.strip().split("\t")
-    (gene_pos, c_pos, p_pos, impact_pos, exon_pos) = process_snv_header(header_split)
+    (gene_pos, c_pos, p_pos, impact_pos, exon_pos) = process_snv_header(header_split, gene_name=expected_gene_name, variant_dna_name=expected_variant_dna_name, variant_prot_name=expected_variant_prot_name, variant_impact_name=expected_variant_impact_name, variant_exon_name=expected_variant_exon_name)
 
     extra_header = []
     if impact_pos:
-        extra_header.append("Variant_impact")
+        extra_header.append(expected_variant_impact_name)
     if exon_pos:
-        extra_header.append("Variant_exon")
+        extra_header.append(expected_variant_exon_name)
 
     extra_pos = []
     for pos,x in enumerate(header_split):
@@ -150,19 +150,19 @@ def read_in_snvs(infile):
     return (raw_data, snv_data, extra_header)
 
 
-def process_cnv_header(header_split):
+def process_cnv_header(header_split, gene_name, variant_cnv_name):
     """
     Retrieve the required column names expected for the header of an input CNV file. Assume column names are: Gene, Variant_cnv (both are required). The type of CNV variant should be one of the following terms: 'GAIN', 'DUPLICATION', 'DUP', 'AMPLIFICATION' or 'AMP' (synonyms for AMPLIFICATION), and 'DELETION', 'DEL' or 'LOSS' (synonyms for DELETION).
     :param header_split:	List of columns from splitting a tab-separated header.
     :return:			Tuple of column positions for the gene and CNV type.
     """
-    gene_pos = check_header_field("Gene", header_split, is_required=True)
-    cnv_pos = check_header_field("Variant_cnv", header_split, is_required=True)
+    gene_pos = check_header_field(gene_name, header_split, is_required=True)
+    cnv_pos = check_header_field(variant_cnv_name, header_split, is_required=True)
 
     return (gene_pos, cnv_pos)
 
 
-def read_in_cnvs(infile):
+def read_in_cnvs(infile, expected_gene_name="Gene", expected_variant_cnv_name="Variant_cnv"):
     """
     Read-in input file of CNV data and process it into structured dictionaries. Assumes header and that relevant info is contained in the following columns: Gene, Variant_cnv.
     :param infile:    Path to the input CNV file to read in.
@@ -176,7 +176,7 @@ def read_in_cnvs(infile):
     in_file = open(infile, "r")
     header = in_file.readline().strip()
     header_split = header.strip().split("\t")
-    (gene_pos, cnv_pos) = process_cnv_header(header_split)
+    (gene_pos, cnv_pos) = process_cnv_header(header_split, gene_name=expected_gene_name, variant_cnv_name=expected_variant_cnv_name)
 
     extra_header = []
     extra_pos = []
@@ -211,19 +211,19 @@ def read_in_cnvs(infile):
     return (raw_data, cnv_data, extra_header)
 
 
-def process_expr_header(header_split):
+def process_expr_header(header_split, gene_name, logfc_name):
     """
     Retrieve the required column names expected for the header of an input Expression file. Assume column names are: Gene, logFC (both are required). The log fold-change value of a differentially expressed gene should be numeric and different from zero (to query CIViC, it will be translated into 'OVEREXPRESSION', if positive, and 'UNDEREXPRESSION', if negative).
     :param header_split:	List of columns from splitting a tab-separated header.
     :return:			Tuple of column positions for the gene and log fold-change.
     """
-    gene_pos = check_header_field("Gene", header_split, is_required=True)
-    logfc_pos = check_header_field("logFC", header_split, is_required=True)
+    gene_pos = check_header_field(gene_name, header_split, is_required=True)
+    logfc_pos = check_header_field(logfc_name, header_split, is_required=True)
 
     return (gene_pos, logfc_pos)
 
 
-def read_in_expr(infile):
+def read_in_expr(infile, expected_gene_name="Gene", expected_logFC_name="logFC"):
     """
     Read-in input file of differentially expressed data and process it into structured dictionaries. Assumes header and that relevant info is contained in the following columns: Gene, logFC.
     :param infile:    Path to the input expression file to read in.
@@ -237,7 +237,7 @@ def read_in_expr(infile):
     in_file = open(infile, "r")
     header = in_file.readline().strip()
     header_split = header.strip().split("\t")
-    (gene_pos, logfc_pos) = process_expr_header(header_split)
+    (gene_pos, logfc_pos) = process_expr_header(header_split, gene_name=expected_gene_name, logfc_name=expected_logFC_name)
 
     extra_header = []
     extra_pos = []
@@ -301,7 +301,7 @@ def write_to_yaml(in_dict, outfile):
     return None
 
 
-def write_header_line(data_type, header, write_support):
+def write_header_line(data_type, header, write_support, expected_gene_name, expected_logFC_name, expected_variant_cnv_name, expected_variant_dna_name, expected_variant_prot_name, expected_variant_impact_name, expected_variant_exon_name):
     """
     Given a list of sorted column names (from splitting the input header), process it to generate the corresponding output header.
     :param data_type:		['SNV', 'CNV', 'EXPR']
@@ -320,24 +320,24 @@ def write_header_line(data_type, header, write_support):
     write_exon = False
 
     if data_type == "SNV":
-        main_header = "Gene\tVariant_dna\tVariant_prot"
-        if "Variant_impact" in header:
-            main_header += "\tVariant_impact"
+        main_header = f"{expected_gene_name}\t{expected_variant_dna_name}\t{expected_variant_prot_name}"
+        if expected_variant_impact_name in header:
+            main_header += f"\t{expected_variant_impact_name}"
             write_impact = True
-        if "Variant_exon" in header:
-            main_header += "\tVariant_exon"
+        if expected_variant_exon_name in header:
+            main_header += f"\t{expected_variant_exon_namef}"
             write_exon = True
 
     if data_type == "CNV":
-        main_header = "Gene\tVariant_cnv"
+        main_header = f"{expected_gene_name}\t{expected_variant_cnv_name}" 
 
     if data_type == "EXPR":
-        main_header = "Gene\tlogFC"
+        main_header = f"{expected_gene_name}\t{expected_logFC_name}"
 
     clean_header = []
     if header:
         for tmp in header:
-            if (tmp != "Variant_impact" and tmp != "Variant_exon"):
+            if (tmp != expected_variant_impact_name and tmp != expected_variant_exon_name):
                 clean_header.append(tmp)
     if clean_header:
         main_header += "\t%s" %("\t".join(clean_header))
@@ -457,7 +457,7 @@ def write_evidences(item, write_drug=False, write_ct=None, write_complete=False)
     return evidences
 
 
-def write_match(match_map, var_map, raw_map, header, data_type, outfile, has_support=True, has_ct=True, write_ct=False, write_support=True, write_complete=False):
+def write_match(match_map, var_map, raw_map, header, data_type, outfile, has_support=True, has_ct=True, write_ct=False, write_support=True, write_complete=False, expected_gene_name="Gene", expected_logFC_name="logFC", expected_variant_cnv_name="Variant_cnv", expected_variant_dna_name="Variant_dna", expected_variant_prot_name="Variant_prot", expected_variant_impact_name="Variant_impact", expected_variant_exon_name="Variant_exon"):
     """
     Process input data and matched CIViC information, and reformat to write into a tab-separated table.
     :param match_map:		Dictionary containing data matched in CIViC (there must be a correspondance of 'match_map' and the variant data in 'var_map'). See README for more details about the specific structure of dictionary 'match_map'.
@@ -490,7 +490,7 @@ def write_match(match_map, var_map, raw_map, header, data_type, outfile, has_sup
     outfile = open(outfile, "w")
     
     # Retrieve the output header given the argument selection
-    (out_header, clean_header, write_impact, write_exon) = write_header_line(data_type, header, write_support)
+    (out_header, clean_header, write_impact, write_exon) = write_header_line(data_type, header, write_support, expected_gene_name, expected_logFC_name, expected_variant_cnv_name, expected_variant_dna_name, expected_variant_prot_name, expected_variant_impact_name, expected_variant_exon_name)
     outfile.write(out_header + "\n")
     
     for n_line in raw_map.keys():
