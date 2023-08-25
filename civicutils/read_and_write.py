@@ -640,9 +640,15 @@ def write_drug_targets(drug_targets, outfile_drug_targets):
     :param outfile_drug_targets:          	Path to the output file to write the drug targets into (tab-separated table).
     :return:                 	None
     """
-    with open(outfile_drug_targets, "w") as file:
-        file.write("Drug\tTargets\n")
-        for drug, targets in drug_targets.items():
-            line = f"{drug}\t{'; '.join(targets)}\n"
-            file.write(line)
+    with open(outfile_drug_targets, 'w') as file:
+        # Write the header
+        file.write("Drug\tTarget\tVariant\tEvidence_type\tct\tDisease\tEvidence\n")
+
+        # Iterate through the dictionary and write each row
+        for drugs, targets_info in drug_targets.items():
+            targets = targets_info.keys()
+            for target in targets:
+                info = targets_info[target]
+                file.write(f"{drugs}\t{target}\t{info[0]}\t{info[1]}\t{info[2]}\t{info[3]}\t{info[4]}\n")
+    
     return None 

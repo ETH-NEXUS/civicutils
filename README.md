@@ -489,6 +489,6 @@ support_dict = get_dict_support()
 # Write to output
 # Do not report the CT classification of each disease, and write column with the drug responses predicted for each available CT class of every variant match
 write_match(annot_match, annot_map, raw_data, extra_header, data_type="SNV", outfile, has_support=True, has_ct=True, write_ct=False, write_support=True, write_complete=False)
-# Write second output file listing drugs and their associated genes
+# Generate a second output file that lists drugs targeting more than 2 genes. The file includes variant information along with evidence associated with the Drug/Variant association. 
 write_drug_targets(drug_targets, outfile_drug_targets)
 ```
