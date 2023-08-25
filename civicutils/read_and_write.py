@@ -325,7 +325,7 @@ def write_header_line(data_type, header, write_support, expected_gene_name, expe
             main_header += f"\t{expected_variant_impact_name}"
             write_impact = True
         if expected_variant_exon_name in header:
-            main_header += f"\t{expected_variant_exon_namef}"
+            main_header += f"\t{expected_variant_exon_name}"
             write_exon = True
 
     if data_type == "CNV":

@@ -494,26 +494,28 @@ def check_match_before_writing(match_map, var_map, raw_map, has_support=True, ha
 def develop_parentheses_content(string):
     # Find all matches of the pattern within the string
     matches = re.findall(r'\((.*?)\)', string)
-
+    matches_or = re.findall(r'\bOR\b', string)
+    
     # List to store the developed expressions
-    developed_expressions = []
-
+    final_expressions = []
+    
     # Check if there are any matches
     if matches:
         # Iterate over the matches and develop the expressions
         for match in matches:
             expressions = match.split(" OR ")
-            developed_expressions.extend(expressions)
-
-        # Generate the final expressions
-        final_expressions = []
-        for expression in developed_expressions:
-            final_expression = string.replace("(" + match + ")", expression)
-            final_expressions.append(final_expression)
+            for expression in expressions:
+                final_expression = string.replace("(" + match + ")", expression)
+                final_expressions.append(final_expression)       
+                
+    elif matches_or:
+        # special case where the molecular profile is only composed of OR logical term ex:  NRAS Mutation OR KRAS Mutation OR RAF1 Mutation OR MAP2K1 Mutation OR MAP2K2 Mutation
+            final_expressions = string.split(" OR ")
+            
     else:
         # If no matches found, simply return the original string
         final_expressions = [string]
-
+        
     return final_expressions
 
 
@@ -521,28 +523,37 @@ def extract_terms(string):
     terms = string.split("AND")
     needed = []
     excluded = []
-
-    i = 0
-    while i < len(terms):
-        term = terms[i].strip()
-
-        if term.startswith("NOT"):
+    
+    for term in terms:
+        term = term.strip()
+        
+        if re.match(r'^NOT\b', term):
             excluded.append(term[4:].strip().split()[0])
         else:
             needed.append(term.split()[0])
-
-        i += 1
-
+            
     return needed, excluded
 
 
-def check_molecular_profile(molecular_profile, input_genes):
+def check_molecular_profile(molecular_profile, molecular_profile_id, var_map):
     final_expressions = develop_parentheses_content(molecular_profile)
     Keep = False
     
     for expression in final_expressions:
-        (needed, excluded) = extract_terms(expression)
-        if all(element in input_genes for element in needed) and all(element not in input_genes for element in excluded):
+        needed, excluded = extract_terms(expression)
+        Needed_count = 0
+        Excluded_count = 0
+        
+        for gene in needed:
+            if gene in var_map.keys() and any(molecular_profile_id in var_map[gene][variant].keys() for variant in var_map[gene].keys()):
+                Needed_count += 1
+                
+        if Needed_count == len(needed):
+            for gene in excluded:
+                if gene in var_map.keys() and any(molecular_profile_id in var_map[gene][variant].keys() for variant in var_map[gene].keys()):
+                    Excluded_count += 1     
+                            
+        if Needed_count == len(needed) and Excluded_count == 0:
             Keep = True
-    
-    return Keep    
+            
+    return Keep

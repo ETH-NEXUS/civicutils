@@ -222,12 +222,6 @@ def filter_civic(var_map, gene_id_in=[], gene_id_not_in=[], min_variants=0, var_
                 # Check that the expected entries are found in the dictionary
                 check_keys(list(var_map[gene_id][var_id][molecular_profil_id].keys()), "var_map", var_map_entries_molecular_profile, matches_all=False)
                
-                # Check that all the genes involved in the molecular profile are in the input
-                if hasattr(var_map[gene_id][var_id][molecular_profil_id], "Name"):
-                    keep_mp = check_molecular_profile(var_map[gene_id][var_id][molecular_profil_id]["name"], list(var_map.keys()))
-                    if not keep_mp:
-                        continue  
-                
                 # Allow number of evidence items to be 0
                 n_evidence_items = var_map[gene_id][var_id][molecular_profil_id]["n_evidence_items"]
                 keep_mp = filter_cutoff(n_evidence_items, "n_evidence_items", min_evidence_items, "min_evidence_items")
@@ -240,6 +234,12 @@ def filter_civic(var_map, gene_id_in=[], gene_id_not_in=[], min_variants=0, var_
                 if not keep_mp:
                     continue
 
+                # Check that all the genes involved in the molecular profile are in the input
+                if hasattr(var_map[gene_id][var_id][molecular_profil_id], "Name"):
+                    keep_mp = check_molecular_profile(var_map[gene_id][var_id][molecular_profil_id]["name"], molecular_profile_id, var_map)
+                    if not keep_mp:
+                        continue  
+                
                 n_evidence_items_after = 0
                 evidence_types = list(var_map[gene_id][var_id][molecular_profil_id]["evidence_items"].keys())
                 allowed_evidence_types = []
