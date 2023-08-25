@@ -100,9 +100,9 @@ def read_in_snvs(infile, expected_gene_name="Gene", expected_variant_dna_name="V
 
     extra_header = []
     if impact_pos:
-        extra_header.append("Variant_impact")
+        extra_header.append(expected_variant_impact_name)
     if exon_pos:
-        extra_header.append("Variant_exon")
+        extra_header.append(expected_variant_exon_name)
 
     extra_pos = []
     for pos,x in enumerate(header_split):
@@ -301,7 +301,7 @@ def write_to_yaml(in_dict, outfile):
     return None
 
 
-def write_header_line(data_type, header, write_support):
+def write_header_line(data_type, header, write_support, expected_gene_name, expected_logFC_name, expected_variant_cnv_name, expected_variant_dna_name, expected_variant_prot_name, expected_variant_impact_name, expected_variant_exon_name):
     """
     Given a list of sorted column names (from splitting the input header), process it to generate the corresponding output header.
     :param data_type:		['SNV', 'CNV', 'EXPR']
@@ -320,24 +320,24 @@ def write_header_line(data_type, header, write_support):
     write_exon = False
 
     if data_type == "SNV":
-        main_header = "Gene\tVariant_dna\tVariant_prot"
-        if "Variant_impact" in header:
-            main_header += "\tVariant_impact"
+        main_header = f"{expected_gene_name}\t{expected_variant_dna_name}\t{expected_variant_prot_name}"
+        if expected_variant_impact_name in header:
+            main_header += f"\t{expected_variant_impact_name}"
             write_impact = True
-        if "Variant_exon" in header:
-            main_header += "\tVariant_exon"
+        if expected_variant_exon_name in header:
+            main_header += f"\t{expected_variant_exon_namef}"
             write_exon = True
 
     if data_type == "CNV":
-        main_header = "Gene\tVariant_cnv"
+        main_header = f"{expected_gene_name}\t{expected_variant_cnv_name}" 
 
     if data_type == "EXPR":
-        main_header = "Gene\tlogFC"
+        main_header = f"{expected_gene_name}\t{expected_logFC_name}"
 
     clean_header = []
     if header:
         for tmp in header:
-            if (tmp != "Variant_impact" and tmp != "Variant_exon"):
+            if (tmp != expected_variant_impact_name and tmp != expected_variant_exon_name):
                 clean_header.append(tmp)
     if clean_header:
         main_header += "\t%s" %("\t".join(clean_header))
@@ -457,7 +457,7 @@ def write_evidences(item, write_drug=False, write_ct=None, write_complete=False)
     return evidences
 
 
-def write_match(match_map, var_map, raw_map, header, data_type, outfile, has_support=True, has_ct=True, write_ct=False, write_support=True, write_complete=False):
+def write_match(match_map, var_map, raw_map, header, data_type, outfile, has_support=True, has_ct=True, write_ct=False, write_support=True, write_complete=False, expected_gene_name="Gene", expected_logFC_name="logFC", expected_variant_cnv_name="Variant_cnv", expected_variant_dna_name="Variant_dna", expected_variant_prot_name="Variant_prot", expected_variant_impact_name="Variant_impact", expected_variant_exon_name="Variant_exon"):
     """
     Process input data and matched CIViC information, and reformat to write into a tab-separated table.
     :param match_map:		Dictionary containing data matched in CIViC (there must be a correspondance of 'match_map' and the variant data in 'var_map'). See README for more details about the specific structure of dictionary 'match_map'.
@@ -490,7 +490,7 @@ def write_match(match_map, var_map, raw_map, header, data_type, outfile, has_sup
     outfile = open(outfile, "w")
     
     # Retrieve the output header given the argument selection
-    (out_header, clean_header, write_impact, write_exon) = write_header_line(data_type, header, write_support)
+    (out_header, clean_header, write_impact, write_exon) = write_header_line(data_type, header, write_support, expected_gene_name, expected_logFC_name, expected_variant_cnv_name, expected_variant_dna_name, expected_variant_prot_name, expected_variant_impact_name, expected_variant_exon_name)
     outfile.write(out_header + "\n")
     
     for n_line in raw_map.keys():
