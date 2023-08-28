@@ -642,7 +642,7 @@ def write_drug_targets(drug_targets, outfile_drug_targets):
     """
     with open(outfile_drug_targets, 'w') as file:
         # Write the header
-        file.write("Drug\tTarget\tVariant\tEvidence_type\tct\tDisease\tEvidence\n")
+        file.write("Drug\Gene\tVariant\tEvidence_type\tct\tDisease\tEvidence\n")
 
         # Iterate through the dictionary and write each row
         for drugs, targets_info in drug_targets.items():
