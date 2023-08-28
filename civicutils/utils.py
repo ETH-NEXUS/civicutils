@@ -492,6 +492,11 @@ def check_match_before_writing(match_map, var_map, raw_map, has_support=True, ha
 
 
 def develop_parentheses_content(string):
+    """
+    Check that the provided molecular profile includes parentheses in its expression and expand this expression into multiple simpler expressions without parentheses or check that the provided molecular profile only contain OR logical paramters and return only one variant per expression.
+    :param string:     Molecular profile string to be checked.
+    :return:         multiple simpler expressions 
+    """
     # Find all matches of the pattern within the string
     matches = re.findall(r'\((.*?)\)', string)
     matches_or = re.findall(r'\bOR\b', string)
@@ -520,6 +525,11 @@ def develop_parentheses_content(string):
 
 
 def extract_terms(string):
+    """
+    Extract the needed variants as well as the excluded variants from the molecular profile.
+    :param string:     Molecular profile string to be extracted.
+    :return:         Needed variants and excluded variants
+    """
     terms = string.split("AND")
     needed = []
     excluded = []
@@ -536,6 +546,13 @@ def extract_terms(string):
 
 
 def check_molecular_profile(molecular_profile, molecular_profile_id, var_map):
+    """
+    Verify that the required variants associated with the molecular profile exist within the filtered dictionary of results obtained from querying genes in CIViC. Additionally, ensure that the excluded variants are absent from this dictionary.
+    :param molecular_profile:     Molecular profile string to be checked.
+    :param molecular_profile_id:     Molecular profile id to be checked.
+    :param var_map:     Filtered dictionary of results obtained from querying genes in CIViC.
+    :return:         Boolean value (True/False) indicating whether the molecular profile should be retained or discarded.
+    """
     final_expressions = develop_parentheses_content(molecular_profile)
     Keep = False
     

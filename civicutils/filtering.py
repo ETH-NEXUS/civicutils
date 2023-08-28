@@ -233,12 +233,6 @@ def filter_civic(var_map, gene_id_in=[], gene_id_not_in=[], min_variants=0, var_
                 keep_mp = filter_cutoff(var_score, "var_score", min_civic_score, "min_civic_score")
                 if not keep_mp:
                     continue
-
-                # Check that all the genes involved in the molecular profile are in the input
-                if hasattr(var_map[gene_id][var_id][molecular_profil_id], "Name"):
-                    keep_mp = check_molecular_profile(var_map[gene_id][var_id][molecular_profil_id]["name"], molecular_profile_id, var_map)
-                    if not keep_mp:
-                        continue  
                 
                 n_evidence_items_after = 0
                 evidence_types = list(var_map[gene_id][var_id][molecular_profil_id]["evidence_items"].keys())
@@ -474,5 +468,15 @@ def filter_civic(var_map, gene_id_in=[], gene_id_not_in=[], min_variants=0, var_
                 else:
                     # In this case, corresponding gene and variant entries are always available
                     clean_map[gene_id][var_id][molecular_profil_id]["n_evidence_items"] = n_evidence_items_after
+
+    for gene_id in clean_map.keys():
+        for var_id in clean_map[gene].keys():
+            molecular_profile_ids = set(list(clean_map[gene_id][var_id].keys())) ^ set(var_map_entries_variant)
+            for molecular_profil_id in molecular_profile_ids:
+                # Check that all the variant involved in the molecular profile are in the clean_map
+                if hasattr(clean_map[gene_id][var_id][molecular_profil_id], "Name"):
+                    keep_mp = check_molecular_profile(clean_map[gene_id][var_id][molecular_profil_id]["name"], molecular_profile_id, clean_map)
+                    if not keep_mp:
+                        del clean_map[gene_id][var_id][molecular_profil_id]
 
     return clean_map
