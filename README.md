@@ -96,7 +96,7 @@ cnv_data
 
 An input file of differential gene expression data can be processed using CIViCutils function `read_in_expr()`. Assumes header and the following columns:
 * `Gene`: required. One gene symbol per row allowed. Cannot be empty.
-* `logFC`: required. Log fold-change value for the given gene. The sign of the fold-change is used to match variants in CIViC (either `OVEREXPRESSION` if logFC>0 or `OVEREXPRESSION` if logFC<0). Cannot be empty and only one value allowed per row.
+* `logFC`: required. Log fold-change value for the given gene. The sign of the fold-change is used to match variants in CIViC (either `OVEREXPRESSION` if logFC>0 or `UNDEREXPRESSION` if logFC<0). Cannot be empty and only one value allowed per row.
 ```
 from civicutils.read_and_write import read_in_expr
 
