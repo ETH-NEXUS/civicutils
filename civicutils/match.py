@@ -1155,6 +1155,7 @@ def add_ct(diseases, ct, gene, variant, molecular_profile, evidence_type, new_ma
 				Category of cancer type specificity, to be annotated on the provided CIViC data.
     :param gene:		Gene identifier to append the given disease specificity annotations into in dictionary 'var_map'.
     :param variant:		Input variant annotation to append the given disease specificity annotations into in dictionary 'var_map'.
+    :param molecular_profile:   Input molecular profile associated to the variant to append the given disease specificity annotations into in dictionary 'var_map'.
     :param evidence_type:	Evidence type to append the given disease specificity annotations into in dictionary 'var_map'.
     :param new_map:		Updated 'var_map' dictionary to append the given disease specificity information into.
     :param var_map:		Nested dictionary of genes and variant-level records retrieved from CIViC. See README for more details about the specific structure.

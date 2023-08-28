@@ -218,32 +218,32 @@ def filter_civic(var_map, gene_id_in=[], gene_id_not_in=[], min_variants=0, var_
 
             molecular_profile_ids = set(list(var_map[gene_id][var_id].keys())) ^ set(var_map_entries_variant)
 
-            for molecular_profil_id in molecular_profile_ids:
+            for molecular_profile_id in molecular_profile_ids:
                 # Check that the expected entries are found in the dictionary
-                check_keys(list(var_map[gene_id][var_id][molecular_profil_id].keys()), "var_map", var_map_entries_molecular_profile, matches_all=False)
+                check_keys(list(var_map[gene_id][var_id][molecular_profile_id].keys()), "var_map", var_map_entries_molecular_profile, matches_all=False)
                
                 # Allow number of evidence items to be 0
-                n_evidence_items = var_map[gene_id][var_id][molecular_profil_id]["n_evidence_items"]
+                n_evidence_items = var_map[gene_id][var_id][molecular_profile_id]["n_evidence_items"]
                 keep_mp = filter_cutoff(n_evidence_items, "n_evidence_items", min_evidence_items, "min_evidence_items")
                 if not keep_mp:
                     continue
 
                 # CIViC Score is always a number (can be 0)
-                var_score = var_map[gene_id][var_id][molecular_profil_id]["civic_score"]
+                var_score = var_map[gene_id][var_id][molecular_profile_id]["civic_score"]
                 keep_mp = filter_cutoff(var_score, "var_score", min_civic_score, "min_civic_score")
                 if not keep_mp:
                     continue
                 
                 n_evidence_items_after = 0
-                evidence_types = list(var_map[gene_id][var_id][molecular_profil_id]["evidence_items"].keys())
+                evidence_types = list(var_map[gene_id][var_id][molecular_profile_id]["evidence_items"].keys())
                 allowed_evidence_types = []
                 
                 if output_empty:
-                    if molecular_profil_id not in clean_map[gene_id][var_id].keys():
-                        clean_map[gene_id][var_id][molecular_profil_id] = {}
-                        clean_map[gene_id][var_id][molecular_profil_id]["civic_score"] = var_score
-                        clean_map[gene_id][var_id][molecular_profil_id]["n_evidence_items"] = 0
-                        clean_map[gene_id][var_id][molecular_profil_id]["evidence_items"] = {}
+                    if molecular_profile_id not in clean_map[gene_id][var_id].keys():
+                        clean_map[gene_id][var_id][molecular_profile_id] = {}
+                        clean_map[gene_id][var_id][molecular_profile_id]["civic_score"] = var_score
+                        clean_map[gene_id][var_id][molecular_profile_id]["n_evidence_items"] = 0
+                        clean_map[gene_id][var_id][molecular_profile_id]["evidence_items"] = {}
                 
                 # Evidence type should always be available
                 for evidence_type in evidence_types:
@@ -260,10 +260,10 @@ def filter_civic(var_map, gene_id_in=[], gene_id_not_in=[], min_variants=0, var_
                     # Current evidence type has passed filters
                     # Write to output (filtered) dict only when output_empty=True
                     if output_empty:
-                        if evidence_type not in clean_map[gene_id][var_id][molecular_profil_id]["evidence_items"].keys():
-                            clean_map[gene_id][var_id][molecular_profil_id]["evidence_items"][evidence_type] = {}
+                        if evidence_type not in clean_map[gene_id][var_id][molecular_profile_id]["evidence_items"].keys():
+                            clean_map[gene_id][var_id][molecular_profile_id]["evidence_items"][evidence_type] = {}
 
-                    type_diseases = list(var_map[gene_id][var_id][molecular_profil_id]["evidence_items"][evidence_type].keys())
+                    type_diseases = list(var_map[gene_id][var_id][molecular_profile_id]["evidence_items"][evidence_type].keys())
                     # Check that provided var_map is not annotated with disease specificity info (ct/gt/nct)
                     check_keys_not(type_diseases, "var_map", sorted_cts)
 
@@ -283,11 +283,11 @@ def filter_civic(var_map, gene_id_in=[], gene_id_not_in=[], min_variants=0, var_
                         # Current disease name has passed filters
                         # Write to output (filtered) dict only when output_empty=True
                         if output_empty:
-                            if disease not in clean_map[gene_id][var_id][molecular_profil_id]["evidence_items"][evidence_type].keys():
-                                clean_map[gene_id][var_id][molecular_profil_id]["evidence_items"][evidence_type][disease] = {}
+                            if disease not in clean_map[gene_id][var_id][molecular_profile_id]["evidence_items"][evidence_type].keys():
+                                clean_map[gene_id][var_id][molecular_profile_id]["evidence_items"][evidence_type][disease] = {}
                         # All evidence types except "PREDICTIVE" will have a single entry "NULL" (because drugs are not associated to these evidence types)
                         # When "NULL", the drug-related filters do not apply (to avoid filtering evidences from types other than "PREDICTIVE"
-                        disease_drugs = list(var_map[gene_id][var_id][molecular_profil_id]["evidence_items"][evidence_type][disease].keys())
+                        disease_drugs = list(var_map[gene_id][var_id][molecular_profile_id]["evidence_items"][evidence_type][disease].keys())
                         if (len(disease_drugs) == 0):
                             continue                        
                         
@@ -310,10 +310,10 @@ def filter_civic(var_map, gene_id_in=[], gene_id_not_in=[], min_variants=0, var_
                             # Current drug has passed filters ("NULL" whenever evidence type is not "PREDICTIVE")
                             # Write to output (filtered) dict only when output_empty=True
                             if output_empty:
-                                if drug not in clean_map[gene_id][var_id][molecular_profil_id]["evidence_items"][evidence_type][disease].keys():
-                                    clean_map[gene_id][var_id][molecular_profil_id]["evidence_items"][evidence_type][disease][drug] = {}
+                                if drug not in clean_map[gene_id][var_id][molecular_profile_id]["evidence_items"][evidence_type][disease].keys():
+                                    clean_map[gene_id][var_id][molecular_profile_id]["evidence_items"][evidence_type][disease][drug] = {}
 
-                            evidences = list(var_map[gene_id][var_id][molecular_profil_id]["evidence_items"][evidence_type][disease][drug].keys())
+                            evidences = list(var_map[gene_id][var_id][molecular_profile_id]["evidence_items"][evidence_type][disease][drug].keys())
                             allowed_evidences = []
                             for evidence in evidences:
                                 # Split the evidence string into direction and clinical significance
@@ -346,10 +346,10 @@ def filter_civic(var_map, gene_id_in=[], gene_id_not_in=[], min_variants=0, var_
                                 # Current evidence has passed filters
                                 # Write to output (filtered) dict only when output_empty=True
                                 if output_empty:
-                                    if this_evidence not in clean_map[gene_id][var_id][molecular_profil_id]["evidence_items"][evidence_type][disease][drug].keys():
-                                        clean_map[gene_id][var_id][molecular_profil_id]["evidence_items"][evidence_type][disease][drug][this_evidence] = {}
+                                    if this_evidence not in clean_map[gene_id][var_id][molecular_profile_id]["evidence_items"][evidence_type][disease][drug].keys():
+                                        clean_map[gene_id][var_id][molecular_profile_id]["evidence_items"][evidence_type][disease][drug][this_evidence] = {}
 
-                                evidence_levels = list(var_map[gene_id][var_id][molecular_profil_id]["evidence_items"][evidence_type][disease][drug][this_evidence].keys())
+                                evidence_levels = list(var_map[gene_id][var_id][molecular_profile_id]["evidence_items"][evidence_type][disease][drug][this_evidence].keys())
                                 allowed_levels = []
                                 for evidence_level in evidence_levels:
                                     keep_level = filter_in(evidence_level, "evidence level", evidence_level_in, "evidence_level_in",  match_type="exact")
@@ -365,11 +365,11 @@ def filter_civic(var_map, gene_id_in=[], gene_id_not_in=[], min_variants=0, var_
                                     # Current evidence level has passed filters
                                     # Write to output (filtered) dict only when output_empty=True
                                     if output_empty:
-                                        if level not in clean_map[gene_id][var_id][molecular_profil_id]["evidence_items"][evidence_type][disease][drug][this_evidence].keys():
-                                            clean_map[gene_id][var_id][molecular_profil_id]["evidence_items"][evidence_type][disease][drug][this_evidence][level] = []
+                                        if level not in clean_map[gene_id][var_id][molecular_profile_id]["evidence_items"][evidence_type][disease][drug][this_evidence].keys():
+                                            clean_map[gene_id][var_id][molecular_profile_id]["evidence_items"][evidence_type][disease][drug][this_evidence][level] = []
 
                                     # Format of list: ["TYPE_ID1:EVIDENCESTATUS1:SOURCESTATUS1:VARORIGIN1:RATING1",..,"TYPE_IDN:EVIDENCESTATUSN:SOURCESTATUSN:VARORIGINN:RATINGN"]
-                                    all_evidence_items = var_map[gene_id][var_id][molecular_profil_id]["evidence_items"][evidence_type][disease][drug][this_evidence][level]
+                                    all_evidence_items = var_map[gene_id][var_id][molecular_profile_id]["evidence_items"][evidence_type][disease][drug][this_evidence][level]
                                     for evidence_item in all_evidence_items:
                                         # Split the evidence item string into the 5 separate fields
                                         item_list = evidence_item.strip().split(":")
@@ -439,23 +439,23 @@ def filter_civic(var_map, gene_id_in=[], gene_id_not_in=[], min_variants=0, var_
                                                 clean_map[gene_id][var_id]["name"] = variant
                                                 clean_map[gene_id][var_id]["hgvs"] = var_map[gene_id][var_id]["hgvs"]
                                                 clean_map[gene_id][var_id]["types"] = variant_types
-                                            if molecular_profil_id not in clean_map[gene_id][var_id].keys():
-                                                clean_map[gene_id][var_id][molecular_profil_id] = {}
-                                                clean_map[gene_id][var_id][molecular_profil_id]["civic_score"] = var_score
-                                                clean_map[gene_id][var_id][molecular_profil_id]["n_evidence_items"] = 0
-                                                clean_map[gene_id][var_id][molecular_profil_id]["evidence_items"] = {}                                                
-                                            if evidence_type not in clean_map[gene_id][var_id][molecular_profil_id]["evidence_items"].keys():
-                                                clean_map[gene_id][var_id][molecular_profil_id]["evidence_items"][evidence_type] = {}
-                                            if disease not in clean_map[gene_id][var_id][molecular_profil_id]["evidence_items"][evidence_type].keys():
-                                                clean_map[gene_id][var_id][molecular_profil_id]["evidence_items"][evidence_type][disease] = {}
-                                            if drug not in clean_map[gene_id][var_id][molecular_profil_id]["evidence_items"][evidence_type][disease].keys():
-                                                clean_map[gene_id][var_id][molecular_profil_id]["evidence_items"][evidence_type][disease][drug] = {}
-                                            if this_evidence not in clean_map[gene_id][var_id][molecular_profil_id]["evidence_items"][evidence_type][disease][drug].keys():
-                                                clean_map[gene_id][var_id][molecular_profil_id]["evidence_items"][evidence_type][disease][drug][this_evidence] = {}
-                                            if level not in clean_map[gene_id][var_id][molecular_profil_id]["evidence_items"][evidence_type][disease][drug][this_evidence].keys():
-                                                clean_map[gene_id][var_id][molecular_profil_id]["evidence_items"][evidence_type][disease][drug][this_evidence][level] = []
+                                            if molecular_profile_id not in clean_map[gene_id][var_id].keys():
+                                                clean_map[gene_id][var_id][molecular_profile_id] = {}
+                                                clean_map[gene_id][var_id][molecular_profile_id]["civic_score"] = var_score
+                                                clean_map[gene_id][var_id][molecular_profile_id]["n_evidence_items"] = 0
+                                                clean_map[gene_id][var_id][molecular_profile_id]["evidence_items"] = {}                                                
+                                            if evidence_type not in clean_map[gene_id][var_id][molecular_profile_id]["evidence_items"].keys():
+                                                clean_map[gene_id][var_id][molecular_profile_id]["evidence_items"][evidence_type] = {}
+                                            if disease not in clean_map[gene_id][var_id][molecular_profile_id]["evidence_items"][evidence_type].keys():
+                                                clean_map[gene_id][var_id][molecular_profile_id]["evidence_items"][evidence_type][disease] = {}
+                                            if drug not in clean_map[gene_id][var_id][molecular_profile_id]["evidence_items"][evidence_type][disease].keys():
+                                                clean_map[gene_id][var_id][molecular_profile_id]["evidence_items"][evidence_type][disease][drug] = {}
+                                            if this_evidence not in clean_map[gene_id][var_id][molecular_profile_id]["evidence_items"][evidence_type][disease][drug].keys():
+                                                clean_map[gene_id][var_id][molecular_profile_id]["evidence_items"][evidence_type][disease][drug][this_evidence] = {}
+                                            if level not in clean_map[gene_id][var_id][molecular_profile_id]["evidence_items"][evidence_type][disease][drug][this_evidence].keys():
+                                                clean_map[gene_id][var_id][molecular_profile_id]["evidence_items"][evidence_type][disease][drug][this_evidence][level] = []
 
-                                        clean_map[gene_id][var_id][molecular_profil_id]["evidence_items"][evidence_type][disease][drug][this_evidence][level].append(evidence_item)
+                                        clean_map[gene_id][var_id][molecular_profile_id]["evidence_items"][evidence_type][disease][drug][this_evidence][level].append(evidence_item)
                                         n_evidence_items_after += 1
 
                 # At this point, all evidence items available for this variant have been parsed and filtered
@@ -464,19 +464,19 @@ def filter_civic(var_map, gene_id_in=[], gene_id_not_in=[], min_variants=0, var_
                 if not output_empty:
                     # In this case, corresponding gene and variant entries will only be available when n_items > 0 (avoid empty entries)
                     if (n_evidence_items_after > 0):
-                        clean_map[gene_id][var_id][molecular_profil_id]["n_evidence_items"] = n_evidence_items_after
+                        clean_map[gene_id][var_id][molecular_profile_id]["n_evidence_items"] = n_evidence_items_after
                 else:
                     # In this case, corresponding gene and variant entries are always available
-                    clean_map[gene_id][var_id][molecular_profil_id]["n_evidence_items"] = n_evidence_items_after
+                    clean_map[gene_id][var_id][molecular_profile_id]["n_evidence_items"] = n_evidence_items_after
 
     for gene_id in clean_map.keys():
-        for var_id in clean_map[gene].keys():
+        for var_id in clean_map[gene_id].keys():
             molecular_profile_ids = set(list(clean_map[gene_id][var_id].keys())) ^ set(var_map_entries_variant)
-            for molecular_profil_id in molecular_profile_ids:
+            for molecular_profile_id in molecular_profile_ids:
                 # Check that all the variant involved in the molecular profile are in the clean_map
-                if hasattr(clean_map[gene_id][var_id][molecular_profil_id], "Name"):
-                    keep_mp = check_molecular_profile(clean_map[gene_id][var_id][molecular_profil_id]["name"], molecular_profile_id, clean_map)
+                if hasattr(clean_map[gene_id][var_id][molecular_profile_id], "Name"):
+                    keep_mp = check_molecular_profile(clean_map[gene_id][var_id][molecular_profile_id]["name"], molecular_profile_id, clean_map)
                     if not keep_mp:
-                        del clean_map[gene_id][var_id][molecular_profil_id]
+                        del clean_map[gene_id][var_id][molecular_profile_id]
 
     return clean_map

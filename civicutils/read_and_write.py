@@ -586,31 +586,31 @@ def write_match(match_map, var_map, raw_map, header, data_type, outfile, has_sup
            
                     gene_var_types.append(gene + ":" + variant + ":" + ",".join(var_map[gene][var_id]["types"]))
                     molecular_profile_ids = set(list(var_map[gene][var_id].keys())) ^ set(varmap_entries_variant)
-                    for molecular_profil_id in molecular_profile_ids:
-                        gene_scores.append(gene + ":" + variant + ":" + molecular_profil_id + ":" + str(var_map[gene][var_id][molecular_profil_id]["civic_score"]))
+                    for molecular_profile_id in molecular_profile_ids:
+                        gene_scores.append(gene + ":" + variant + ":" + molecular_profile_id + ":" + str(var_map[gene][var_id][molecular_profile_id]["civic_score"]))
                         for evidence_type in sorted_evidence_types:
-                            if evidence_type in var_map[gene][var_id][molecular_profil_id]["evidence_items"].keys():
+                            if evidence_type in var_map[gene][var_id][molecular_profile_id]["evidence_items"].keys():
                                 if evidence_type not in result_map.keys():
                                     result_map[evidence_type] = []
                                 write_drug = False
                                 if evidence_type == evidence_type:
                                     write_drug=True
                                 if has_ct:
-                                    check_keys(list(var_map[gene][var_id][molecular_profil_id]["evidence_items"][evidence_type].keys()), "var_map", sorted_cts, matches_all=True)
-                                    for ct in var_map[gene][var_id][molecular_profil_id]["evidence_items"][evidence_type].keys():
+                                    check_keys(list(var_map[gene][var_id][molecular_profile_id]["evidence_items"][evidence_type].keys()), "var_map", sorted_cts, matches_all=True)
+                                    for ct in var_map[gene][var_id][molecular_profile_id]["evidence_items"][evidence_type].keys():
                                         if write_ct:
-                                            results = write_evidences(var_map[gene][var_id][molecular_profil_id]["evidence_items"][evidence_type][ct], write_drug=write_drug, write_ct=ct, write_complete=write_complete)
+                                            results = write_evidences(var_map[gene][var_id][molecular_profile_id]["evidence_items"][evidence_type][ct], write_drug=write_drug, write_ct=ct, write_complete=write_complete)
                                         else:
-                                            results = write_evidences(var_map[gene][var_id][molecular_profil_id]["evidence_items"][evidence_type][ct], write_drug=write_drug, write_ct=None, write_complete=write_complete)
+                                            results = write_evidences(var_map[gene][var_id][molecular_profile_id]["evidence_items"][evidence_type][ct], write_drug=write_drug, write_ct=None, write_complete=write_complete)
                                         for x in results:
-                                            result_map[evidence_type].append(gene + ":" + variant + ":" + molecular_profil_id + ":" + x)
+                                            result_map[evidence_type].append(gene + ":" + variant + ":" + molecular_profile_id + ":" + x)
                                 else:
-                                    check_keys_not(list(var_map[gene][var_id][molecular_profil_id]["evidence_items"][evidence_type].keys()), "var_map", sorted_cts)
+                                    check_keys_not(list(var_map[gene][var_id][molecular_profile_id]["evidence_items"][evidence_type].keys()), "var_map", sorted_cts)
                                     if write_ct:
                                         raise ValueError("Option 'write_ct' cannot be selected when 'has_ct'=False!")
-                                    results = write_evidences(var_map[gene][var_id][molecular_profil_id]["evidence_items"][evidence_type], write_drug=write_drug, write_ct=None, write_complete=write_complete)
+                                    results = write_evidences(var_map[gene][var_id][molecular_profile_id]["evidence_items"][evidence_type], write_drug=write_drug, write_ct=None, write_complete=write_complete)
                                     for x in results:
-                                        result_map[evidence_type].append(gene + ":" + variant + ":" + molecular_profil_id + ":" + x)
+                                        result_map[evidence_type].append(gene + ":" + variant + ":" + molecular_profile_id + ":" + x)
 
                 # Only write line current tier when there was at least one match for it
                 if all_variants:
