@@ -640,15 +640,24 @@ def write_drug_targets(drug_targets, outfile_drug_targets):
     :param outfile_drug_targets:          	Path to the output file to write the drug targets into (tab-separated table).
     :return:                 	None
     """
+    
+    # Count the frequency of each drug in the dictionary
+    drug_frequency = {}
+    for drugs in drug_targets:
+        drug_frequency[drugs] = len(drug_targets[drugs].keys())
+        
+    # Sort the dictionary based on the frequency of the drug (column one)
+    sorted_drug_targets = sorted(drug_targets.items(), key=lambda x: drug_frequency[x[0]], reverse=True)
+    
     with open(outfile_drug_targets, 'w') as file:
         # Write the header
-        file.write("Drug\Gene\tVariant\tEvidence_type\tct\tDisease\tEvidence\n")
-
+        file.write("Drug\tGene\tVariant\tEvidence_type\tct\tDisease\tEvidence\n")
+        
         # Iterate through the dictionary and write each row
-        for drugs, targets_info in drug_targets.items():
+        for drugs, targets_info in sorted_drug_targets:
             targets = targets_info.keys()
             for target in targets:
                 info = targets_info[target]
                 file.write(f"{drugs}\t{target}\t{info[0]}\t{info[1]}\t{info[2]}\t{info[3]}\t{info[4]}\n")
-    
+                
     return None 
