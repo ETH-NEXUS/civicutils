@@ -1350,12 +1350,13 @@ def filter_ct(var_map, select_ct):
     return new_map
 
 
-def process_drug_support(match_map, var_map, support_dict, report_drug_targets=False):
+def process_drug_support(match_map, var_map, support_dict, report_drug_targets=True):
     """
     Given a dictionary of CIViC variant-level records matched to a set of input molecular alterations ('match_map'), and the corresponding set of associated clinical information retrieved from CIViC ('var_map'), compute consensus drug response predictions based on the available 'predictive' CIViC information and a helper dictionary of evidence-to-drug response provided by the user ('support_dict').
     :param match_map:		Nested dictionary with fixed structure containing all tier categories and corresponding list of CIViC variant matches found in each case (if any) for the input gene and molecular alteration at hand. This dictionary will be annotated by the function with consensus drug response information computed based on the provided 'predictive' CIViC evidence. See README for more details about the specific structure expected for this dictionary, before and after the annotation of consensus drug information.
     :param var_map:		Nested dictionary of genes and variant-level evidence records retrieved from CIViC, to be used for computing consensus drug response predictions based on the available 'predictive' evidence of the matched CIViC records (provided in 'match_map'). See README for more details about the specific structure expected for this dictionary.
     :param support_dict:	Dictionary of evidence-to-drug response, provided in the data.yml file, and to be used for computing consensus drug predictions. See README for more details about this topic.
+    :param report_drug_targets: Boolean indicating whether the file reporting drugs targeting variants is returned (True) or not (False). 
     :return:			Updated 'match_map' dictionary, containing consensus drug response prediction information. Individual consensus predictions use format 'DRUG_NAME:CT_CLASS:CONSENSUS_RESPONSE:#positive|#negative|#unknown|#do_not_support'.
     """
     sorted_tiers = ["tier_1", "tier_1b", "tier_2", "tier_3", "tier_4"]
