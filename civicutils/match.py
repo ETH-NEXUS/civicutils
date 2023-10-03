@@ -1430,6 +1430,7 @@ def process_drug_support(match_map, var_map, support_dict, report_drug_targets=T
                                             if gene not in drug_target[drug].keys():
                                                 drug_target[drug][gene]=[]
                                                 drug_target[drug][gene].append(var_map[gene][var_id]["name"])
+                                                drug_target[drug][gene].append(tier)
                                                 drug_target[drug][gene].append(evidence_type)
                                                 drug_target[drug][gene].append(ct)
                                                 drug_target[drug][gene].append(disease)
