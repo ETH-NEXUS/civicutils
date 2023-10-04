@@ -637,6 +637,12 @@ def write_drug_targets(drug_targets, raw_map, data_type, outfile_drug_targets):
     """
     Process drug targets data to write into a tab-separated table.
     :param drug_targets:		Dictionary containing data matched in CIViC (there must be a correspondance of 'match_map' and the variant data in 'var_map'). See README for more details about the specific structure of dictionary 'match_map'.
+    :param raw_map:		Dictionary containing the original rows and fields from the processed input file (n_line -> [field1,field2,..]).
+    :param data_type:		['SNV', 'CNV', 'EXPR']
+                             	SNV:   Expects a file of genomic single nucleotide variants and insertions/deletions
+                             	CNV:   Expects a file of genomic copy number alterations
+                             	EXPR:  Expects a file of differential gene expression data
+                             	String data type of the corresponding input file.
     :param outfile_drug_targets:          	Path to the output file to write the drug targets into (tab-separated table).
     :return:                 	None
     """
@@ -701,10 +707,5 @@ def write_drug_targets(drug_targets, raw_map, data_type, outfile_drug_targets):
                     keys_with_search_item = [key for key, values in raw_map.items() if target in values]
                     Observed_data = raw_map[keys_with_search_item[0]]
                     file.write(f"{drugs}\t{target}\t{Observed_data[1]}\t{info[0]}\t{info[1]}\t{info[2]}\t{info[3]}\t{info[4]}\t{info[5]}\n")   
-    
-    
-    
-    
-    
                 
     return None 
