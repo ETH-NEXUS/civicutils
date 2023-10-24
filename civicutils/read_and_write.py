@@ -632,3 +632,80 @@ def write_match(match_map, var_map, raw_map, header, data_type, outfile, has_sup
     outfile.close()
 
     return None
+
+def write_drug_targets(drug_targets, raw_map, data_type, outfile_drug_targets):
+    """
+    Process drug targets data to write into a tab-separated table.
+    :param drug_targets:		Dictionary containing data matched in CIViC (there must be a correspondance of 'match_map' and the variant data in 'var_map'). See README for more details about the specific structure of dictionary 'match_map'.
+    :param raw_map:		Dictionary containing the original rows and fields from the processed input file (n_line -> [field1,field2,..]).
+    :param data_type:		['SNV', 'CNV', 'EXPR']
+                             	SNV:   Expects a file of genomic single nucleotide variants and insertions/deletions
+                             	CNV:   Expects a file of genomic copy number alterations
+                             	EXPR:  Expects a file of differential gene expression data
+                             	String data type of the corresponding input file.
+    :param outfile_drug_targets:          	Path to the output file to write the drug targets into (tab-separated table).
+    :return:                 	None
+    """
+    
+    # Count the frequency of each drug in the dictionary
+    drug_frequency = {}
+    for drugs in drug_targets:
+        drug_frequency[drugs] = len(drug_targets[drugs].keys())
+        
+    # Sort the dictionary based on the frequency of the drug (column one)
+    sorted_drug_targets = sorted(drug_targets.items(), key=lambda x: drug_frequency[x[0]], reverse=True)
+        
+    if data_type == "SNV":    
+        with open(outfile_drug_targets, 'w') as file:
+            # Write the header
+            file.write("Drug\tGene\tObserved_DNA_Variant\tObserved_Prot_Variant\tCivic_Variant\tTier\tEvidence_type\tct\tDisease\tEvidence\n")
+        
+            # Iterate through the dictionary and write each row
+            for drugs, targets_info in sorted_drug_targets:
+                targets = targets_info.keys()
+                for target in targets:
+                    info = targets_info[target]
+                    keys_with_search_item = [key for key, values in raw_map.items() if target in values]
+                    Observed_data = raw_map[keys_with_search_item[0]]
+                    file.write(f"{drugs}\t{target}\t{Observed_data[1]}\t{Observed_data[2]}\t{info[0]}\t{info[1]}\t{info[2]}\t{info[3]}\t{info[4]}\t{info[5]}\n")
+    
+    if data_type == "CNV":
+        amplification_term = ["AMPLIFICATION", "AMP", "GAIN", "DUPLICATION", "DUP"]
+        deletion_term = ["DELETION", "DEL", "LOSS"]
+        
+        with open(outfile_drug_targets, 'w') as file:
+            # Write the header
+            file.write("Drug\tGene\tObserved_CNV_Variant\tCivic_Variant\tTier\tEvidence_type\tct\tDisease\tEvidence\n")
+            # Iterate through the dictionary and write each row
+            for drugs, targets_info in sorted_drug_targets:
+                targets = targets_info.keys()
+                for target in targets:
+                    info = targets_info[target]
+                    keys_with_search_item = [key for key, values in raw_map.items() if target in values]
+                    if len(keys_with_search_item) > 1:
+                        Observed_data=[]
+                        for variant_cnv in keys_with_search_item:
+                            var_annot = raw_map[variant_cnv][1]
+                            if (any(term in var_annot for term in amplification_term)) and (info[0] == "AMPLIFICATION"):
+                                Observed_data = raw_map[variant_cnv]
+                            elif (any(term in var_annot for term in deletion_term)) and (info[0] == "DELETION"):
+                                Observed_data = raw_map[variant_cnv]
+                    else:
+                        Observed_data = raw_map[keys_with_search_item[0]]
+                    file.write(f"{drugs}\t{target}\t{Observed_data[1]}\t{info[0]}\t{info[1]}\t{info[2]}\t{info[3]}\t{info[4]}\t{info[5]}\n")
+    
+    if data_type == "EXPR":
+        with open(outfile_drug_targets, 'w') as file:
+            # Write the header
+            file.write("Drug\tGene\tObserved_logFC\tCivic_Variant\tTier\tEvidence_type\tct\tDisease\tEvidence\n")
+        
+            # Iterate through the dictionary and write each row
+            for drugs, targets_info in sorted_drug_targets:
+                targets = targets_info.keys()
+                for target in targets:
+                    info = targets_info[target]
+                    keys_with_search_item = [key for key, values in raw_map.items() if target in values]
+                    Observed_data = raw_map[keys_with_search_item[0]]
+                    file.write(f"{drugs}\t{target}\t{Observed_data[1]}\t{info[0]}\t{info[1]}\t{info[2]}\t{info[3]}\t{info[4]}\t{info[5]}\n")   
+                
+    return None 

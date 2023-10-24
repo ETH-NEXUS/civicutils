@@ -452,7 +452,7 @@ The specific format used for the clinical statements listed in the evidence colu
 ```
 # Load package and import relevant functions
 import civicutils
-from civicutils.read_and_write import read_in_snvs, get_dict_support, write_match
+from civicutils.read_and_write import read_in_snvs, get_dict_support, write_match, write_drug_targets
 from civicutils.query import query_civic
 from civicutils.filtering import filter_civic
 from civicutils.match import match_in_civic, annotate_ct, filter_ct, process_drug_support
@@ -483,11 +483,18 @@ annot_map = filter_ct(annot_map, select_ct="highest")
 # This defines how each combination of evidence direction + clinical significance in CIViC is classified in terms of drug response (e.g. sensitivity, resistance, unknown, etc.)
 support_dict = get_dict_support()
 
-# Process consensus drug support for the matched variants using the underlying CIViC evidences annotated 
-annot_match = process_drug_support(match_map, annot_map, support_dict)
+# Process consensus drug support for the matched variants using the underlying CIViC evidences annotated. report_drug_targets is a boolean value to indicate whether drugs targeting more than 2 gene variants should be reported.
+(annot_match, drug_targets)  = process_drug_support(match_map, annot_map, support_dict, report_drug_targets=True)
 
 # Write to output
 # Do not report the CT classification of each disease, and write column with the drug responses predicted for each available CT class of every variant match
 write_match(annot_match, annot_map, raw_data, extra_header, data_type="SNV", outfile, has_support=True, has_ct=True, write_ct=False, write_support=True, write_complete=False)
-```
 
+# Create a secondary output file that compiles drugs targeting more than 2 gene variants. The file comprises variant details alongside the corresponding evidence linked to the Drug/Variant association.
+<<<<<<< HEAD
+write_drug_targets(drug_targets, outfile_drug_targets)
+```
+=======
+write_drug_targets(drug_targets, raw_data, data_type="SNV", outfile_drug_targets)
+```
+>>>>>>> 4ebaf2b8540954a4cec5c5107de9cdca55a53dd3
