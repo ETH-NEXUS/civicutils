@@ -587,7 +587,7 @@ def write_match(match_map, var_map, raw_map, header, data_type, outfile, has_sup
                     gene_var_types.append(gene + ":" + variant + ":" + ",".join(var_map[gene][var_id]["types"]))
                     molecular_profile_ids = set(list(var_map[gene][var_id].keys())) ^ set(varmap_entries_variant)
                     for molecular_profile_id in molecular_profile_ids:
-                        gene_scores.append(gene + ":" + variant + ":" + molecular_profile_id + ":" + str(var_map[gene][var_id][molecular_profile_id]["civic_score"]))
+                        gene_scores.append(gene + ":" + variant + ":" + molecular_profile_id + ":" + str(var_map[gene][var_id][molecular_profile_id]["name"]) + ":" + str(var_map[gene][var_id][molecular_profile_id]["civic_score"]))
                         for evidence_type in sorted_evidence_types:
                             if evidence_type in var_map[gene][var_id][molecular_profile_id]["evidence_items"].keys():
                                 if evidence_type not in result_map.keys():

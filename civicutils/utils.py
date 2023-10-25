@@ -545,16 +545,19 @@ def extract_terms(string):
     return needed, excluded
 
 
-def check_molecular_profile(molecular_profile, molecular_profile_id, var_map):
+def check_molecular_profile(molecular_profile, molecular_profile_id, var_map, match_map):
     """
     Verify that the required variants associated with the molecular profile exist within the filtered dictionary of results obtained from querying genes in CIViC. Additionally, ensure that the excluded variants are absent from this dictionary.
     :param molecular_profile:     Molecular profile string to be checked.
     :param molecular_profile_id:     Molecular profile id to be checked.
     :param var_map:     Filtered dictionary of results obtained from querying genes in CIViC.
+    :param match_map:   Nested dictionary with fixed structure containing all tier categories and corresponding matches found in CIViC
     :return:         Boolean value (True/False) indicating whether the molecular profile should be retained or discarded.
     """
     final_expressions = develop_parentheses_content(molecular_profile)
     Keep = False
+    
+    tiers_to_check = {'tier_1', 'tier_1b', 'tier_2'}
     
     for expression in final_expressions:
         needed, excluded = extract_terms(expression)
@@ -562,13 +565,21 @@ def check_molecular_profile(molecular_profile, molecular_profile_id, var_map):
         Excluded_count = 0
         
         for gene in needed:
-            if gene in var_map.keys() and any(molecular_profile_id in var_map[gene][variant].keys() for variant in var_map[gene].keys()):
-                Needed_count += 1
+            if gene in match_map.keys():
+                for variant in match_map[gene].keys():
+                    for tier in tiers_to_check:    
+                        for variants in match_map[gene][variant][tier] :
+                            if any(molecular_profile_id in var_map[gene][variants].keys() for variant in match_map[gene].keys()):
+                                Needed_count += 1
                 
         if Needed_count == len(needed):
             for gene in excluded:
-                if gene in var_map.keys() and any(molecular_profile_id in var_map[gene][variant].keys() for variant in var_map[gene].keys()):
-                    Excluded_count += 1     
+                if gene in match_map.keys():
+                    for variant in match_map[gene].keys(): 
+                        for tier in tiers_to_check:
+                            for variants in match_map[gene][variant][tier]:
+                                if any(molecular_profile_id in var_map[gene][variants].keys() for variant in match_map[gene].keys()):
+                                    Excluded_count += 1                
                             
         if Needed_count == len(needed) and Excluded_count == 0:
             Keep = True
