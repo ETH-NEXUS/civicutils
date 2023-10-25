@@ -1345,6 +1345,7 @@ def filter_ct(var_map, select_ct):
             molecular_profile_ids = set(list(var_map[gene][variant].keys())) ^ set(var_map_entries_variant)
             for molecular_profile_id in molecular_profile_ids:
                 new_map[gene][variant][molecular_profile_id] = {}
+                new_map[gene][variant][molecular_profile_id]["name"] = var_map[gene][variant][molecular_profile_id]["name"]
                 new_map[gene][variant][molecular_profile_id]["civic_score"] = var_map[gene][variant][molecular_profile_id]["civic_score"]
                 new_map[gene][variant][molecular_profile_id]["n_evidence_items"] = var_map[gene][variant][molecular_profile_id]["n_evidence_items"]
                 new_map[gene][variant][molecular_profile_id]["evidence_items"] = {}
