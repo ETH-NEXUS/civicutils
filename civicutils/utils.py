@@ -565,22 +565,32 @@ def check_molecular_profile(molecular_profile, molecular_profile_id, var_map, ma
         Excluded_count = 0
         
         for gene in needed:
+            Break = False
             if gene in match_map.keys():
                 for variant in match_map[gene].keys():
-                    for tier in tiers_to_check:    
+                    for tier in tiers_to_check:
+                        if Break:
+                            break    
                         for variants in match_map[gene][variant][tier] :
-                            if any(molecular_profile_id in var_map[gene][variants].keys() for variant in match_map[gene].keys()):
+                            if molecular_profile_id in var_map[gene][variants].keys():
                                 Needed_count += 1
+                                Break = True
+                                break
                 
         if Needed_count == len(needed):
             for gene in excluded:
+                Break = False
                 if gene in match_map.keys():
                     for variant in match_map[gene].keys(): 
                         for tier in tiers_to_check:
+                            if Break:
+                                break
                             for variants in match_map[gene][variant][tier]:
-                                if any(molecular_profile_id in var_map[gene][variants].keys() for variant in match_map[gene].keys()):
-                                    Excluded_count += 1                
-                            
+                                if molecular_profile_id in var_map[gene][variants].keys():
+                                    Excluded_count += 1
+                                    Break = True                
+                                    break
+                                
         if Needed_count == len(needed) and Excluded_count == 0:
             Keep = True
             
