@@ -491,10 +491,5 @@ support_dict = get_dict_support()
 write_match(annot_match, annot_map, raw_data, extra_header, data_type="SNV", outfile, has_support=True, has_ct=True, write_ct=False, write_support=True, write_complete=False)
 
 # Create a secondary output file that compiles drugs targeting more than 2 gene variants. The file comprises variant details alongside the corresponding evidence linked to the Drug/Variant association.
-<<<<<<< HEAD
-write_drug_targets(drug_targets, outfile_drug_targets)
-```
-=======
 write_drug_targets(drug_targets, raw_data, data_type="SNV", outfile_drug_targets)
 ```
->>>>>>> 4ebaf2b8540954a4cec5c5107de9cdca55a53dd3
