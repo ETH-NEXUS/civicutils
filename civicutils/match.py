@@ -2,7 +2,7 @@ import sys
 import os
 import re
 
-from civicutils.utils import check_arguments, check_argument, translate_aa, check_is_dict, check_is_list, check_is_str, check_keys, check_keys_not, check_tier_selection, parse_input, check_empty_input, check_dict_entry, check_is_chgvs, check_is_phgvs, check_identifier_type, check_data_type, check_is_bool, uppercase_list, check_is_none, check_logfc
+from utils import check_arguments, check_argument, translate_aa, check_is_dict, check_is_list, check_is_str, check_keys, check_keys_not, check_tier_selection, parse_input, check_empty_input, check_dict_entry, check_is_chgvs, check_is_phgvs, check_identifier_type, check_data_type, check_is_bool, uppercase_list, check_is_none, check_logfc, check_molecular_profile
 
 
 def civic_name_to_hgvs(var_name):
@@ -917,8 +917,8 @@ def match_in_civic(var_data, data_type, identifier_type, select_tier="all", var_
                 match = match_variants_in_civic(gene, variants, var_map, data_type, impacts=impact_list, exons=exon_list)
 
                 # Avoid executing unnecessary filter when select_tier="all" (as resulting dict will be identical)
-                if select_tier != "all":
-                    match = filter_match(match, select_tier)
+                #if select_tier != "all":
+                #    match = filter_match(match, select_tier)
 
             # In the case of EXPRESSION data, only tier1 is possible (either CIViC record was matched or not)
             if (data_type == "EXPR"):
@@ -935,9 +935,29 @@ def match_in_civic(var_data, data_type, identifier_type, select_tier="all", var_
 
     # At this point, all input gene + variants in var_data have been matched to CIViC
     # Filter var_map used to match CIViC info based on the matched variant ids (to avoid returning unnecessary records)
-    from civicutils.filtering import filter_civic
+    from filtering import filter_civic
     var_map = filter_civic(var_map, var_id_in=matched_ids, output_empty=False)
+    var_map_entries_variant = ["name", "hgvs", "types"]
+    for gene_id in var_map.keys():
+        for var_id in var_map[gene_id].keys():
+            molecular_profile_ids = set(list(var_map[gene_id][var_id].keys())) ^ set(var_map_entries_variant)
+           
+            for molecular_profile_id in molecular_profile_ids:
+                keep_mp = check_molecular_profile(var_map[gene_id][var_id][molecular_profile_id]["name"], molecular_profile_id, var_map, match_map)
+                
+                if not keep_mp:
+                    del var_map[gene_id][var_id][molecular_profile_id]
+                    check_presence_of_mp = set(list(var_map[gene_id][var_id].keys())) ^ set(var_map_entries_variant)
+                    
+                    if check_presence_of_mp == 0:
+                        del var_map[gene_id][var_id]
+                        
+                        if len(var_map[gene_id].keys()) == 0:
+                            del var_map[gene_id]
+                            
+                        continue
 
+    (match_map, matched_ids) = filter_matches(match_map, select_tier)
     # Return match_map, list of all matched variant ids, and associated variant records retrieved from CIViC (or provided by user), already filtered for the matched variants
     return (match_map, matched_ids, var_map)
 
@@ -1155,6 +1175,7 @@ def add_ct(diseases, ct, gene, variant, molecular_profile, evidence_type, new_ma
 				Category of cancer type specificity, to be annotated on the provided CIViC data.
     :param gene:		Gene identifier to append the given disease specificity annotations into in dictionary 'var_map'.
     :param variant:		Input variant annotation to append the given disease specificity annotations into in dictionary 'var_map'.
+    :param molecular_profile:   Input molecular profile associated to the variant to append the given disease specificity annotations into in dictionary 'var_map'.
     :param evidence_type:	Evidence type to append the given disease specificity annotations into in dictionary 'var_map'.
     :param new_map:		Updated 'var_map' dictionary to append the given disease specificity information into.
     :param var_map:		Nested dictionary of genes and variant-level records retrieved from CIViC. See README for more details about the specific structure.
@@ -1252,6 +1273,7 @@ def annotate_ct(var_map, disease_name_not_in, disease_name_in, alt_disease_names
 
             for molecular_profile_id in molecular_profile_ids:
                 new_map[gene][variant][molecular_profile_id] = {}
+                new_map[gene][variant][molecular_profile_id]["name"] = var_map[gene][variant][molecular_profile_id]["name"]
                 new_map[gene][variant][molecular_profile_id]["civic_score"] = var_map[gene][variant][molecular_profile_id]["civic_score"]
                 new_map[gene][variant][molecular_profile_id]["n_evidence_items"] = var_map[gene][variant][molecular_profile_id]["n_evidence_items"]
                 new_map[gene][variant][molecular_profile_id]["evidence_items"] = {}
@@ -1323,6 +1345,7 @@ def filter_ct(var_map, select_ct):
             molecular_profile_ids = set(list(var_map[gene][variant].keys())) ^ set(var_map_entries_variant)
             for molecular_profile_id in molecular_profile_ids:
                 new_map[gene][variant][molecular_profile_id] = {}
+                new_map[gene][variant][molecular_profile_id]["name"] = var_map[gene][variant][molecular_profile_id]["name"]
                 new_map[gene][variant][molecular_profile_id]["civic_score"] = var_map[gene][variant][molecular_profile_id]["civic_score"]
                 new_map[gene][variant][molecular_profile_id]["n_evidence_items"] = var_map[gene][variant][molecular_profile_id]["n_evidence_items"]
                 new_map[gene][variant][molecular_profile_id]["evidence_items"] = {}

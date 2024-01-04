@@ -489,3 +489,109 @@ def check_match_before_writing(match_map, var_map, raw_map, has_support=True, ha
                 check_keys(list(var_map[gene][var_id].keys()), "var_map", var_map_entries_variant, matches_all=False)
 
     return None
+
+
+def develop_parentheses_content(string):
+    """
+    Check that the provided molecular profile includes parentheses in its expression and expand this expression into multiple simpler expressions without parentheses or check that the provided molecular profile only contain OR logical paramters and return only one variant per expression.
+    :param string:     Molecular profile string to be checked.
+    :return:         multiple simpler expressions 
+    """
+    # Find all matches of the pattern within the string
+    matches = re.findall(r'\((.*?)\)', string)
+    matches_or = re.findall(r'\bOR\b', string)
+    
+    # List to store the developed expressions
+    final_expressions = []
+    
+    # Check if there are any matches
+    if matches:
+        # Iterate over the matches and develop the expressions
+        for match in matches:
+            expressions = match.split(" OR ")
+            for expression in expressions:
+                final_expression = string.replace("(" + match + ")", expression)
+                final_expressions.append(final_expression)       
+                
+    elif matches_or:
+        # special case where the molecular profile is only composed of OR logical term ex:  NRAS Mutation OR KRAS Mutation OR RAF1 Mutation OR MAP2K1 Mutation OR MAP2K2 Mutation
+            final_expressions = string.split(" OR ")
+            
+    else:
+        # If no matches found, simply return the original string
+        final_expressions = [string]
+        
+    return final_expressions
+
+
+def extract_terms(string):
+    """
+    Extract the needed variants as well as the excluded variants from the molecular profile.
+    :param string:     Molecular profile string to be extracted.
+    :return:         Needed variants and excluded variants
+    """
+    terms = string.split("AND")
+    needed = []
+    excluded = []
+    
+    for term in terms:
+        term = term.strip()
+        
+        if re.match(r'^NOT\b', term):
+            excluded.append(term[4:].strip().split()[0])
+        else:
+            needed.append(term.split()[0])
+            
+    return needed, excluded
+
+
+def check_molecular_profile(molecular_profile, molecular_profile_id, var_map, match_map):
+    """
+    Verify that the required variants associated with the molecular profile exist within the filtered dictionary of results obtained from querying genes in CIViC. Additionally, ensure that the excluded variants are absent from this dictionary.
+    :param molecular_profile:     Molecular profile string to be checked.
+    :param molecular_profile_id:     Molecular profile id to be checked.
+    :param var_map:     Filtered dictionary of results obtained from querying genes in CIViC.
+    :param match_map:   Nested dictionary with fixed structure containing all tier categories and corresponding matches found in CIViC
+    :return:         Boolean value (True/False) indicating whether the molecular profile should be retained or discarded.
+    """
+    final_expressions = develop_parentheses_content(molecular_profile)
+    Keep = False
+    
+    tiers_to_check = {'tier_1', 'tier_1b', 'tier_2'}
+    
+    for expression in final_expressions:
+        needed, excluded = extract_terms(expression)
+        Needed_count = 0
+        Excluded_count = 0
+        
+        for gene in needed:
+            Break = False
+            if gene in match_map.keys():
+                for variant in match_map[gene].keys():
+                    for tier in tiers_to_check:
+                        if Break:
+                            break    
+                        for variants in match_map[gene][variant][tier] :
+                            if molecular_profile_id in var_map[gene][variants].keys():
+                                Needed_count += 1
+                                Break = True
+                                break
+                
+        if Needed_count == len(needed):
+            for gene in excluded:
+                Break = False
+                if gene in match_map.keys():
+                    for variant in match_map[gene].keys(): 
+                        for tier in tiers_to_check:
+                            if Break:
+                                break
+                            for variants in match_map[gene][variant][tier]:
+                                if molecular_profile_id in var_map[gene][variants].keys():
+                                    Excluded_count += 1
+                                    Break = True                
+                                    break
+                                
+        if Needed_count == len(needed) and Excluded_count == 0:
+            Keep = True
+            
+    return Keep
