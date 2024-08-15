@@ -1,6 +1,4 @@
 import sys
-import os
-import re
 
 
 def check_is_none(argument, arg_name):
@@ -11,7 +9,7 @@ def check_is_none(argument, arg_name):
     :return:		None
     """
     if argument is None:
-        raise ValueError("Argument '%s' must be provided!" %(arg_name))
+        raise ValueError("Argument '%s' must be provided!" % (arg_name))
 
     return None
 
@@ -25,7 +23,7 @@ def check_argument(argument, arg_name):
     """
     check_is_none(argument, arg_name)
     if not argument:
-        raise ValueError("Argument '%s' must be provided!" %(arg_name))
+        raise ValueError("Argument '%s' must be provided!" % (arg_name))
 
     return None
 
@@ -42,8 +40,9 @@ def check_arguments(arg_list, name_list):
     check_is_list(arg_list, "arg_list")
     check_is_list(name_list, "name_list")
     if (len(arg_list) != len(name_list)):
-        raise ValueError("Arguments 'arg_list' and 'name_list' must have the same length!")
-    for i,argument in enumerate(arg_list):
+        raise ValueError(
+            "Arguments 'arg_list' and 'name_list' must have the same length!")
+    for i, argument in enumerate(arg_list):
         check_argument(argument, name_list[i])
 
     return None
@@ -53,17 +52,18 @@ def check_identifier_type(identifier_type):
     """
     Check that a given identifier type is valid.
     :param identifier_type:	['entrez_symbol', 'entrez_id', 'civic_id']
-                        	entrez_symbol:	Entrez gene symbol
-                        	entrez_id:	Entrez gene identifier
-                        	civic_id:	CIViC internal identifier
-                        	String identifier type to check for validity.
+                                entrez_symbol:	Entrez gene symbol
+                                entrez_id:	Entrez gene identifier
+                                civic_id:	CIViC internal identifier
+                                String identifier type to check for validity.
     :return:            	None
     """
     check_argument(identifier_type, "identifier_type")
     check_is_str(identifier_type, "identifier_type")
     id_types = ["entrez_id", "entrez_symbol", "civic_id"]
     if identifier_type not in id_types:
-        raise ValueError("'%s' is not a valid identifier_type. Please provide one of: %s" %(identifier_type, id_types))
+        raise ValueError("'%s' is not a valid identifier_type. Please provide one of: %s" % (
+            identifier_type, id_types))
 
     return None
 
@@ -72,17 +72,18 @@ def check_data_type(data_type):
     """
     Check that a given data type is valid.
     :param data_type:	['SNV', 'CNV', 'EXPR']
-			SNV:   Expects genomic single nucleotide variants and insertions/deletions
-			CNV:   Expects genomic copy number alterations
-			EXPR:  Expects differential gene expression data
-			String data type to check for validity.
+                        SNV:   Expects genomic single nucleotide variants and insertions/deletions
+                        CNV:   Expects genomic copy number alterations
+                        EXPR:  Expects differential gene expression data
+                        String data type to check for validity.
     :return:            None
     """
     check_argument(data_type, "data_type")
     check_is_str(data_type, "data_type")
     data_types = ["SNV", "CNV", "EXPR"]
     if data_type not in data_types:
-        raise ValueError("'%s' is not a valid data_type. Please provide one of: %s" %(data_type, data_types))
+        raise ValueError("'%s' is not a valid data_type. Please provide one of: %s" % (
+            data_type, data_types))
 
     return None
 
@@ -112,7 +113,8 @@ def check_empty_input(in_field, field_name, is_required=True):
     check_is_str(in_field, field_name)
     if (in_field is None) or (not in_field) or (in_field == "."):
         if is_required:
-            raise ValueError("'%s' is required and cannot be empty!" %(field_name))
+            raise ValueError(
+                "'%s' is required and cannot be empty!" % (field_name))
         new_field = ""
     else:
         new_field = in_field
@@ -153,7 +155,8 @@ def check_logfc(logfc, gene):
     try:
         logfc = float(logfc)
     except ValueError:
-        print("Invalid logFC = '%s' for gene '%s'. Please provide a numeric value." %(logfc, gene))
+        print("Invalid logFC = '%s' for gene '%s'. Please provide a numeric value." % (
+            logfc, gene))
         sys.exit(1)
 
     return logfc
@@ -167,7 +170,7 @@ def check_is_bool(in_bool, bool_name):
     :return:            None
     """
     if not isinstance(in_bool, bool):
-        raise TypeError("'%s' is not of type 'bool'" %(bool_name))
+        raise TypeError("'%s' is not of type 'bool'" % (bool_name))
 
     return None
 
@@ -180,7 +183,7 @@ def check_is_list(in_list, list_name):
     :return:		None
     """
     if not isinstance(in_list, list):
-        raise TypeError("'%s' is not of type 'list'" %(list_name))
+        raise TypeError("'%s' is not of type 'list'" % (list_name))
 
     return None
 
@@ -193,7 +196,7 @@ def check_is_dict(in_dict, dict_name):
     :return:		None
     """
     if not isinstance(in_dict, dict):
-        raise TypeError("'%s' is not of type 'dict'" %(dict_name))
+        raise TypeError("'%s' is not of type 'dict'" % (dict_name))
 
     return None
 
@@ -215,12 +218,13 @@ def check_keys(in_keys, dict_name, key_list, matches_all=True):
     in2 = set(key_list)
     if matches_all:
         if (in1 != in2):
-            raise ValueError("Dictionary '%s' does not contain all of the following keys: %s" %(dict_name, key_list))
+            raise ValueError("Dictionary '%s' does not contain all of the following keys: %s" % (
+                dict_name, key_list))
     else:
-        not_found = False
         for x in in2:
             if x not in in_keys:
-                raise ValueError("Dictionary '%s' does not contain the following key: %s" %(dict_name, x))
+                raise ValueError(
+                    "Dictionary '%s' does not contain the following key: %s" % (dict_name, x))
 
     return None
 
@@ -238,7 +242,8 @@ def check_keys_not(in_keys, dict_name, key_list):
     check_is_list(key_list, "key_list")
     for key in key_list:
         if key in in_keys:
-            raise ValueError("'%s' cannot contain key '%s'!" %(dict_name, key))
+            raise ValueError("'%s' cannot contain key '%s'!" %
+                             (dict_name, key))
 
     return None
 
@@ -251,7 +256,7 @@ def check_is_str(in_field, field_name):
     :return:		None
     """
     if not isinstance(in_field, str):
-        raise TypeError("'%s' is not of type 'str'" %(field_name))
+        raise TypeError("'%s' is not of type 'str'" % (field_name))
 
     return None
 
@@ -304,11 +309,11 @@ def check_cutoff_filter_arguments(value, name):
     """
     # cutoff can be 0
     if (value is None):
-        raise ValueError("Argument '%s' must be provided!" %(name))
+        raise ValueError("Argument '%s' must be provided!" % (name))
     try:
         cutoff_f = float(value)
     except ValueError:
-        print("Invalid '%s'! Please provide a numeric value." %(name, value))
+        print("Invalid value %s: '%s'! Please provide a numeric value." % (name, value))
         sys.exit(1)
 
     return cutoff_f
@@ -327,7 +332,8 @@ def check_dict_entry(input_dict, dict_name, entry, entry_name):
     check_is_dict(input_dict, dict_name)
     check_is_str(entry, entry_name)
     if entry not in input_dict.keys():
-        raise ValueError("Could not find %s '%s' in dict %s!" %(entry_name, entry, dict_name))
+        raise ValueError("Could not find %s '%s' in dict %s!" %
+                         (entry_name, entry, dict_name))
 
     return None
 
@@ -351,14 +357,16 @@ def check_tier_selection(select_tier, all_tiers):
     elif isinstance(select_tier, str):
         # Check a valid value was provided for select_tier
         if select_tier not in ["all", "highest"]:
-            raise ValueError("Unknown tier option provided: '%s'. Possible options are: 'all' (to return all tiers) or 'highest' (to return only match for the highest tier)." %(select_tier))
+            raise ValueError(
+                "Unknown tier option provided: '%s'. Possible options are: 'all' (to return all tiers) or 'highest' (to return only match for the highest tier)." % (select_tier))
         new_selection = select_tier
     elif isinstance(select_tier, list):
         unique_tiers = set(select_tier)
         # Check that valid values were provided in select_tier
         for tmp_tier in list(unique_tiers):
             if tmp_tier not in all_tiers:
-                raise ValueError("Provided list contains invalid tier: '%s'. Possible options are: %s" %(tmp_tier, all_tiers))
+                raise ValueError("Provided list contains invalid tier: '%s'. Possible options are: %s" % (
+                    tmp_tier, all_tiers))
         new_selection = []
         # Sanity check for cases when all tiers are provided in the list
         if unique_tiers == set(all_tiers):
@@ -366,10 +374,11 @@ def check_tier_selection(select_tier, all_tiers):
             new_selection = "all"
         else:
             for tmp_tier in all_tiers:
-                if tmp_tier in unique_tiers: 
+                if tmp_tier in unique_tiers:
                     new_selection.append(tmp_tier)
     else:
-        raise TypeError("Please provide either a str ('all', 'highest') or a list of tiers.")
+        raise TypeError(
+            "Please provide either a str ('all', 'highest') or a list of tiers.")
 
     return new_selection
 
@@ -381,7 +390,7 @@ def check_is_chgvs(hgvs):
     :return:         None
     """
     if not hgvs.startswith("c."):
-        raise ValueError("HGVS string '%s' does not start with 'c.'!" %(hgvs))
+        raise ValueError("HGVS string '%s' does not start with 'c.'!" % (hgvs))
 
     return None
 
@@ -393,7 +402,7 @@ def check_is_phgvs(hgvs):
     :return:         None
     """
     if not hgvs.startswith("p."):
-        raise ValueError("HGVS string '%s' does not start with 'p.'!" %(hgvs))
+        raise ValueError("HGVS string '%s' does not start with 'p.'!" % (hgvs))
 
     return None
 
@@ -430,7 +439,8 @@ def check_match_before_writing(match_map, var_map, raw_map, has_support=True, ha
     """
     sorted_tiers = ["tier_1", "tier_1b", "tier_2", "tier_3", "tier_4"]
     var_map_entries_variant = ["name", "hgvs", "types"]
-    special_cases = ["NON_SNV_MATCH_ONLY", "NON_CNV_MATCH_ONLY", "NON_EXPR_MATCH_ONLY"]
+    special_cases = ["NON_SNV_MATCH_ONLY",
+                     "NON_CNV_MATCH_ONLY", "NON_EXPR_MATCH_ONLY"]
 
     check_arguments([match_map, raw_map], ["match_map", "raw_map"])
     check_is_none(has_support, "has_support")
@@ -450,21 +460,27 @@ def check_match_before_writing(match_map, var_map, raw_map, has_support=True, ha
     for gene in match_map.keys():
         matched = []
         for variant in match_map[gene].keys():
-            check_keys(list(match_map[gene][variant].keys()), "match_map", sorted_tiers, matches_all=True)
+            check_keys(list(match_map[gene][variant].keys()),
+                       "match_map", sorted_tiers, matches_all=True)
             for tier in match_map[gene][variant].keys():
                 if has_support:
-                    check_keys(list(match_map[gene][variant][tier].keys()), "match_map", ["matched", "drug_support"], matches_all=True)
-                    check_is_list(match_map[gene][variant][tier]["drug_support"], tier)
+                    check_keys(list(match_map[gene][variant][tier].keys()), "match_map", [
+                               "matched", "drug_support"], matches_all=True)
+                    check_is_list(match_map[gene][variant]
+                                  [tier]["drug_support"], tier)
                     if tier == "tier_4":
-                        check_is_bool(match_map[gene][variant][tier]["matched"], tier)
+                        check_is_bool(
+                            match_map[gene][variant][tier]["matched"], tier)
                     else:
-                        check_is_list(match_map[gene][variant][tier]["matched"], tier)
+                        check_is_list(
+                            match_map[gene][variant][tier]["matched"], tier)
                         for tmp_var in match_map[gene][variant][tier]["matched"]:
                             # NOTE: check for special case when tier3 but no matching variant returned for the given data type
                             if tmp_var.upper() in special_cases:
                                 # Check that no other variant was matched when this special case was matched (length of matches should always be one)
                                 if len(match_map[gene][variant][tier]["matched"]) != 1:
-                                    raise ValueError("Unexpected: encountered multiple matches in special case of empty tier3 match '%s'!" %(match_map[gene][variant][tier]["matched"]))
+                                    raise ValueError("Unexpected: encountered multiple matches in special case of empty tier3 match '%s'!" % (
+                                        match_map[gene][variant][tier]["matched"]))
                                 continue
                             if tmp_var not in matched:
                                 matched.append(tmp_var)
@@ -478,7 +494,8 @@ def check_match_before_writing(match_map, var_map, raw_map, has_support=True, ha
                             if tmp_var.upper() in special_cases:
                                 # Check that no other variant was matched when this special case was matched (length of matches should always be one)
                                 if len(match_map[gene][variant][tier]) != 1:
-                                    raise ValueError("Unexpected: encountered multiple matches in special case of empty tier3 match '%s'!" %(match_map[gene][variant][tier]))
+                                    raise ValueError("Unexpected: encountered multiple matches in special case of empty tier3 match '%s'!" % (
+                                        match_map[gene][variant][tier]))
                                 continue
                             if tmp_var not in matched:
                                 matched.append(tmp_var)
@@ -486,6 +503,7 @@ def check_match_before_writing(match_map, var_map, raw_map, has_support=True, ha
                 check_dict_entry(var_map, "var_map", gene, "gene")
             for var_id in matched:
                 check_dict_entry(var_map[gene], "var_map", var_id, "variant")
-                check_keys(list(var_map[gene][var_id].keys()), "var_map", var_map_entries_variant, matches_all=False)
+                check_keys(list(var_map[gene][var_id].keys(
+                )), "var_map", var_map_entries_variant, matches_all=False)
 
     return None

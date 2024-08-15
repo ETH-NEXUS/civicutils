@@ -10,31 +10,29 @@ Lourdes Rosano, Feb 2022
 
 import sys
 import argparse
-
-## Load relevant functions from CIViCutils package
-
-sys.path.append("/path/to/civicutils")
-
-from read_and_write import get_dict_support, write_evidences, write_output_line
-from query import query_civic
-from filtering import filter_civic
-from match import match_in_civic, annotate_ct, filter_ct, process_drug_support, reprocess_drug_support_across_selected_variants
-from utils import check_match_before_writing, check_keys, check_keys_not, check_data_type, check_dict_entry
+# Load relevant functions from CIViCutils package
+from civicutils.read_and_write import get_dict_support, write_evidences, write_output_line
+from civicutils.query import query_civic
+from civicutils.filtering import filter_civic
+from civicutils.match import match_in_civic, annotate_ct, filter_ct, process_drug_support, reprocess_drug_support_across_selected_variants
+from civicutils.utils import check_match_before_writing, check_keys, check_keys_not, check_data_type
 
 
 """
 Functions
 """
 
+
 # Given the header, find the input columns containing genes and variants/cnvs values (use provided arguments directly)
 # For SNVs, also retrieve the input columns containing variant impacts and exons
+
 def get_column_positions(header, data_type):
     header_split = header.split("\t")
     gene_pos = -1
     var_pos = -1
     impact_pos = -1
     exon_pos = -1
-    for pos in range(0,len(header_split)):
+    for pos in range(0, len(header_split)):
         # Avoid mismatches due to case by always using uppercase
         if args.colname_gene.upper() == header_split[pos].upper():
             gene_pos = pos
@@ -47,12 +45,12 @@ def get_column_positions(header, data_type):
                 exon_pos = pos
     # Check if required columns could be found in the header
     if (gene_pos == -1) or (var_pos == -1):
-        print("\nError! Could not match all input columns in header %s." %(header))
+        print("\nError! Could not match all input columns in header %s." % (header))
         sys.exit(1)
     # Check if optional columns were provided (only for SNVs)
     if data_type == "SNV":
         if (impact_pos == -1) or (exon_pos == -1):
-            print("\nError! Could not match all input columns in header %s." %(header))
+            print("\nError! Could not match all input columns in header %s." % (header))
             sys.exit(1)
     return (gene_pos, var_pos, impact_pos, exon_pos)
 
@@ -70,9 +68,10 @@ def read_in_snvs_multiple_genes(input_snv_file):
     # Retrieve indices for all relevant columns (i.e. gene and variant annotation; for SNV also variant impact and exon info)
     # If not all are found, script will exit with an error
     # When data_type=CNV, impact_pos=-1 and exon_pos=-1 since they will be disregared
-    (gene_pos, var_pos, impact_pos, exon_pos) = get_column_positions(input_header, data_type)
+    (gene_pos, var_pos, impact_pos, exon_pos) = get_column_positions(
+        input_header, data_type)
     # Each parsed line corresponds to a different genomic variant (which can have several annotations available)
-    for n_line,line in enumerate(infile):
+    for n_line, line in enumerate(infile):
         line_split = line.strip().split("\t")
         all_variants = line_split[var_pos].strip().split(";")
         all_impacts = line_split[impact_pos].strip().split(";")
@@ -82,8 +81,9 @@ def read_in_snvs_multiple_genes(input_snv_file):
         check_lists = [all_variants, all_impacts, all_exons]
         it = iter(check_lists)
         n_variants = len(next(it))
-        if not all(len(l) == n_variants for l in it):
-            raise ValueError("Encountered different number of available annotations in columns '%s', '%s' and '%s'!" %(args.colname_data, args.colname_impact, args.colname_exon))
+        if not all(len(var_list) == n_variants for var_list in it):
+            raise ValueError("Encountered different number of available annotations in columns '%s', '%s' and '%s'!" % (
+                args.colname_data, args.colname_impact, args.colname_exon))
         # n_line -> [var1,..,varN]}
         raw_mapping[str(n_line)] = []
         # Loop all available items (same number), and retrieve for each variant corresponding info from each list
@@ -99,25 +99,31 @@ def read_in_snvs_multiple_genes(input_snv_file):
             # Sanity check required information is never empty
             # NOTE: p_variant is considered optional
             if not gene:
-                raise ValueError("Encountered empty gene annotation in column '%s'!" %(args.colname_data))
+                raise ValueError(
+                    "Encountered empty gene annotation in column '%s'!" % (args.colname_data))
             if not c_variant:
-                raise ValueError("Encountered empty variant annotation in column '%s'!" %(args.colname_data))
+                raise ValueError(
+                    "Encountered empty variant annotation in column '%s'!" % (args.colname_data))
             impact_tag = all_impacts[n_variant]
             impact_split = impact_tag.strip().split(":")
             if impact_split[0].strip() != gene:
-                raise ValueError("Encountered different genes in positional annotations of columns '%s' and '%s'!" %(args.colname_data, args.colname_impact))
+                raise ValueError("Encountered different genes in positional annotations of columns '%s' and '%s'!" % (
+                    args.colname_data, args.colname_impact))
             impact = impact_split[1].strip()
             exon_tag = all_exons[n_variant]
             exon_split = exon_tag.strip().split(":")
             if exon_split[0].strip() != gene:
-                raise ValueError("Encountered different genes in positional annotations of columns '%s' and '%s'!" %(args.colname_data, args.colname_exon))
+                raise ValueError("Encountered different genes in positional annotations of columns '%s' and '%s'!" % (
+                    args.colname_data, args.colname_exon))
             if exon_split[1].strip() != variant_split[1].strip():
-                raise ValueError("Encountered different variants in positional annotations of columns '%s' and '%s'!" %(args.colname_data, args.colname_exon))
+                raise ValueError("Encountered different variants in positional annotations of columns '%s' and '%s'!" % (
+                    args.colname_data, args.colname_exon))
             exon = exon_split[2].strip()
             # Sanity check required information is never empty
             # NOTE: exon is considered optional
             if not impact:
-                raise ValueError("Encountered empty variant impact annotation in column '%s'!" %(args.colname_impact))
+                raise ValueError("Encountered empty variant impact annotation in column '%s'!" % (
+                    args.colname_impact))
             # NOTE: for now, skip variants which do not have a valid c.HGVS expression available (e.g. n.HGVS)
             # We can do this because we will use alternative custom function "write_match_multiple_annotations" to write results to output, and these variant annotations will not be removed from the affected columns
             if not c_variant.startswith("c."):
@@ -128,13 +134,15 @@ def read_in_snvs_multiple_genes(input_snv_file):
                 snv_mapping[gene] = {}
             # Collapse variant info separated with "|"
             # Keep track of what line each variant comes from
-            variant = c_variant + "|" + p_variant + "|" + impact + "|" + exon + "|" + str(n_line)
+            variant = c_variant + "|" + p_variant + "|" + \
+                impact + "|" + exon + "|" + str(n_line)
         # NOTE: Variants can never be duplicated because of the different row numbers assigned
         # if variant in snv_mapping[gene].keys():
         #     print("Found duplicated variant '%s|%s' for gene '%s' in line '%s'!" %(c_variant, p_variant, gene, str(n_line)))
         #     sys.exit(1)
             snv_mapping[gene][variant] = None
-            raw_mapping[str(n_line)].append([variant, gene, c_variant, p_variant, impact, exon])
+            raw_mapping[str(n_line)].append(
+                [variant, gene, c_variant, p_variant, impact, exon])
     infile.close()
     return (raw_mapping, snv_mapping, input_header)
 
@@ -152,9 +160,10 @@ def read_in_cnvs_multiple_genes(input_cnv_file):
     # Retrieve indices for all relevant columns (i.e. gene and variant annotation; for SNV also variant impact and exon info)
     # If not all are found, script will exit with an error
     # When data_type=CNV, impact_pos=-1 and exon_pos=-1 since they will be disregared
-    (gene_pos, var_pos, impact_pos, exon_pos) = get_column_positions(input_header, data_type)
+    (gene_pos, var_pos, impact_pos, exon_pos) = get_column_positions(
+        input_header, data_type)
     # Each parsed line corresponds to a different CNV (which can have several genes annotated)
-    for n_line,line in enumerate(infile):
+    for n_line, line in enumerate(infile):
         line_split = line.strip().split("\t")
         cnv = line_split[var_pos].strip()
         # n_line -> {details -> cnv, genes -> [gene1,..,geneN]}
@@ -186,9 +195,11 @@ def check_tier_and_matches(gene, combined_id, match_mapping, has_support=True):
     sorted_tiers = ["tier_1", "tier_1b", "tier_2", "tier_3", "tier_4"]
     # Check if match_mapping contains the provided input variants
     if gene not in match_mapping.keys():
-        raise ValueError("Provided gene '%s' is not contained in provided 'match_mapping'." %(gene))
+        raise ValueError(
+            "Provided gene '%s' is not contained in provided 'match_mapping'." % (gene))
     if combined_id not in match_mapping[gene].keys():
-        raise ValueError("Provided variant '%s' is not contained in supplied 'match_mapping' for gene '%s'." %(combined_id, gene))
+        raise ValueError(
+            "Provided variant '%s' is not contained in supplied 'match_mapping' for gene '%s'." % (combined_id, gene))
     all_tiers = list(match_mapping[gene][combined_id].keys())
     selected_tier = "tier_4"
     # Pick highest tier available
@@ -224,11 +235,14 @@ def check_tier_and_matches(gene, combined_id, match_mapping, has_support=True):
 # Write header to output table (add extra column when consensus drug support is provided)
 # NOTE: for now, always write column for consensus drug support
 def write_header(outfile, write_support=True):
-    sorted_evidence_types = ["PREDICTIVE", "DIAGNOSTIC", "PROGNOSTIC", "PREDISPOSING"]
+    sorted_evidence_types = ["PREDICTIVE",
+                             "DIAGNOSTIC", "PROGNOSTIC", "PREDISPOSING"]
     if write_support:
-        out_header = "%s\tCIViC_Tier\tCIViC_Score\tCIViC_VariantType\tCIViC_Drug_Support\t%s" %(header, "\t".join(["CIViC_" + x for x in sorted_evidence_types]))
+        out_header = "%s\tCIViC_Tier\tCIViC_Score\tCIViC_VariantType\tCIViC_Drug_Support\t%s" % (
+            header, "\t".join(["CIViC_" + x for x in sorted_evidence_types]))
     else:
-        out_header = "%s\tCIViC_Tier\tCIViC_Score\tCIViC_VariantType\t%s" %(header, "\t".join(["CIViC_" + x for x in sorted_evidence_types]))
+        out_header = "%s\tCIViC_Tier\tCIViC_Score\tCIViC_VariantType\t%s" % (
+            header, "\t".join(["CIViC_" + x for x in sorted_evidence_types]))
     outfile.write(out_header + "\n")
     return None
 
@@ -236,39 +250,47 @@ def write_header(outfile, write_support=True):
 # Write header to output table (add extra column when consensus drug support is provided)
 def write_match_multiple_annotations(match_mapping, variant_mapping, raw_mapping, input_file, outfile, data_type="SNV", has_support=True, has_ct=True, write_ct=False, write_support=True, write_complete=False):
     # NOTE: uppercase is critical for matching!
-    sorted_evidence_types = ["PREDICTIVE", "DIAGNOSTIC", "PROGNOSTIC", "PREDISPOSING"]
+    sorted_evidence_types = ["PREDICTIVE",
+                             "DIAGNOSTIC", "PROGNOSTIC", "PREDISPOSING"]
     # Define the evidence type which contain CIViC drug predictions
     drug_evidence_type = "PREDICTIVE"
-    special_cases = ["NON_SNV_MATCH_ONLY", "NON_CNV_MATCH_ONLY", "NON_EXPR_MATCH_ONLY"]
+    special_cases = ["NON_SNV_MATCH_ONLY",
+                     "NON_CNV_MATCH_ONLY", "NON_EXPR_MATCH_ONLY"]
     sorted_cts = ["ct", "gt", "nct"]
     sorted_tiers = ["tier_1", "tier_1b", "tier_2", "tier_3", "tier_4"]
     varmap_entries_variant = ["name", "hgvs", "types"]
 
     # Use CIViCutils functionality to sanity check that all expected data and formats are correct
-    check_match_before_writing(match_mapping, variant_mapping, raw_mapping, has_support, has_ct, write_ct, write_support, write_complete)
+    check_match_before_writing(match_mapping, variant_mapping, raw_mapping,
+                               has_support, has_ct, write_ct, write_support, write_complete)
 
     if write_support:
         if not has_support:
-            raise ValueError("Option 'write_support' cannot be selected when 'has_support'=False!")
+            raise ValueError(
+                "Option 'write_support' cannot be selected when 'has_support'=False!")
     if write_ct:
         if not has_ct:
-            raise ValueError("Option 'write_ct' cannot be selected when 'has_ct'=False!")
+            raise ValueError(
+                "Option 'write_ct' cannot be selected when 'has_ct'=False!")
 
     # Keep track of all matches and non-matches
     exact_matches = 0           # Tier 1
     syn_matches = 0             # Tier 1b
     pos_matches = 0             # Tier 2
-    no_matches = 0              # Tier 3 (includes special cases when there is no match of the same variant type returned)
+    # Tier 3 (includes special cases when there is no match of the same variant type returned)
+    no_matches = 0
     gene_not_found = 0          # Tier 4
 
     # Iterate through the input table once more and simultaneously write results to output table
     # Each parsed line corresponds to a different variant
     infile = open(input_file, "r")
-    ignore_header = infile.readline().strip()
-    for n_line,line in enumerate(infile):
+    # ignore header
+    _ = infile.readline().strip()
+    for n_line, line in enumerate(infile):
         n_line = str(n_line)
         if n_line not in raw_mapping.keys():
-            raise ValueError("Line %s could not be found in provided 'raw_mapping'!" %(n_line))
+            raise ValueError(
+                "Line %s could not be found in provided 'raw_mapping'!" % (n_line))
 
         tier_to_write = -1
         # gene -> variant
@@ -289,13 +311,14 @@ def write_match_multiple_annotations(match_mapping, variant_mapping, raw_mapping
             selected_variant = []
             for variant_list in nested_variant_list:
                 if (len(variant_list) != 6):
-                    raise ValueError("Must provide 6 elements to describe a SNV variant (even if some can be empty): variant_id, gene, dna, [prot], impact, [exon], ...")
+                    raise ValueError(
+                        "Must provide 6 elements to describe a SNV variant (even if some can be empty): variant_id, gene, dna, [prot], impact, [exon], ...")
                 combined_id = variant_list[0]
                 gene = variant_list[1]
                 c_variant = variant_list[2]
-                p_variant = variant_list[3]
-                impact = variant_list[4]
-                exon = variant_list[5]
+                # p_variant = variant_list[3]
+                # impact = variant_list[4]
+                # exon = variant_list[5]
 
                 # NOTE: for now, skip variants which do not have a valid c.HGVS expression available (e.g. n.HGVS)
                 # We can do this because we will use alternative custom function "write_match_multiple_annotations" to write results to output, and these variant annotations will not be removed from the affected columns
@@ -303,7 +326,8 @@ def write_match_multiple_annotations(match_mapping, variant_mapping, raw_mapping
                     continue
 
                 # Process and prioritize available tiers
-                (tmp_tier, all_variants) = check_tier_and_matches(gene, combined_id, match_mapping, has_support)
+                (tmp_tier, all_variants) = check_tier_and_matches(
+                    gene, combined_id, match_mapping, has_support)
                 # Compare the currently evaluated tier with the highest one encountered (so far)
                 # NOTE: use the order of priority already defined in "sorted_tiers"
                 prioritize_tier = False
@@ -323,7 +347,8 @@ def write_match_multiple_annotations(match_mapping, variant_mapping, raw_mapping
                     n_variants = len(all_variants)
 
             if not selected_variant:
-                raise ValueError("Could not select a single valid variant annotation for line %s" %(line.strip()))
+                raise ValueError(
+                    "Could not select a single valid variant annotation for line %s" % (line.strip()))
 
             # In the end, we only select one single variant annotation per SNV line (even if >1 genes are annotated)
             tier_to_write = selected_tier
@@ -333,16 +358,18 @@ def write_match_multiple_annotations(match_mapping, variant_mapping, raw_mapping
             genes_and_variants_to_write[final_gene] = {}
             genes_and_variants_to_write[final_gene][final_variant] = []
             # Process and prioritize available tiers
-            (tmp_tier, all_variants) = check_tier_and_matches(final_gene, final_variant, match_mapping, has_support)
+            (tmp_tier, all_variants) = check_tier_and_matches(
+                final_gene, final_variant, match_mapping, has_support)
             for tmp_variant in all_variants:
-                genes_and_variants_to_write[final_gene][final_variant].append(tmp_variant)
-
+                genes_and_variants_to_write[final_gene][final_variant].append(
+                    tmp_variant)
 
         # Process and prioritize CIViC results matched across all genes annotated for the current CNV line
         # NOTE: when reporting results for a CNV line, sanity check there are no duplicated genes, and report all matched CIViC information available for the highest tier (as they will always correspond to different genes, hence the retrieved CIViC records will never be duplicated for a given CNV type and tier)
         if data_type == "CNV":
             if ("details" not in raw_mapping[n_line].keys()) or ("genes" not in raw_mapping[n_line].keys()):
-                raise ValueError("Must provide 2 elements to describe a CNV variant: gene, cnv, ...")
+                raise ValueError(
+                    "Must provide 2 elements to describe a CNV variant: gene, cnv, ...")
             cnv = raw_mapping[n_line]["details"]
             combined_id = cnv + "|" + n_line
             all_genes = raw_mapping[n_line]["genes"]
@@ -350,11 +377,13 @@ def write_match_multiple_annotations(match_mapping, variant_mapping, raw_mapping
             tmp_cnv_results = {}
             for gene in all_genes:
                 # Process and prioritize available tiers
-                (tmp_tier, all_variants) = check_tier_and_matches(gene, combined_id, match_mapping, has_support)
+                (tmp_tier, all_variants) = check_tier_and_matches(
+                    gene, combined_id, match_mapping, has_support)
                 if tmp_tier not in tmp_cnv_results.keys():
                     tmp_cnv_results[tmp_tier] = []
                 if gene in tmp_cnv_results[tmp_tier]:
-                    raise ValueError("Encountered duplicated gene annotation in line %s" %(line.strip()))
+                    raise ValueError(
+                        "Encountered duplicated gene annotation in line %s" % (line.strip()))
                 tmp_cnv_results[tmp_tier].append(gene)
 
             # Select the highest available tier for the current line
@@ -375,12 +404,13 @@ def write_match_multiple_annotations(match_mapping, variant_mapping, raw_mapping
                     genes_and_variants_to_write[final_gene] = {}
                     genes_and_variants_to_write[final_gene][combined_id] = []
                 # Process and prioritize available tiers
-                (tier, all_variants) = check_tier_and_matches(final_gene, combined_id, match_mapping, has_support)
+                (tier, all_variants) = check_tier_and_matches(
+                    final_gene, combined_id, match_mapping, has_support)
                 for tmp_variant in all_variants:
-                    genes_and_variants_to_write[final_gene][combined_id].append(tmp_variant)
+                    genes_and_variants_to_write[final_gene][combined_id].append(
+                        tmp_variant)
 
-
-        ## At this point, the genes and variant annotations which will be reported for the current variant line have already been parsed and selected
+        # At this point, the genes and variant annotations which will be reported for the current variant line have already been parsed and selected
         gene_scores = []
         gene_var_types = []
         drug_support = []
@@ -391,7 +421,8 @@ def write_match_multiple_annotations(match_mapping, variant_mapping, raw_mapping
                 all_civic_variants = genes_and_variants_to_write[gene][variant_annotation]
                 if tier_to_write == "tier_4":
                     if all_civic_variants:
-                        raise ValueError("Unexpectedly found matched variants for a line classified as 'tier_4': %s" %(all_civic_variants))
+                        raise ValueError("Unexpectedly found matched variants for a line classified as 'tier_4': %s" % (
+                            all_civic_variants))
                 elif has_support:
                     this_drug_support = match_mapping[gene][variant_annotation][tier_to_write]["drug_support"]
                     if write_support:
@@ -409,10 +440,13 @@ def write_match_multiple_annotations(match_mapping, variant_mapping, raw_mapping
 
                     civic_variant = variant_mapping[gene][variant_id]["name"]
 
-                    gene_var_types.append(gene + ":" + civic_variant + ":" + ",".join(variant_mapping[gene][variant_id]["types"]))
-                    molecular_profile_ids = set(list(variant_mapping[gene][variant_id].keys())) ^ set(varmap_entries_variant)
+                    gene_var_types.append(
+                        gene + ":" + civic_variant + ":" + ",".join(variant_mapping[gene][variant_id]["types"]))
+                    molecular_profile_ids = set(
+                        list(variant_mapping[gene][variant_id].keys())) ^ set(varmap_entries_variant)
                     for molecular_profil_id in molecular_profile_ids:
-                        gene_scores.append(gene + ":" + civic_variant + ":" + molecular_profil_id + ":" + str(variant_mapping[gene][variant_id][molecular_profil_id]["civic_score"]))                        
+                        gene_scores.append(gene + ":" + civic_variant + ":" + molecular_profil_id + ":" + str(
+                            variant_mapping[gene][variant_id][molecular_profil_id]["civic_score"]))
                         for evidence_type in sorted_evidence_types:
                             if evidence_type in variant_mapping[gene][variant_id][molecular_profil_id]["evidence_items"].keys():
                                 if evidence_type not in result_mapping.keys():
@@ -420,32 +454,42 @@ def write_match_multiple_annotations(match_mapping, variant_mapping, raw_mapping
                                 write_drug = False
                                 # Check whether current evidence column name corresponds to the one defined at the beginning of the function (i.e. indicates drug prediction evidence)
                                 if evidence_type == drug_evidence_type:
-                                    write_drug=True
+                                    write_drug = True
                                 if has_ct:
-                                    check_keys(list(variant_mapping[gene][variant_id][molecular_profil_id]["evidence_items"][evidence_type].keys()), "variant_mapping", sorted_cts, matches_all=True)
+                                    check_keys(list(variant_mapping[gene][variant_id][molecular_profil_id]["evidence_items"][evidence_type].keys(
+                                    )), "variant_mapping", sorted_cts, matches_all=True)
                                     for ct in variant_mapping[gene][variant_id][molecular_profil_id]["evidence_items"][evidence_type].keys():
                                         if write_ct:
-                                            results = write_evidences(variant_mapping[gene][variant_id][molecular_profil_id]["evidence_items"][evidence_type][ct], write_drug=write_drug, write_ct=ct, write_complete=write_complete)
+                                            results = write_evidences(variant_mapping[gene][variant_id][molecular_profil_id]["evidence_items"][
+                                                                      evidence_type][ct], write_drug=write_drug, write_ct=ct, write_complete=write_complete)
                                         else:
-                                            results = write_evidences(variant_mapping[gene][variant_id][molecular_profil_id]["evidence_items"][evidence_type][ct], write_drug=write_drug, write_ct=None, write_complete=write_complete)
+                                            results = write_evidences(variant_mapping[gene][variant_id][molecular_profil_id]["evidence_items"][
+                                                                      evidence_type][ct], write_drug=write_drug, write_ct=None, write_complete=write_complete)
                                         for x in results:
-                                            result_mapping[evidence_type].append(gene + ":" + civic_variant + ":" + x)
+                                            result_mapping[evidence_type].append(
+                                                gene + ":" + civic_variant + ":" + x)
                                 else:
-                                    check_keys_not(list(variant_mapping[gene][variant_id][molecular_profil_id]["evidence_items"][evidence_type].keys()), "variant_mapping", sorted_cts)
+                                    check_keys_not(list(variant_mapping[gene][variant_id][molecular_profil_id]["evidence_items"][evidence_type].keys(
+                                    )), "variant_mapping", sorted_cts)
                                     if write_ct:
-                                        raise ValueError("Option 'write_ct' cannot be selected when 'has_ct'=False!")
-                                    results = write_evidences(variant_mapping[gene][variant_id][molecular_profil_id]["evidence_items"][evidence_type], write_drug=write_drug, write_ct=None, write_complete=write_complete)
+                                        raise ValueError(
+                                            "Option 'write_ct' cannot be selected when 'has_ct'=False!")
+                                    results = write_evidences(variant_mapping[gene][variant_id][molecular_profil_id]["evidence_items"][
+                                                              evidence_type], write_drug=write_drug, write_ct=None, write_complete=write_complete)
                                     for x in results:
-                                        result_mapping[evidence_type].append(gene + ":" + civic_variant + ":" + x)
+                                        result_mapping[evidence_type].append(
+                                            gene + ":" + civic_variant + ":" + x)
         # NOTE: in the above case, if CIViC info is reported across multiple different variant annotations within the same line (e.g. case of the CNVs with >1 genes having CIViC info with the same tier), then the drug support will need to be recomputed to aggregate the information across all reported variants
         # Use custom function to recompute final consensus drug support for the current line
         # Now, support is aggregated across all genes and variants for which CIViC info is to be reported
         # NOTE: currently, for SNV data, only 1 single gene and variant annotation is selected per line
         # NOTE: currently, for CNV data, multiple genes annotated for the same CNV can be reported with CIViC info (only those having the same, highest tier)
         drug_support = []
-        drug_support = reprocess_drug_support_across_selected_variants(genes_and_variants_to_write, match_mapping, variant_mapping, support_dict, has_support=True)
-        ## Write result to output
-        out_line = write_output_line(tier_to_write, line.strip(), gene_scores, gene_var_types, drug_support, result_mapping, write_support)
+        drug_support = reprocess_drug_support_across_selected_variants(
+            genes_and_variants_to_write, match_mapping, variant_mapping, support_dict, has_support=True)
+        # Write result to output
+        out_line = write_output_line(tier_to_write, line.strip(
+        ), gene_scores, gene_var_types, drug_support, result_mapping, write_support)
         # Once here, all genes and variants within the row have been classified into tiers
         if tier_to_write == "tier_4":
             gene_not_found += 1
@@ -464,36 +508,48 @@ def write_match_multiple_annotations(match_mapping, variant_mapping, raw_mapping
     return (exact_matches, syn_matches, pos_matches, no_matches, gene_not_found)
 
 
-
 """
 Script
 """
 
-parser = argparse.ArgumentParser(description="Query CIViC to retrieve drug information for snvs or cnvs.")
-parser.add_argument("--infile", dest="infile", required=True, help="Input table with genes and variants, needs to be tab separated.")
-parser.add_argument("--outfile", dest="outfile", required=True, help="Name of the output file.")
-parser.add_argument("--cancer_type_list", dest="cancer_type_list", required=True, help="Comma-separated list of accepted cancer types. Partial matches will be sought.")
-parser.add_argument("--black_list", dest="black_list", required=True, help="Comma-separated list of not accepted cancer types. Partial matches will be sought, and those matched will be excluded from the list of considered evidence.")
-parser.add_argument("--high_level_list", dest="high_level_list", required=True, help="Comma-separated list of high level cancer types (e.g. Cancer). Only exact matches will be sought. The user should be aware that results for high level cancer types will only be retrieved when no match for cancer specific types (i.e. --cancer_type_list) is found.")
-parser.add_argument("--colname_gene", dest="colname_gene", required=True, help="Name of column containing gene symbols.")
-parser.add_argument("--colname_data", dest="colname_data", required=True, help="Name of column containing variant annotations (SNV) or cnv categories (CNV).")
-parser.add_argument("--data_type", dest="data_type", required=True, choices=["snv", "cnv"], default="snv", help="Type of data in infile. Possible options are: snv, cnv.")
-parser.add_argument("--colname_impact", dest="colname_impact", required=False, help="Name of column containing variant impacts (for SNV only).")
-parser.add_argument("--colname_exon", dest="colname_exon", required=False, help="Name of column containing variant exon information (for SNV only).")
+parser = argparse.ArgumentParser(
+    description="Query CIViC to retrieve drug information for snvs or cnvs.")
+parser.add_argument("--infile", dest="infile", required=True,
+                    help="Input table with genes and variants, needs to be tab separated.")
+parser.add_argument("--outfile", dest="outfile",
+                    required=True, help="Name of the output file.")
+parser.add_argument("--cancer_type_list", dest="cancer_type_list", required=True,
+                    help="Comma-separated list of accepted cancer types. Partial matches will be sought.")
+parser.add_argument("--black_list", dest="black_list", required=True,
+                    help="Comma-separated list of not accepted cancer types. Partial matches will be sought, and those matched will be excluded from the list of considered evidence.")
+parser.add_argument("--high_level_list", dest="high_level_list", required=True,
+                    help="Comma-separated list of high level cancer types (e.g. Cancer). Only exact matches will be sought. The user should be aware that results for high level cancer types will only be retrieved when no match for cancer specific types (i.e. --cancer_type_list) is found.")
+parser.add_argument("--colname_gene", dest="colname_gene",
+                    required=True, help="Name of column containing gene symbols.")
+parser.add_argument("--colname_data", dest="colname_data", required=True,
+                    help="Name of column containing variant annotations (SNV) or cnv categories (CNV).")
+parser.add_argument("--data_type", dest="data_type", required=True, choices=[
+                    "snv", "cnv"], default="snv", help="Type of data in infile. Possible options are: snv, cnv.")
+parser.add_argument("--colname_impact", dest="colname_impact", required=False,
+                    help="Name of column containing variant impacts (for SNV only).")
+parser.add_argument("--colname_exon", dest="colname_exon", required=False,
+                    help="Name of column containing variant exon information (for SNV only).")
 
 args = parser.parse_args()
 
 # Check input parameters
-data_type = args.data_type.upper() # SNV or CNV
+data_type = args.data_type.upper()  # SNV or CNV
 
 # Check expected data type using CIViCutils functionality
 check_data_type(data_type)
 
 # For SNV, two additional arguments are required (i.e. column names for variant impact and exon information)
-if (data_type=="SNV") and (args.colname_impact is None or args.colname_exon is None):
-    parser.error("--data_type 'snv' requires --colname_impact and --colname_exon.")
+if (data_type == "SNV") and (args.colname_impact is None or args.colname_exon is None):
+    parser.error(
+        "--data_type 'snv' requires --colname_impact and --colname_exon.")
 
-print("\nParameters:\n infile: %s\n outfile: %s\n data_type: %s\n colname_gene: %s\n colname_data: %s\n colname_impact: %s\n colname_exon: %s\n" %(args.infile, args.outfile, args.data_type, args.colname_gene, args.colname_data, args.colname_impact, args.colname_exon))
+print("\nParameters:\n infile: %s\n outfile: %s\n data_type: %s\n colname_gene: %s\n colname_data: %s\n colname_impact: %s\n colname_exon: %s\n" %
+      (args.infile, args.outfile, args.data_type, args.colname_gene, args.colname_data, args.colname_impact, args.colname_exon))
 
 
 cancer_type_list = args.cancer_type_list
@@ -518,15 +574,15 @@ if high_level_list == [""]:
 
 
 # Read in and process file of input SNV variants
-if data_type=="SNV":
+if data_type == "SNV":
     (raw_mapping, var_data, header) = read_in_snvs_multiple_genes(args.infile)
 # Read in and process file of input CNV variants
-if data_type=="CNV":
+if data_type == "CNV":
     (raw_mapping, var_data, header) = read_in_cnvs_multiple_genes(args.infile)
 
 
 # Already write new header into output file
-outfile = open(args.outfile,"w")
+outfile = open(args.outfile, "w")
 write_header(outfile, write_support=True)
 
 # Extract all genes parsed in the provided input file
@@ -535,12 +591,13 @@ genes = list(var_data.keys())
 # When no genes were found in the input file, write empty files (necessary for snakemake pipeline) and exit without error
 # e.g. empty input file containing only header because patient had no variants at all
 if not genes:
-    print("\nDid not find any genes in column \'{}\' of file {}".format(args.colname_gene, args.infile))
+    print("\nDid not find any genes in column \'{}\' of file {}".format(
+        args.colname_gene, args.infile))
     outfile.close()
     sys.exit(0)
 
 
-## Query CIViC for the genes of interest
+# Query CIViC for the genes of interest
 
 print("\nTotal # genes to query: {}".format(len(genes)))
 print("\nRetrieving data from CIViC...")
@@ -555,19 +612,22 @@ variant_mapping = query_civic(genes, identifier_type="entrez_symbol")
 # print("\nGenes with no CIViC data: {}".format(",".join(unmatched)))
 
 # Filter undesired evidences to avoid matching later on
-variant_mapping = filter_civic(variant_mapping, evidence_type_not_in=["FUNCTIONAL", "ONCOGENIC"], evidence_status_in=["ACCEPTED"], var_origin_not_in=["GERMLINE"], output_empty=False)
+variant_mapping = filter_civic(variant_mapping, evidence_type_not_in=["FUNCTIONAL", "ONCOGENIC"], evidence_status_in=[
+                               "ACCEPTED"], var_origin_not_in=["GERMLINE"], output_empty=False)
 
 
 # Match input SNV variants in CIViC, pick highest tier available per input gene+variant
 # Tier hierarchy: 1 > 1b > 2 > 3 > 4
-(match_mapping, matched_ids, variant_mapping) = match_in_civic(var_data, data_type=data_type, identifier_type="entrez_symbol", select_tier="highest", var_map=variant_mapping)
+(match_mapping, matched_ids, variant_mapping) = match_in_civic(var_data, data_type=data_type,
+                                                               identifier_type="entrez_symbol", select_tier="highest", var_map=variant_mapping)
 
 
 # Annotate matched CIViC evidences with cancer specificity of the associated diseases
 disease_name_not_in = []
 disease_name_in = ["bladder"]
 alt_disease_names = ["solid tumor"]
-annot_mapping = annotate_ct(variant_mapping, disease_name_not_in, disease_name_in, alt_disease_names)
+annot_mapping = annotate_ct(
+    variant_mapping, disease_name_not_in, disease_name_in, alt_disease_names)
 
 # Filter CIViC evidences to pick only those for the highest cancer specificity available
 # ct hierarchy: ct > gt > nct
@@ -578,12 +638,14 @@ annot_mapping = filter_ct(annot_mapping, select_ct="highest")
 support_dict = get_dict_support()
 
 # Process drug support of the matched variants using the annotated CIViC evidences
-annot_match_mapping = process_drug_support(match_mapping, annot_mapping, support_dict)
+annot_match_mapping = process_drug_support(
+    match_mapping, annot_mapping, support_dict)
 
 # Write to output
 # Parse input file again, now checking (and prioritizing, if necessary) the available CIViC info per variant line
 # Report the CT classification of each disease, and write column with the overall drug support of the match for each available CT class
-(exact_matches, syn_matches, pos_matches, no_matches, gene_not_found) = write_match_multiple_annotations(annot_match_mapping, annot_mapping, raw_mapping, args.infile, outfile, data_type=data_type, has_support=True, has_ct=True, write_ct=True, write_support=True, write_complete=True)
+(exact_matches, syn_matches, pos_matches, no_matches, gene_not_found) = write_match_multiple_annotations(annot_match_mapping, annot_mapping,
+                                                                                                         raw_mapping, args.infile, outfile, data_type=data_type, has_support=True, has_ct=True, write_ct=True, write_support=True, write_complete=True)
 
 outfile.close()
 
@@ -596,4 +658,3 @@ if data_type == "CNV":
     string_not_found = "Total # genes without variant data: {}"
 print(string_not_found.format(gene_not_found))
 print("---------------------")
-

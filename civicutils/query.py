@@ -1,7 +1,3 @@
-import sys
-import os
-import re
-
 from civicutils.utils import check_identifier_type, check_empty_field, check_argument, check_is_list
 
 
@@ -10,11 +6,11 @@ def query_civic(genes, identifier_type="entrez_symbol"):
     Given a list of gene identifiers, query CIViC using 'civic.get_all_genes()' (from Python package CIViCpy) and return a nested dictionary summarizing the evidences from the database. Only a selection of the complete record is processed and returned.
     :param genes:    		List containing gene identifiers to query.
     :param identifier_type:     ['entrez_symbol', 'entrez_id', 'civic_id']
-                        	entrez_symbol:  Entrez gene symbol
-                        	entrez_id: 	Entrez gene identifier
-                        	civic_id: 	CIViC internal identifier
-                        	Type of gene identifier used in your query. This parameter defaults to 'entrez_symbol'.
-    :return:            	Returns a nested dictionary from 'reformat_civic()'; see README for more details about the specific structure (i.e. var_map). 
+                                entrez_symbol:  Entrez gene symbol
+                                entrez_id: 	Entrez gene identifier
+                                civic_id: 	CIViC internal identifier
+                                Type of gene identifier used in your query. This parameter defaults to 'entrez_symbol'.
+    :return:            	Returns a nested dictionary from 'reformat_civic()'; see README for more details about the specific structure (i.e. var_map).
     """
     # Check arguments
     check_argument(genes, "genes")
@@ -42,12 +38,14 @@ def query_civic(genes, identifier_type="entrez_symbol"):
         to_keep = False
 
         if (identifier_type == "civic_id"):
-            gene_id = str(gene_record.id)                    # expectation is a single number
+            # expectation is a single number
+            gene_id = str(gene_record.id)
             if gene_id in genes:
                 to_keep = True
 
         if (identifier_type == "entrez_id"):
-            gene_id = str(gene_record.entrez_id)             # expectation is a single number
+            # expectation is a single number
+            gene_id = str(gene_record.entrez_id)
             if gene_id in genes:
                 to_keep = True
 
@@ -68,7 +66,8 @@ def query_civic(genes, identifier_type="entrez_symbol"):
             results.append(gene_record)
 
     if len(results) == 0:
-        raise ValueError("None of the input genes '%s' were found in civic database" %(genes))
+        raise ValueError(
+            "None of the input genes '%s' were found in civic database" % (genes))
     # At this point, all CIViC results for queried genes have been retrieved in a list
     # Process gene records into a dictionary with structured format
     # gene -> variants -> evidence_items
@@ -82,10 +81,10 @@ def reformat_civic(results, identifier_type="entrez_symbol"):
     Given a list of results from querying genes in CIViC, reformat the returned records into a nested dictionary with a specific structure. Only a selection of the complete record from the database is processed and returned.
     :param results:    		List of objects of class 'civicpy.civic.Gene', returned from querying genes in CIViC via 'civic.get_all_genes()'. Can be empty.
     :param identifier_type:     ['entrez_symbol', 'entrez_id', 'civic_id']
-                        	entrez_symbol:	Entrez gene symbol
-                        	entrez_id: 	Entrez gene identifier
-                        	civic_id: 	CIViC internal identifier
-                        	Type of gene identifier used in your query. This parameter defaults to 'entrez_symbol'.
+                                entrez_symbol:	Entrez gene symbol
+                                entrez_id: 	Entrez gene identifier
+                                civic_id: 	CIViC internal identifier
+                                Type of gene identifier used in your query. This parameter defaults to 'entrez_symbol'.
     :return:            	Returns a nested dictionary with a specific structure. See README for more details (i.e. var_map).
     """
     # Check arguments
@@ -132,28 +131,30 @@ def reformat_civic(results, identifier_type="entrez_symbol"):
             variant_name = variant_record.name.strip().upper()
             hgvs_expressions = variant_record.hgvs_expressions
             molecular_profiles = variant_record.molecular_profiles
-            
+
             # Variant id should be unique even across genes
             if variant_id not in var_map[gene_key].keys():
                 var_map[gene_key][variant_id] = {}
                 var_map[gene_key][variant_id]["name"] = variant_name
                 # Keep original HGVS annotations (empty list when nothing is available)
                 # Use uppercase to avoid mismatches due to case
-                var_map[gene_key][variant_id]["hgvs"] = [h.strip().upper() for h in hgvs_expressions]
-                
+                var_map[gene_key][variant_id]["hgvs"] = [h.strip().upper()
+                                                         for h in hgvs_expressions]
+
                 # Include associated variant types (sequence ontology terms). There can be multiple terms
                 var_map[gene_key][variant_id]["types"] = []
                 for vartype_record in variant_record.variant_types:
-                    var_map[gene_key][variant_id]["types"].append(vartype_record.name.strip().upper())
+                    var_map[gene_key][variant_id]["types"].append(
+                        vartype_record.name.strip().upper())
                     # Account for empty variant types (can happen)
                     # "NULL" is introduced to distinguish from "N/A" tag
                 if not var_map[gene_key][variant_id]["types"]:
                     var_map[gene_key][variant_id]["types"] = ["NULL"]
-                
+
                 # Iterate molecular profile associated to the current variant
                 # Retrieve all relevant info listed for each molecular profile
                 for molecular_profile in molecular_profiles:
-                    
+
                     molecular_profile_name = molecular_profile.name.strip().upper()
                     # Internal molecular profile id in CIVIC
                     molecular_profile_id = str(molecular_profile.id)
@@ -172,12 +173,13 @@ def reformat_civic(results, identifier_type="entrez_symbol"):
 
                     # Keep track of number of evidence items associated with the current molecular profile
                     var_map[gene_key][variant_id][molecular_profile_id]["n_evidence_items"] = n_items
-                    var_map[gene_key][variant_id][molecular_profile_id]["evidence_items"] = {}
+                    var_map[gene_key][variant_id][molecular_profile_id]["evidence_items"] = {
+                    }
 
                     # Iterate through the listed evidence items and store relevant information for this variant
                     # Variants which do not have any clinical data associated to them will be directly skipped
                     for evidence_record in evidence_items:
-                        
+
                         # Use uppercase for consistency of the tags (except id which should be unique)
                         # These fields are expected to never be empty or None
                         evidence_type = evidence_record.evidence_type.strip().upper()
@@ -190,20 +192,30 @@ def reformat_civic(results, identifier_type="entrez_symbol"):
                         evidence_status = evidence_record.status.strip().upper()
                         source_type = evidence_record.source.source_type.strip().upper()
                         source_status = evidence_record.status.strip().upper()
-                        evidence_id = str(evidence_record.source.citation_id).strip()        # expected to be entirely numeric
+                        # expected to be entirely numeric
+                        evidence_id = str(
+                            evidence_record.source.citation_id).strip()
 
                         if evidence_type not in var_map[gene_key][variant_id][molecular_profile_id]["evidence_items"].keys():
-                            var_map[gene_key][variant_id][molecular_profile_id]["evidence_items"][evidence_type] = {}
+                            var_map[gene_key][variant_id][molecular_profile_id]["evidence_items"][evidence_type] = {
+                            }
                         if disease not in var_map[gene_key][variant_id][molecular_profile_id]["evidence_items"][evidence_type].keys():
-                            var_map[gene_key][variant_id][molecular_profile_id]["evidence_items"][evidence_type][disease] = {}
+                            var_map[gene_key][variant_id][molecular_profile_id]["evidence_items"][evidence_type][disease] = {
+                            }
 
                         # Sanity check for fields that can be empty
                         # "NULL" is introduced to distinguish from "N/A" tag
-                        evidence_level = check_empty_field(evidence_record.evidence_level).strip().upper()                     # string (just in case, should never be None)
-                        variant_origin = check_empty_field(evidence_record.variant_origin).strip().upper()                     # string, can be None
-                        evidence_direction = check_empty_field(evidence_record.evidence_direction).strip().upper()             # string, can be None
-                        clinical_significance = check_empty_field(evidence_record.significance).strip().upper()                # string, can be None
-                        evidence_rating = check_empty_field(evidence_record.rating)                                            # numeric, can be None
+                        evidence_level = check_empty_field(evidence_record.evidence_level).strip(
+                        ).upper()                     # string (just in case, should never be None)
+                        variant_origin = check_empty_field(evidence_record.variant_origin).strip(
+                        ).upper()                     # string, can be None
+                        evidence_direction = check_empty_field(evidence_record.evidence_direction).strip(
+                        ).upper()             # string, can be None
+                        clinical_significance = check_empty_field(evidence_record.significance).strip(
+                        ).upper()                # string, can be None
+                        # numeric, can be None
+                        evidence_rating = check_empty_field(
+                            evidence_record.rating)
                         # Sanity check for cases when rating=0 (check will return "NULL")
                         if (isinstance(evidence_record.rating, int) or isinstance(evidence_record.rating, float)) and (evidence_rating == "NULL"):
                             evidence_rating = 0.0
@@ -237,8 +249,9 @@ def reformat_civic(results, identifier_type="entrez_symbol"):
                         # Sanity checks that only "PREDICTIVE" evidences have drugs associated
                         # Submitted evidence items can fulfill having "PREDICTIVE" evidence type and no drugs ("NULL")
                         if (evidence_type != "PREDICTIVE") and (drugs != ["NULL"]):
-                            raise ValueError("Only evidences of type 'PREDICTIVE' can have drugs associated!")
-                            
+                            raise ValueError(
+                                "Only evidences of type 'PREDICTIVE' can have drugs associated!")
+
                         # Iterate through drugs to add evidences associated to them
                         #   For non-Predictive evidences or Predictive with empty drugs, drugs=["NULL"]
                         #   For Predictive and interaction=None, len(drugs) = 1
@@ -246,15 +259,19 @@ def reformat_civic(results, identifier_type="entrez_symbol"):
                         #   For Predictive and interaction!="Substitutes", len(drugs)=1 (combiantion of several using "+")
                         for drug in drugs:
                             if drug not in var_map[gene_key][variant_id][molecular_profile_id]["evidence_items"][evidence_type][disease].keys():
-                                var_map[gene_key][variant_id][molecular_profile_id]["evidence_items"][evidence_type][disease][drug] = {}
+                                var_map[gene_key][variant_id][molecular_profile_id]["evidence_items"][evidence_type][disease][drug] = {
+                                }
                             if evidence not in var_map[gene_key][variant_id][molecular_profile_id]["evidence_items"][evidence_type][disease][drug].keys():
-                                var_map[gene_key][variant_id][molecular_profile_id]["evidence_items"][evidence_type][disease][drug][evidence] = {}
+                                var_map[gene_key][variant_id][molecular_profile_id]["evidence_items"][evidence_type][disease][drug][evidence] = {
+                                }
                             if evidence_level not in var_map[gene_key][variant_id][molecular_profile_id]["evidence_items"][evidence_type][disease][drug][evidence].keys():
-                                var_map[gene_key][variant_id][molecular_profile_id]["evidence_items"][evidence_type][disease][drug][evidence][evidence_level] = []
+                                var_map[gene_key][variant_id][molecular_profile_id]["evidence_items"][
+                                    evidence_type][disease][drug][evidence][evidence_level] = []
 
                             # Group all publications associated to the same level
                             # Keep track of associated info: source type, source id, evidence status, publication status, variant origin, evidence rating
                             # Format: "TYPE_ID:EVIDENCESTATUS:SOURCESTATUS:VARORIGIN:RATING"
-                            var_map[gene_key][variant_id][molecular_profile_id]["evidence_items"][evidence_type][disease][drug][evidence][evidence_level].append(source_type + "_" + str(evidence_id) + ":" + evidence_status + ":" + source_status + ":" + variant_origin + ":" + str(evidence_rating))
+                            var_map[gene_key][variant_id][molecular_profile_id]["evidence_items"][evidence_type][disease][drug][evidence][evidence_level].append(
+                                source_type + "_" + str(evidence_id) + ":" + evidence_status + ":" + source_status + ":" + variant_origin + ":" + str(evidence_rating))
 
     return var_map
